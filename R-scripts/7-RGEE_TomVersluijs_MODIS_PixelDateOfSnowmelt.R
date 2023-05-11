@@ -802,7 +802,8 @@
                  task_vector3$start()
                  print("Export original image to Google Drive:")
                  ee_monitoring(task_vector3, max_attempts = 5000)
-               
+                 ee_drive_to_local(task = task_vector3, dsn=paste0("Output/", data_ID, "_PixelSnowmeltDoy_Image_DoySnowmelt"))
+                 
               #(F): Export RGB image to Google Drive (takes c.a. 2 minutes):
              
                 #Convert original image to an RGB image:
@@ -826,7 +827,8 @@
                  print("Export RGB image to Google Drive:")
                  task_vector4$start()
                  ee_monitoring(task_vector4, max_attempts = 5000)
-              
+                 ee_drive_to_local(task = task_vector4, dsn=paste0("Output/", data_ID, "_PixelSnowmeltDoy_Image_RGB"))
+                 
         #17: Extract the date of snowmelt for all pixels within image_snowmelt (i.e. clipped by aoi_Shapefile)         
                  
               #(A): Extract the date of snowmelt at each pixel within image_snowmelt and store each pixel value as a separate feature.
