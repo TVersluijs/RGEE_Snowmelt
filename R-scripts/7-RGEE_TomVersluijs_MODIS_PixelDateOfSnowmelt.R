@@ -491,7 +491,7 @@
             print("Transform each image to a feature Collection of NDSI values for all pixels:")
             ee_monitoring(task_vector1, max_attempts = 5000)
 
-            exported_stats <- ee_drive_to_local(task = task_vector1, dsn=paste0(data_ID, "_Pixel_NDSI"))
+            exported_stats <- ee_drive_to_local(task = task_vector1, dsn=paste0("Output/", data_ID, "_Pixel_NDSI"))
             df_pixel_ndsi <- read.csv(exported_stats)
             b=Sys.time()
             print(paste0("Computation finished in ",  round(as.numeric(difftime(b, a, units="mins")),2), " minutes"))
@@ -573,16 +573,16 @@
             df_pixel_snowmelt <- lapply(results, "[[", 1)
             df_pixel_snowmelt <- as.data.frame(do.call(rbind, do.call(c, df_pixel_snowmelt)))
             colnames(df_pixel_snowmelt)[colnames(df_pixel_snowmelt)=="x_threshold"] <- "doy_snowmelt"
-            write.csv(df_pixel_snowmelt, file=paste0(data_ID, "_Pixel_Snowmelt_aoi.csv"), quote = FALSE, row.names=FALSE)
+            write.csv(df_pixel_snowmelt, file=paste0(here(), "/Output/", data_ID, "_Pixel_Snowmelt_aoi.csv"), quote = FALSE, row.names=FALSE)
             ##Read dataframe
-            #df_pixel_snowmelt <- read.csv(file=paste0(data_ID, "_Pixel_Snowmelt_aoi.csv"), header=TRUE)  
+            #df_pixel_snowmelt <- read.csv(file=paste0(here(), "/Output/", data_ID, "_Pixel_Snowmelt_aoi.csv"), header=TRUE)  
             
            #Store plots
             plot_pixel_snowmelt <- lapply(results, "[[", 2)
             plots_per_page = 25
             plot_pixel_snowmelt <- lapply(plot_pixel_snowmelt, function(x){split(x, ceiling(seq_along(plot_pixel_snowmelt[[1]])/plots_per_page))})
             plot_pixel_snowmelt <- unname(unlist(plot_pixel_snowmelt, recursive = F))
-            pdf(paste0(data_ID, "_Pixel_NDSI_Snowmelt_aoi.pdf"), width=20, height=16, onefile = TRUE)
+            pdf(paste0("Output/", data_ID, "_Pixel_NDSI_Snowmelt_aoi.pdf"), width=20, height=16, onefile = TRUE)
             for (i in seq(length(plot_pixel_snowmelt))) { do.call("grid.arrange", plot_pixel_snowmelt[[i]]) }
             dev.off()
         
@@ -867,7 +867,7 @@
                  task_vector5$start()
                  print("Transform image_snowmelt to a feature Collection of doy_snowmelt values for all pixels:")
                  ee_monitoring(task_vector5, max_attempts = 5000)
-                 exported_stats <- ee_drive_to_local(task = task_vector5, dsn=paste0(data_ID, "_Pixel_Snowmelt_shapefile"))
+                 exported_stats <- ee_drive_to_local(task = task_vector5, dsn=paste0("Output/", data_ID, "_Pixel_Snowmelt_shapefile"))
                  df_pixel_snowmelt_shapefile <- read.csv(exported_stats)
                  b=Sys.time()
                  print(paste0("Computation finished in ",  round(as.numeric(difftime(b, a, units="mins")),2), " minutes"))
@@ -879,12 +879,12 @@
                  df_pixel_snowmelt_shapefile <- df_pixel_snowmelt_shapefile[,c("pixel_ID", "doy_snowmelt")]
                  
               #(E): Save dataframe
-                write.csv(df_pixel_snowmelt_shapefile, file=paste0(data_ID, "_Pixel_Snowmelt_shapefile.csv"), quote = FALSE, row.names=FALSE)
+                write.csv(df_pixel_snowmelt_shapefile, file=paste0(here(), "/Output/", data_ID, "_Pixel_Snowmelt_shapefile.csv"), quote = FALSE, row.names=FALSE)
                  
         #(18): Save workspace
-         #save.image(paste0(data_ID, "_Backup_Workspace_PixelDateOfSnowmelt.RData"))
+         #save.image(paste0(here(), "/Output/", data_ID, "_Backup_Workspace_PixelDateOfSnowmelt.RData"))
          
-    #The snowmelt image is now completed and can be downloaded as .tif file from the RGEE_backup folder on my Google Drive.
+    #The snowmelt image is now completed and can be downloaded as .tif file from the RGEE_backup folder on the specified Google Drive.
     #The optional code below uses the generated snowmelt image to extract the snowmelt day of year at specific points of interest.
 
          
@@ -1075,7 +1075,7 @@
   #    #(13) Add Snowmelt_doy values per location to the corresponding date-location combination in ZAC_Paths
   #        ZAC_Paths$Date_doy <- as.numeric(strftime(ZAC_Paths$DateTime , format = "%j"))
   #        ZAC_Paths <- left_join(ZAC_Paths, Locations_BandValues, by=c("LocationID"))
-  #        write.csv(ZAC_Paths, paste0(data_ID, "_ChickMovement_Snowmelt_doy_Buffer", Buffer_radius_m, ".csv"), row.names = FALSE)
+  #        write.csv(ZAC_Paths, paste0(here(), "/Output/", data_ID, "_ChickMovement_Snowmelt_doy_Buffer", Buffer_radius_m, ".csv"), row.names = FALSE)
   # 
   #    #(14) Plot each individuals path through a landscape of Snowmelt doy values
   #        p1 <- ggplot()+
@@ -1088,7 +1088,7 @@
   #          ylab("Day of snowmelt") +
   #          theme_tom()
   #
-  #          ggsave(plot=p1, paste0(data_ID, "_MovementPaths_Snowmelt_doy_Grid_Buffer", Buffer_radius_m, ".pdf"), width=10, height = 8)
+  #          ggsave(plot=p1, paste0(here(), "/Output/", data_ID, "_MovementPaths_Snowmelt_doy_Grid_Buffer", Buffer_radius_m, ".pdf"), width=10, height = 8)
   # 
   #     #(15): There do not seem to be any clear trajectories in individuals moving up to areas with a later snowmelt (except maybe 8218556)
   #     #We therefore calculate the average encountered Snowmelt_doy values along each individual's foraging trajectory
@@ -1110,7 +1110,7 @@
   #          ylab("Upper asymptote bodymass (gram)") +
   #          theme_tom()
   #
-  #          ggsave(plot=p2, paste0(data_ID, "_GrowthParameter_Mean_Snowmelt_doy_Buffer", Buffer_radius_m, ".pdf"), width=10, height = 8)
+  #          ggsave(plot=p2, paste0(here(), "/Output/", data_ID, "_GrowthParameter_Mean_Snowmelt_doy_Buffer", Buffer_radius_m, ".pdf"), width=10, height = 8)
   # 
   #        #Construct linear mixed models:
   #        lmm0 <- lme(d ~ 1, random=~1|Brood, data=ZAC_Chicks_MeanBandvalue, method="ML")
@@ -1199,7 +1199,7 @@
 #                               breaks = seq(0, max(na.omit(df$Age)), by = 1))+
 #          new_scale_color()
 #          }
-#      ggsave(plot=p3, paste0(data_ID, "_Chick_Movement_Snowmelt.pdf"), width=13 , height=12 , units="in")
+#      ggsave(plot=p3, paste0(here(), "/Output/", data_ID, "_Chick_Movement_Snowmelt.pdf"), width=13 , height=12 , units="in")
          
          
 ##############################################################################################################################################################         
