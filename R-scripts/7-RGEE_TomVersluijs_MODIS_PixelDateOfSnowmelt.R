@@ -20,6 +20,7 @@
        library(mgcv)
        library(googledrive)
        library(dplyr)
+       library(here)
 
       #(2): Define ggplot2 plotting theme
        theme_tom <- function(){
@@ -31,7 +32,7 @@
              complete = TRUE)}
        
        #(3): Load auxiliary functions
-       source_files <- list.files(path=paste0(getwd(), "/Input"), full.names=TRUE, recursive = TRUE, pattern = "MODIS_AuxiliaryFunctions")
+       source_files <- list.files(path=paste0(here(), "/Input"), full.names=TRUE, recursive = TRUE, pattern = "MODIS_AuxiliaryFunctions")
        sapply(source_files, source, chdir = TRUE) ; rm(source_files)
        
       #(4): Initialize earth engine and google drive
@@ -166,7 +167,7 @@
          #empty (i.e. add 0 instead of NULL or NA in QGIS layer attribute table)
                  
          #Read aoi_Shapefile shapefile in root folder
-         root_fldr <- getwd()
+         root_fldr <- here()
          aoi_Shapefile <- st_read(paste0(root_fldr, "/Input/Shapefiles/", shapefile), quiet=T)
          aoi_Shapefile <- st_transform(aoi_Shapefile, crs=crs)
          aoi_Shapefile <- sf_as_ee(aoi_Shapefile)
@@ -951,7 +952,7 @@
   #      end_date_doy <- as.numeric(strftime(end_date, format = "%j"))
   # 
   #   #(7): Read aoi_Shapefile shapefile in root folder
-  #      root_fldr <- getwd()
+  #      root_fldr <- here()
   #      aoi_Shapefile <- st_read(paste0(root_fldr, "/Input/Shapefiles/", shapefile), quiet=T)
   #      aoi_Shapefile <- st_transform(aoi_Shapefile, crs=crs)
   #      aoi_Shapefile <- sf_as_ee(aoi_Shapefile)
