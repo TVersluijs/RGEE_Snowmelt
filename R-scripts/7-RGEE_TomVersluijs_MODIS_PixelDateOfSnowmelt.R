@@ -4,6 +4,9 @@
 
 #Copyright Tom Versluijs 2023-02-08. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
 
+#Before running this script make sure to install RGEE according to the instructions in script "00-RGEE_TomVersluijs_Installation.R". 
+#Note that a GoogleDrive is required.
+
 ##################################################################################################################################
 
 #I: Setup workspace
@@ -14,13 +17,19 @@
        rm(list=ls())
         
       #(1): Load packages
-       library(sf)
+       #install.packages("pacman")
+       library(pacman)
        library(rgee)
-       library(ggplot2)
-       library(mgcv)
-       library(googledrive)
-       library(dplyr)
-       library(here)
+       p_load(sf,
+              ggplot2,
+              mgcv,
+              googledrive,
+              dplyr,
+              here,
+              foreach,
+              parallel,
+              doSNOW,
+              gridExtra)       
 
       #(2): Define ggplot2 plotting theme
        theme_tom <- function(){
@@ -36,8 +45,8 @@
        sapply(source_files, source, chdir = TRUE) ; rm(source_files)
        
       #(4): Initialize earth engine and google drive
-       ee_Initialize(user='tom.versluijs@gmail.com', drive=TRUE)
-       #ee_check() 
+       rgee::ee_Initialize(user="tom.versluijs@gmail.com", drive = T)
+       #If this does not work then run "ee_install()" and restart R.
        
 ##################################################################################################################################
        
@@ -509,12 +518,6 @@
            #gigantic dataset (df_pixel_ndsi) as one chunk. The code becomes MUCH faster if we split this up into
            #several sub-datasets (e.g. based on subsets of 10000 unique pixel_IDs).
 
-           #Load packages that allow for parallel processing:
-            library(foreach)
-            library(parallel)
-            library(doSNOW)
-            library(gridExtra)
-
            #Specify number of cores:
             numCores <- detectCores()
 
@@ -895,11 +898,12 @@
   #    rm(list=ls())
   # 
   #   #(1): Load packages
-  #    library(sf)
+  #    library(pacman)
   #    library(rgee)
-  #    library(ggplot2)
-  #    library(mgcv)
-  #    library(dplyr)
+  #    p_load(sf,
+  #           ggplot2,
+  #           mgcv,
+  #           dplyr)
   # 
   #    #(2): Define ggplot2 plotting theme
   #     theme_tom <- function(){
@@ -911,7 +915,7 @@
   #               complete = TRUE)}
   # 
   #   #(3): Initialize earth engine and google drive
-  #    ee_Initialize(user='tom.versluijs@gmail.com', drive=TRUE)
+  #    rgee::ee_Initialize(user="tom.versluijs@gmail.com", drive = T)
   #    #ee_check()
   # 
   #   #(4): Specify parameters used in the analysis
@@ -1126,12 +1130,13 @@
 #    rm(list=ls())
 # 
 #   #(1): Load packages
+#    library(pacman)
 #    library(rgee)
-#    library(stars)
-#    library(ggplot2)
-#    library(colorspace)
-#    library(ggnewscale)
-#    library(future)
+#    p_load(stars,
+#           ggplot2,
+#           colorspace,
+#           ggnewscale,
+#           future)
 # 
 #    #Define ggplot2 plotting theme
 #     theme_tom <- function(){
@@ -1143,7 +1148,7 @@
 #                    complete = TRUE)}
 # 
 #   #(2): Initialize earth engine and google drive
-#     ee_Initialize(user='tom.versluijs@gmail.com', drive=TRUE)
+#     rgee::ee_Initialize(user="tom.versluijs@gmail.com", drive = T)
 #     #ee_check()
 # 
 #   #(3) Specify a unique data identifier
