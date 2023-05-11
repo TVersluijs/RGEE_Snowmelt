@@ -14,7 +14,7 @@
  # general libraries
   #install.packages("pacman")
   library(pacman)
-
+  p_load(here)
 
 ######################################################################################################################################
 
@@ -38,10 +38,10 @@
   ## install Miniconda3 at https://docs.conda.io/en/latest/miniconda.html (keep all default settings, i.e. install for local user only)
   ## open 'anaconda' in the command prompt (window button --> anaconda, you will see anaconda prompt)
   ## then type in the commands below one-by-one (without the #) to install the rgee_py environment and packages:
-  # conda create -n rgee_py pip python  #or "conda create -n rgee_py pip python=3.09" for a specific version
-  # activate rgee_py
+  # conda create -n rgee_py pip python     #or "conda create -n rgee_py pip python=3.09" for a specific version
+  # conda activate rgee_py
   # pip install google-api-python-client
-  # pip install earthengine-api   #or 'pip install earthengine-api==0.1.329' for specific version
+  # pip install earthengine-api            #or 'pip install earthengine-api==0.1.329' for specific version
   # pip install numpy
 
   ## ok conda should now be installed, now lets get the path to the environment, type inside anaconda:
@@ -51,7 +51,8 @@
   ## note the use of double backslashes \\ 
   ## this below is where is located in MY computer, you have to use the 'conda env list' command to find where it is located on yours
   rgee_environment_dir = "C:\\Users\\tomve\\miniconda3\\envs\\rgee_py"
-
+  saveRDS(object = rgee_environment_dir, file = paste0(here(), "/Input/rgee_environment_dir.rds"))
+  
 ######################################################################################################################################
 
 #(3): Install the gcloud CLI
@@ -62,7 +63,7 @@
   #install for local user only). https://cloud.google.com/sdk/docs/install
 
   # Can check that gcloud works within the rgee python environment : 
-  #     Run python.exe in 'rgee_environment_dir'
+  #     Run python.exe found in folder 'rgee_environment_dir'
   #     In the python console :
   #         import ee
   #         ee.Authenticate()
@@ -175,7 +176,7 @@
   rgee::ee_check_gcloud()
   #potential gcloud error might be due to misspecification of path in which is checked for gcloud
 
-  #Make sure an .Renviron file is generated in D:/Documents with the following information (without hashtag)
+  #Make sure an .Renviron file is generated in ~//Documents with the following information (without hashtag)
    #PATH="${RTOOLS42_HOME}\usr\bin;${PATH}"
    #EARTHENGINE_INIT_MESSAGE="True"
    #EARTHENGINE_PYTHON="C:\Users\tomve\miniconda3\envs\rgee_py"
