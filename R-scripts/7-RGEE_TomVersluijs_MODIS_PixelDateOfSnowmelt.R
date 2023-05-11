@@ -13,23 +13,16 @@
 
 ##################################################################################################################################
 
-      #(0): Clear workspace
+      #(0): Clear workspace and set python environment
        rm(list=ls())
-        
+       library(here)
+       rgee_environment_dir <- readRDS(paste0(here::here(), "/Input/rgee_environment_dir.rds"))
+       reticulate::use_python(rgee_environment_dir, required=T)
+       reticulate::py_config()
+
       #(1): Load packages
-       #install.packages("pacman")
        library(pacman)
-       library(rgee)
-       p_load(sf,
-              ggplot2,
-              mgcv,
-              googledrive,
-              dplyr,
-              here,
-              foreach,
-              parallel,
-              doSNOW,
-              gridExtra)       
+       p_load(sf, rgee, ggplot2, mgcv, googledrive, dplyr, foreach, parallel, doSNOW, gridExtra)       
 
       #(2): Define ggplot2 plotting theme
        theme_tom <- function(){
@@ -46,7 +39,7 @@
        
       #(4): Initialize earth engine and google drive
        rgee::ee_Initialize(user="tom.versluijs@gmail.com", drive = T)
-       #If this does not work then run "ee_install()" and restart R.
+       
        
 ##################################################################################################################################
        
