@@ -135,8 +135,8 @@
           
         #Create a unique Asset folder (delete this folder if already present) 
          path_asset <- paste0(ee_get_assethome(), "/", data_ID)
-         #ee_manage_assetlist(path_asset)
-         ee_manage_delete(path_asset)
+         #tryCatch(ee_manage_assetlist(path_asset), error=function(error_message) {message("path_asset does not yet exist")})
+         tryCatch(ee_manage_delete(path_asset), error=function(error_message) {message("path_asset does not yet exist")})
          ee_manage_create(path_asset=path_asset, asset_type="Folder")
          ee_manage_assetlist()
       
