@@ -274,15 +274,20 @@ of NULL or NA in QGIS layer attribute table)
                                list('B4'=image$select('sur_refl_b04'),
                                     'B2'=image$select('sur_refl_b02')))
 
-  #Plot all image Bands
+  #Plot RGB image
    Map$setCenter(coordinates_point[1], coordinates_point[2], 10)
-   Map$addLayer(image,list(bands=c("sur_refl_b01", "sur_refl_b04", "sur_refl_b03"), min=100, max=8000, gamma=c(1.9, 1.7, 1.7)), 'TRUE COLOR')+
-   Map$addLayer(ndsi_MODIS,list(min=-1, max=1.5, palette=c('black', '0dffff', '0524ff', 'ffffff')), 'NDSI')+
-   Map$addLayer(ndvi_MODIS,list(min=-1, max=1, palette=c('#FF0000','#00FF00')), 'NDVI')+
-   Map$addLayer(ndwi_MODIS,list(min=0, max=1, palette=c('000000', '0dffff', '0524ff', 'ffffff')), 'NDWI')
+   Map$addLayer(image,list(bands=c("sur_refl_b01", "sur_refl_b04", "sur_refl_b03"), min=100, max=8000, gamma=c(1.9, 1.7, 1.7)), 'TRUE COLOR')
 ```
 
 ![](R-markdown_test_files/figure-gfm/read%20shapefile%20and%20plot%20initial%20data-1.png)<!-- -->
+
+``` r
+  #Plot NDSI image
+   Map$setCenter(coordinates_point[1], coordinates_point[2], 10)
+   Map$addLayer(ndsi_MODIS,list(min=-1, max=1.5, palette=c('black', '0dffff', '0524ff', 'ffffff')), 'NDSI')
+```
+
+![](R-markdown_test_files/figure-gfm/read%20shapefile%20and%20plot%20initial%20data-2.png)<!-- -->
 
 ### (9) Add NDSI, NDVI, NDMI and NDWI to the clipped image collection
 
