@@ -252,7 +252,7 @@
          
 ##################################################################################################################################
         
-#IV: Filter and mask clouds within the image collection
+#V: Filter and mask clouds within the image collection
         
 ##################################################################################################################################
 
@@ -391,7 +391,7 @@
 
 ##################################################################################################################################
          
-#V: Mask permanent waterbodies (ponds, lakes, rivers, sea) within the image collection
+#VI: Mask permanent waterbodies (ponds, lakes, rivers, sea) within the image collection
          
 ##################################################################################################################################            
       
@@ -438,7 +438,7 @@
          
 ##################################################################################################################################
         
-#VI: Calculate the date of snowmelt for every pixel within the study area by fitting a GAM through the NDSI data
+#VII: Calculate the date of snowmelt for every pixel within the study area by fitting a GAM through the NDSI data
         
 ##################################################################################################################################            
          
