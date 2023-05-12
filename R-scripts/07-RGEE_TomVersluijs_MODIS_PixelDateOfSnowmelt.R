@@ -147,7 +147,7 @@
          
 ##################################################################################################################################
 
-      #(6) Extract MODIS satellite Surface Reflectance images for specified daterange and general area of interest
+      #(7) Extract MODIS satellite Surface Reflectance images for specified daterange and general area of interest
        
        #Note that specifying a region of interest using a polygon does not function properly for the MODIS data. 
        #Instead, providing an initial point and then afterwards clipping the image to a desired area of interest works better.
@@ -163,7 +163,7 @@
            filterBounds(point)$
            filterDate(start_date, end_date)
          
-      #(7) Read study area shapefile as a feature collection and clip image collection to area of interest
+      #(8) Read study area shapefile as a feature collection and clip image collection to area of interest
         
          #Make sure that the shapefile is in EPSG:326XX format (UTM). In addition the 'id' column of the shapefile should not be 
          #empty (i.e. add 0 instead of NULL or NA in QGIS layer attribute table)
@@ -220,7 +220,7 @@
            Map$addLayer(ndvi_MODIS,list(min=-1, max=1, palette=c('#FF0000','#00FF00')), 'NDVI')+
            Map$addLayer(ndwi_MODIS,list(min=0, max=1, palette=c('000000', '0dffff', '0524ff', 'ffffff')), 'NDWI')
        
-      #(8) Add NDSI, NDVI, NDMI and NDWI to the clipped image collection
+      #(9) Add NDSI, NDVI, NDMI and NDWI to the clipped image collection
         
         #Map normalized Difference functions over image collection
         MODIS_col <- MODIS_col$
@@ -229,7 +229,7 @@
           map(getNDMI)$
           map(getNDWI)
       
-      #(9) Create a timeseries gif of RGB images for the aoi_Shapefile shapefile (for debugging)
+      #(10) Create a timeseries gif of RGB images for the aoi_Shapefile shapefile (for debugging)
         
         # #Check number of images in collection
         #  MODIS_col$size()$getInfo()
@@ -272,7 +272,7 @@
      #(Wilson et al 2014), while the PGE11 internal cloud mask detects clouds based on two reflective testes and a thermal test. Usually
      #clouds are filtered if one or both of these two algorithms detects clouds (Wilson et al 2014).
 
-      #(10) Add cloud information within the aoi to the image collection: 
+      #(11) Add cloud information within the aoi to the image collection: 
 
         #Add the cloud fraction within the area of interest to each separate image by mapping the cloud functions over the image collection
         MODIS_col <- MODIS_col$
@@ -339,7 +339,7 @@
 
         #These images also indicate that the PGE11 algorithm does a more conservative job that better matches clouds in the RGB images than the MOD35 algorithm.
 
-      #(11): Exclude all images from the image collection that have a CloudFraction value >= max_cloud_fraction, and mask all cloud pixels within the remaining images
+      #(12): Exclude all images from the image collection that have a CloudFraction value >= max_cloud_fraction, and mask all cloud pixels within the remaining images
         
         #In the analysis for the whole study area we exclude images with more than 20% snowcover within our area of 
         #interest. However, now we're interested in individual pixels. So even when 90% of the area of interest is 
@@ -395,7 +395,7 @@
          
 ##################################################################################################################################            
       
-   #Mask permanent waterbodies if mask_water==TRUE
+   #(13): Mask permanent waterbodies if mask_water==TRUE
    if(mask_water==TRUE){   
          
       #(A): print message   
@@ -442,7 +442,7 @@
         
 ##################################################################################################################################            
          
-      #(13): Calculate the date of snowmelt (NDSI <= NDSI_threshold) for every pixel within the study area (bounding box!) 
+      #(14): Calculate the date of snowmelt (NDSI <= NDSI_threshold) for every pixel within the study area (bounding box!) 
        
           #(A): Transform each image to a feature Collection of NDSI values for all pixels within 'aoi'
          
@@ -583,7 +583,7 @@
            #withing the aoi (i.e. the defined bounding box). To be able to plot these data we transform this dataframe to a feature 
            #collection and then transform this feature collection to an image.
             
-       #(14): Transform df_pixel_snowmelt to a feature collection with random geometry
+       #(15): Transform df_pixel_snowmelt to a feature collection with random geometry
             
            #Generate some random longitude and latitude values as this is required for an sf object:
             df_pixel_snowmelt$lon <- runif(nrow(df_pixel_snowmelt), 0, 74)
@@ -640,7 +640,7 @@
              ee_manage_quota()
              ee_manage_assetlist(path_asset)
             
-        #(15): Add geometry (latitude and longitude) of each pixel_ID to FC_pixels_snowmelt
+        #(16): Add geometry (latitude and longitude) of each pixel_ID to FC_pixels_snowmelt
              
            #The feature collection that we want to construct should contain 'pixel_ID' and 'doy_snowmelt' as properties and should contain
            #the original geometry corresponding to each pixel_ID. So far, FC_pixels_snowmelt contains a separate feature for each pixel, where
@@ -753,7 +753,7 @@
                #FC_pixels_snowmelt_optimized$first()$getInfo()
                #FC_pixels_snowmelt_optimized$size()$getInfo()
            
-        #(16): Transform the Feature collection FC_pixels_snowmelt_optimized to an image (with doy_snowmelt as an image band)
+        #(17): Transform the Feature collection FC_pixels_snowmelt_optimized to an image (with doy_snowmelt as an image band)
                
               #(A): Reduce feature collection FC_pixels_snowmelt_optimized to an Image with a 500m resolution:    
                image_snowmelt <- FC_pixels_snowmelt_optimized$
@@ -822,7 +822,7 @@
                  ee_monitoring(task_vector4, max_attempts = 5000)
                  ee_drive_to_local(task = task_vector4, dsn=paste0("Output/", data_ID, "_PixelSnowmeltDoy_Image_RGB"))
                  
-        #17: Extract the date of snowmelt for all pixels within image_snowmelt (i.e. clipped by aoi_Shapefile)         
+        #18: Extract the date of snowmelt for all pixels within image_snowmelt (i.e. clipped by aoi_Shapefile)         
                  
               #(A): Extract the date of snowmelt at each pixel within image_snowmelt and store each pixel value as a separate feature.
               #The resulting output is a feature collection of all features (pixels) for the current image
@@ -876,7 +876,7 @@
               #(E): Save dataframe
                 write.csv(df_pixel_snowmelt_shapefile, file=paste0(here(), "/Output/", data_ID, "_Pixel_Snowmelt_shapefile.csv"), quote = FALSE, row.names=FALSE)
                  
-        #(18): Save workspace
+        #(19): Save workspace
          #save.image(paste0(here(), "/Output/", data_ID, "_Backup_Workspace_PixelDateOfSnowmelt.RData"))
          
     #The snowmelt image is now completed and can be downloaded as .tif file from the RGEE_backup folder on the specified Google Drive.
