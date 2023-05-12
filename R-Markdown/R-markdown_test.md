@@ -1,13 +1,18 @@
-RGEE MODIS - Calculate the date of snowmelt for all pixels within an
-area of interest (shapefile)
-================
-Tom Versluijs
-2023-05-12
+---
+title: "RGEE MODIS - Calculate the date of snowmelt for all pixels within an area of interest (shapefile)"
+author: "Tom Versluijs"
+date: "2023-05-12"
+output: 
+  html_document:
+    keep_md: true
+#always_allow_html: true
+---
 
-Extract MODIS satellite data and Calculate the date of snowmelt for
-every 500mx500m pixel in an area of interest (shapefile).
 
-## Copyright Tom Versluijs 2023-02-08. Do not use this code without permission. Contact information: <tom.versluijs@gmail.com>
+
+Extract MODIS satellite data and Calculate the date of snowmelt for every 500mx500m pixel in an area of interest (shapefile).
+
+## Copyright Tom Versluijs 2023-02-08. Do not use this code without permission. Contact information: [tom.versluijs\@gmail.com](mailto:tom.versluijs@gmail.com){.email}
 
 # I. Setup Workspace
 
@@ -15,46 +20,44 @@ every 500mx500m pixel in an area of interest (shapefile).
 
 ### (1): Clear workspace and load packages
 
-``` r
+
+```r
   #Clear workspace and set python environment
    rm(list=ls())
    library(here)
    rgee_environment_dir <- readRDS(paste0(here::here(), "/Input/rgee_environment_dir.rds"))
    reticulate::use_python(rgee_environment_dir, required=T)
-```
-
-    ## Warning: The request to
-    ## `use_python("C:\Users\tomve\miniconda3\envs\rgee_py/python.exe")` will be
-    ## ignored because the environment variable RETICULATE_PYTHON is set to
-    ## "C:\Users\tomve\miniconda3\envs\rgee_py"
-
-``` r
    reticulate::py_config()
 ```
 
-    ## python:         C:/Users/tomve/miniconda3/envs/rgee_py/python.exe
-    ## libpython:      C:/Users/tomve/miniconda3/envs/rgee_py/python311.dll
-    ## pythonhome:     C:/Users/tomve/miniconda3/envs/rgee_py
-    ## version:        3.11.3 | packaged by Anaconda, Inc. | (main, Apr 19 2023, 23:46:34) [MSC v.1916 64 bit (AMD64)]
-    ## Architecture:   64bit
-    ## numpy:          C:/Users/tomve/miniconda3/envs/rgee_py/Lib/site-packages/numpy
-    ## numpy_version:  1.24.3
-    ## 
-    ## NOTE: Python version was forced by RETICULATE_PYTHON
+```
+## python:         C:/Users/tomve/miniconda3/envs/rgee_py/python.exe
+## libpython:      C:/Users/tomve/miniconda3/envs/rgee_py/python311.dll
+## pythonhome:     C:/Users/tomve/miniconda3/envs/rgee_py
+## version:        3.11.3 | packaged by Anaconda, Inc. | (main, Apr 19 2023, 23:46:34) [MSC v.1916 64 bit (AMD64)]
+## Architecture:   64bit
+## numpy:          C:/Users/tomve/miniconda3/envs/rgee_py/Lib/site-packages/numpy
+## numpy_version:  1.24.3
+## 
+## NOTE: Python version was forced by use_python function
+```
 
-``` r
+```r
   #Load packages
    library(pacman)
    p_load(sf, rgee, ggplot2, mgcv, googledrive, dplyr, foreach, parallel, doSNOW, gridExtra, webshot)
-   webshot::install_phantomjs()
+   webshot::install_phantomjs(force=TRUE)
 ```
 
-    ## Warning in utils::download.file(url, method = method, ...): the 'wininet'
-    ## method is deprecated for http:// and https:// URLs
+```
+## Warning in utils::download.file(url, method = method, ...): the 'wininet'
+## method is deprecated for http:// and https:// URLs
+```
 
 ### (2): Define ggplot2 plotting theme
 
-``` r
+
+```r
     theme_tom <- function(){
        theme_classic() %+replace%
        theme(axis.title = element_text(size=18),
@@ -66,23 +69,30 @@ every 500mx500m pixel in an area of interest (shapefile).
 
 ### (3): Load auxiliary functions
 
-``` r
+
+```r
    source_files <- list.files(path=paste0(here(), "/Input"), full.names=TRUE, recursive = TRUE, pattern = "MODIS_AuxiliaryFunctions")
    sapply(source_files, source, chdir = TRUE) ; rm(source_files)
 ```
 
 ### (4): Initialize earth engine and google drive
 
-``` r
+
+```r
    rgee::ee_Initialize(user="tom.versluijs@gmail.com", drive = T)
 ```
 
-    ## ── rgee 1.1.6.9999 ────────────────────────────────── earthengine-api 0.1.353 ── 
-    ##  ✔ user: tom.versluijs@gmail.com 
-    ##  ✔ Google Drive credentials: ✔ Google Drive credentials:  FOUND
-    ##  ✔ Initializing Google Earth Engine: ✔ Initializing Google Earth Engine:  DONE!
-    ##  ✔ Earth Engine account: users/escape 
-    ## ────────────────────────────────────────────────────────────────────────────────
+```
+## ── rgee 1.1.6.9999 ────────────────────────────────── earthengine-api 0.1.353 ── 
+##  ✔ user: tom.versluijs@gmail.com 
+##  ✔ Google Drive credentials:
+ ✔ Google Drive credentials:  FOUND
+##  ✔ Initializing Google Earth Engine:
+ ✔ Initializing Google Earth Engine:  DONE!
+## 
+ ✔ Earth Engine account: users/escape 
+## ────────────────────────────────────────────────────────────────────────────────
+```
 
 ------------------------------------------------------------------------
 
@@ -92,7 +102,8 @@ every 500mx500m pixel in an area of interest (shapefile).
 
 ### (5): Specify parameters used in analysis
 
-``` r
+
+```r
    #(a): MODIS satellite
 
      #Specify resolution of images in meters
@@ -173,7 +184,8 @@ every 500mx500m pixel in an area of interest (shapefile).
 
 ### (6) Create a unique dataID and asset folder for storing generated datafiles
 
-``` r
+
+```r
     #Create a unique data_ID
      data_ID <- paste0(area_name, substr(year_ID,(nchar(year_ID)+1)-2,nchar(year_ID)), "_MODIS")
      data_ID <- paste0(data_ID, "_", MODIS_cloud_masking_algorithm)
@@ -184,15 +196,19 @@ every 500mx500m pixel in an area of interest (shapefile).
      ee_manage_delete(path_asset)
 ```
 
-    ## EE object deleted: users/escape/ZAC22_MODIS_PGE11
+```
+## EE object deleted: users/escape/ZAC22_MODIS_PGE11
+```
 
-``` r
+```r
      ee_manage_create(path_asset=path_asset, asset_type="Folder")
 ```
 
-    ## GEE asset: users/escape/ZAC22_MODIS_PGE11 created
+```
+## GEE asset: users/escape/ZAC22_MODIS_PGE11 created
+```
 
-``` r
+```r
      #ee_manage_assetlist()
 ```
 
@@ -204,12 +220,10 @@ every 500mx500m pixel in an area of interest (shapefile).
 
 ### (7) Extract MODIS satellite Surface Reflectance images for specified daterange and general area of interest
 
-Note that specifying a region of interest using a polygon does not
-function properly for the MODIS data. Instead, providing an initial
-point and then afterwards clipping the image to a desired area of
-interest works better.
+Note that specifying a region of interest using a polygon does not function properly for the MODIS data. Instead, providing an initial point and then afterwards clipping the image to a desired area of interest works better.
 
-``` r
+
+```r
     #Specify starting and ending date
      start_date_doy <- as.numeric(strftime(start_date, format = "%j"))
      end_date_doy <- as.numeric(strftime(end_date, format = "%j"))
@@ -224,11 +238,11 @@ interest works better.
 
 ### (8) Read study area shapefile as a feature collection and clip image collection to area of interest
 
-Make sure that the shapefile is in EPSG:326XX format (UTM). In addition
-the ‘id’ column of the shapefile should not be empty (i.e. add 0 instead
-of NULL or NA in QGIS layer attribute table)
+Make sure that the shapefile is in EPSG:326XX format (UTM). In addition the 'id' column of the shapefile should not be 
+empty (i.e. add 0 instead of NULL or NA in QGIS layer attribute table)
 
-``` r
+
+```r
     #Read aoi_Shapefile shapefile in root folder
      root_fldr <- here()
      aoi_Shapefile <- st_read(paste0(root_fldr, "/Input/Shapefiles/", shapefile), quiet=T)
@@ -236,11 +250,13 @@ of NULL or NA in QGIS layer attribute table)
      aoi_Shapefile <- sf_as_ee(aoi_Shapefile)
 ```
 
-    ## Registered S3 method overwritten by 'geojsonsf':
-    ##   method        from   
-    ##   print.geojson geojson
+```
+## Registered S3 method overwritten by 'geojsonsf':
+##   method        from   
+##   print.geojson geojson
+```
 
-``` r
+```r
      aoi_Shapefile <- ee$FeatureCollection(aoi_Shapefile)
 
     #Calculate the size of the study area in km2:
@@ -254,9 +270,11 @@ of NULL or NA in QGIS layer attribute table)
      paste0('Size of study area calculated using the pixel area method: ', round(ee$Number(area2$get('area'))$getInfo(),3), ' km2')
 ```
 
-    ## [1] "Size of study area calculated using the pixel area method: 50.008 km2"
+```
+## [1] "Size of study area calculated using the pixel area method: 50.008 km2"
+```
 
-``` r
+```r
     #Clip all images to area of interest (aoi). Clipping to shapefile will occur at step 16B of this script
      MODIS_col <- MODIS_col$map(function(img){return(img$clip(aoi))})
 
@@ -293,6 +311,11 @@ of NULL or NA in QGIS layer attribute table)
        Map$addLayer(ndwi_MODIS,list(min=0, max=1, palette=c('000000', '0dffff', '0524ff', 'ffffff')), 'NDWI')
 ```
 
-![](R-markdown_test_files/figure-gfm/read%20shapefile%20and%20plot%20initial%20data-1.png)<!-- -->
+```{=html}
+<div class="leaflet html-widget html-fill-item-overflow-hidden html-fill-item" id="htmlwidget-3d489d45d9ab46282285" style="width:672px;height:480px;"></div>
+<script type="application/json" data-for="htmlwidget-3d489d45d9ab46282285">{"x":{"options":{"minZoom":1,"maxZoom":24,"crs":{"crsClass":"L.CRS.EPSG3857","code":null,"proj4def":null,"projectedBounds":null,"options":{}},"preferCanvas":false,"bounceAtZoomLimits":false,"maxBounds":[[[-90,-370]],[[90,370]]]},"calls":[{"method":"addProviderTiles","args":["CartoDB.Positron","CartoDB.Positron","CartoDB.Positron",{"errorTileUrl":"","noWrap":false,"detectRetina":false,"pane":"tilePane","maxZoom":24}]},{"method":"addProviderTiles","args":["OpenStreetMap","OpenStreetMap","OpenStreetMap",{"errorTileUrl":"","noWrap":false,"detectRetina":false,"pane":"tilePane","maxZoom":24}]},{"method":"addProviderTiles","args":["CartoDB.DarkMatter","CartoDB.DarkMatter","CartoDB.DarkMatter",{"errorTileUrl":"","noWrap":false,"detectRetina":false,"pane":"tilePane","maxZoom":24}]},{"method":"addProviderTiles","args":["Esri.WorldImagery","Esri.WorldImagery","Esri.WorldImagery",{"errorTileUrl":"","noWrap":false,"detectRetina":false,"pane":"tilePane","maxZoom":24}]},{"method":"addProviderTiles","args":["OpenTopoMap","OpenTopoMap","OpenTopoMap",{"errorTileUrl":"","noWrap":false,"detectRetina":false,"pane":"tilePane","maxZoom":24}]},{"method":"addLayersControl","args":[["CartoDB.Positron","OpenStreetMap","CartoDB.DarkMatter","Esri.WorldImagery","OpenTopoMap"],[],{"collapsed":true,"autoZIndex":true,"position":"topleft"}]},{"method":"addScaleBar","args":[{"maxWidth":100,"metric":true,"imperial":true,"updateWhenIdle":true,"position":"bottomleft"}]},{"method":"addTiles","args":["https://earthengine.googleapis.com/v1alpha/projects/earthengine-legacy/maps/581e05a7d3f792b0f8ce13e8fb1a8732-5c2b8f45ba446576e64c571d1147247d/tiles/{z}/{x}/{y}","TRUE COLOR","TRUE COLOR",{"minZoom":0,"maxZoom":24,"tileSize":256,"subdomains":"abc","errorTileUrl":"","tms":false,"noWrap":false,"zoomOffset":0,"zoomReverse":false,"opacity":1,"zIndex":1,"detectRetina":false}]},{"method":"addLayersControl","args":[["CartoDB.Positron","OpenStreetMap","CartoDB.DarkMatter","Esri.WorldImagery","OpenTopoMap"],"TRUE COLOR",{"collapsed":true,"autoZIndex":true,"position":"topleft"}]},{"method":"hideGroup","args":[null]},{"method":"addTiles","args":["https://earthengine.googleapis.com/v1alpha/projects/earthengine-legacy/maps/5d6de8dd7c83fbf1b648270225721286-eeb4a2ac4083c391c42dcbefe3b6fecb/tiles/{z}/{x}/{y}","NDSI","NDSI",{"minZoom":0,"maxZoom":18,"tileSize":256,"subdomains":"abc","errorTileUrl":"","tms":false,"noWrap":false,"zoomOffset":0,"zoomReverse":false,"opacity":1,"zIndex":1,"detectRetina":false}]},{"method":"addLayersControl","args":[["CartoDB.Positron","OpenStreetMap","CartoDB.DarkMatter","Esri.WorldImagery","OpenTopoMap"],["TRUE COLOR","NDSI"],{"collapsed":true,"autoZIndex":true,"position":"topleft"}]},{"method":"hideGroup","args":[null]},{"method":"addTiles","args":["https://earthengine.googleapis.com/v1alpha/projects/earthengine-legacy/maps/9747b8425ed6fe87650fa29e471a96ba-aead89bdc650551d73c13db0c9419be9/tiles/{z}/{x}/{y}","NDVI","NDVI",{"minZoom":0,"maxZoom":18,"tileSize":256,"subdomains":"abc","errorTileUrl":"","tms":false,"noWrap":false,"zoomOffset":0,"zoomReverse":false,"opacity":1,"zIndex":1,"detectRetina":false}]},{"method":"addLayersControl","args":[["CartoDB.Positron","OpenStreetMap","CartoDB.DarkMatter","Esri.WorldImagery","OpenTopoMap"],["TRUE COLOR","NDSI","NDVI"],{"collapsed":true,"autoZIndex":true,"position":"topleft"}]},{"method":"hideGroup","args":[null]},{"method":"addTiles","args":["https://earthengine.googleapis.com/v1alpha/projects/earthengine-legacy/maps/300626e7ce7e21a22e6a869ba42b0546-a5b18f0b854ca4f22a26bf79a8ee2de9/tiles/{z}/{x}/{y}","NDWI","NDWI",{"minZoom":0,"maxZoom":18,"tileSize":256,"subdomains":"abc","errorTileUrl":"","tms":false,"noWrap":false,"zoomOffset":0,"zoomReverse":false,"opacity":1,"zIndex":1,"detectRetina":false}]},{"method":"addLayersControl","args":[["CartoDB.Positron","OpenStreetMap","CartoDB.DarkMatter","Esri.WorldImagery","OpenTopoMap"],["TRUE COLOR","NDSI","NDVI","NDWI"],{"collapsed":true,"autoZIndex":true,"position":"topleft"}]},{"method":"hideGroup","args":[null]}],"setView":[[74.49,-20.49],10,[]]},"evals":[],"jsHooks":{"render":[{"code":"function(el, x, data) {\n  return (\n      function(el, x, data) {\n      // get the leaflet map\n      var map = this; //HTMLWidgets.find('#' + el.id);\n      // we need a new div element because we have to handle\n      // the mouseover output separately\n      // debugger;\n      function addElement () {\n      // generate new div Element\n      var newDiv = $(document.createElement('div'));\n      // append at end of leaflet htmlwidget container\n      $(el).append(newDiv);\n      //provide ID and style\n      newDiv.addClass('lnlt');\n      newDiv.css({\n      'position': 'relative',\n      'bottomleft':  '0px',\n      'background-color': 'rgba(255, 255, 255, 0.7)',\n      'box-shadow': '0 0 2px #bbb',\n      'background-clip': 'padding-box',\n      'margin': '0',\n      'padding-left': '5px',\n      'color': '#333',\n      'font': '9px/1.5 \"Helvetica Neue\", Arial, Helvetica, sans-serif',\n      'z-index': '700',\n      });\n      return newDiv;\n      }\n\n\n      // check for already existing lnlt class to not duplicate\n      var lnlt = $(el).find('.lnlt');\n\n      if(!lnlt.length) {\n      lnlt = addElement();\n\n      // grab the special div we generated in the beginning\n      // and put the mousmove output there\n\n      map.on('mousemove', function (e) {\n      if (e.originalEvent.ctrlKey) {\n      if (document.querySelector('.lnlt') === null) lnlt = addElement();\n      lnlt.text(\n                           ' lon: ' + (e.latlng.lng).toFixed(5) +\n                           ' | lat: ' + (e.latlng.lat).toFixed(5) +\n                           ' | zoom: ' + map.getZoom() +\n                           ' | x: ' + L.CRS.EPSG3857.project(e.latlng).x.toFixed(0) +\n                           ' | y: ' + L.CRS.EPSG3857.project(e.latlng).y.toFixed(0) +\n                           ' | epsg: 3857 ' +\n                           ' | proj4: +proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +no_defs ');\n      } else {\n      if (document.querySelector('.lnlt') === null) lnlt = addElement();\n      lnlt.text(\n                      ' lon: ' + (e.latlng.lng).toFixed(5) +\n                      ' | lat: ' + (e.latlng.lat).toFixed(5) +\n                      ' | zoom: ' + map.getZoom() + ' ');\n      }\n      });\n\n      // remove the lnlt div when mouse leaves map\n      map.on('mouseout', function (e) {\n      var strip = document.querySelector('.lnlt');\n      if( strip !==null) strip.remove();\n      });\n\n      };\n\n      //$(el).keypress(67, function(e) {\n      map.on('preclick', function(e) {\n      if (e.originalEvent.ctrlKey) {\n      if (document.querySelector('.lnlt') === null) lnlt = addElement();\n      lnlt.text(\n                      ' lon: ' + (e.latlng.lng).toFixed(5) +\n                      ' | lat: ' + (e.latlng.lat).toFixed(5) +\n                      ' | zoom: ' + map.getZoom() + ' ');\n      var txt = document.querySelector('.lnlt').textContent;\n      console.log(txt);\n      //txt.innerText.focus();\n      //txt.select();\n      setClipboardText('\"' + txt + '\"');\n      }\n      });\n\n      }\n      ).call(this.getMap(), el, x, data);\n}","data":null},{"code":"function(el, x, data) {\n  return (function(el,x,data){\n           var map = this;\n\n           map.on('keypress', function(e) {\n               console.log(e.originalEvent.code);\n               var key = e.originalEvent.code;\n               if (key === 'KeyE') {\n                   var bb = this.getBounds();\n                   var txt = JSON.stringify(bb);\n                   console.log(txt);\n\n                   setClipboardText('\\'' + txt + '\\'');\n               }\n           })\n        }).call(this.getMap(), el, x, data);\n}","data":null}]}}</script>
+```
+
+
 
 Built with R-version 4.3.0

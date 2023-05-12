@@ -2,8 +2,10 @@
 title: "RGEE MODIS - Calculate the date of snowmelt for all pixels within an area of interest (shapefile)"
 author: "Tom Versluijs"
 date: "`r Sys.Date()`"
-output: github_document
-always_allow_html: true
+output: 
+  html_document:
+    keep_md: true
+#always_allow_html: true
 ---
 
 ```{r setup, include=FALSE}
@@ -31,7 +33,7 @@ Extract MODIS satellite data and Calculate the date of snowmelt for every 500mx5
   #Load packages
    library(pacman)
    p_load(sf, rgee, ggplot2, mgcv, googledrive, dplyr, foreach, parallel, doSNOW, gridExtra, webshot)
-   webshot::install_phantomjs()
+   webshot::install_phantomjs(force=TRUE)
    
 ```
 
