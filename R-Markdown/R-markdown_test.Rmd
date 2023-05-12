@@ -3,6 +3,7 @@ title: "RGEE MODIS - Calculate the date of snowmelt for all pixels within an are
 author: "Tom Versluijs"
 date: "`r Sys.Date()`"
 output: github_document
+#output: html_notebook
 ---
 
 ```{r setup, include=FALSE}
@@ -285,6 +286,14 @@ Make sure that the shapefile is in EPSG:326XX format (UTM). In addition the 'id'
 
 ```
 
+------------------------------------------------------------------------
+
+# V. Filter and mask clouds within the image collection
+
+------------------------------------------------------------------------
+
+
+TOM CONTINUE WITH LINE 259 OF SCRIPT NR 7.
 
 
 

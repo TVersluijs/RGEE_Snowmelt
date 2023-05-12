@@ -321,4 +321,12 @@ of NULL or NA in QGIS layer attribute table)
 #  browseURL(MODIS_snow_RGB$getVideoThumbURL(videoArgs))
 ```
 
+------------------------------------------------------------------------
+
+# V. Filter and mask clouds within the image collection
+
+------------------------------------------------------------------------
+
+TOM CONTINUE WITH LINE 259 OF SCRIPT NR 7.
+
 Built with R-version 4.3.0
