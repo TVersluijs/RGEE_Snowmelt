@@ -75,7 +75,7 @@
    clouds_buffered <- clouds$
                         focalMin(radius=cld_erosion, units="meters")$
                         focalMax(radius=cld_buffer, units="meters")$
-                        reproject(crs=img$select(0)$projection(), scale=resolution_cldmsk)$
+                        #reproject(crs=crs, scale=resolution_cldmsk)$ #if error revert crs to "crs=img$select(0)$projection()", and uncomment
                         rename('clouds')
    
    #(D): Create an inverse of the clouds_buffered band
@@ -99,7 +99,8 @@
     CloudFraction = clouds$reduceRegion(
       reducer = ee$Reducer$mean(),
       geometry = aoi_Shapefile,
-      scale = resolution_cldmsk
+      scale = resolution_cldmsk,
+      maxPixels=100000000
       )$get('clouds')
   
    #(C): Add CloudFraction as an image property to each image
