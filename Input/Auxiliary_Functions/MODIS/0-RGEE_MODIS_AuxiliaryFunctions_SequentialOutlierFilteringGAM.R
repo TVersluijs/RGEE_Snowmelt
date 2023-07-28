@@ -27,6 +27,9 @@
                                   outlier_thresh_2=outlier_thresh_2,
                                   default_k=10){
     
+    #Remove all rows with NA in columns 'x' or 'y'
+     data <- data[!is.na(data[,x]) & !is.na(data[,y]),]
+   
     #Find range of data
      data_range <- (max(data[,y]) - min(data[,y]))
     
