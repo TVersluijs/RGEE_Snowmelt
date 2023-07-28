@@ -24,7 +24,7 @@
  add_Time <- function(img){
     seconds <- ee$Number(ee$Date(img$get('system:time_start'))$getRelative('second', 'year'))
     seconds_img <- ee$Image$constant(ee$Number(seconds))$toUint32()$rename('seconds') 
-    seconds_img <- seconds_img$clip(img$geometry())
+    seconds_img <- seconds_img$clipToCollection(aoi_Shapefile)
     return(img$addBands(seconds_img))
  } 
  
