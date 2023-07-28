@@ -9,9 +9,6 @@
 
 ####################################################################################################################################
 
-#Add the 'S2_CLOUD_PROBABILITY' dataset to our sentinel-2 image collection as a new image property:
-
-
 #(I.a): (Option 1) Detect water pixels using the ESA Worldcover map with a 10 meter resolution
  compute_Water_ESA <- function(ESA_index=80){
    
