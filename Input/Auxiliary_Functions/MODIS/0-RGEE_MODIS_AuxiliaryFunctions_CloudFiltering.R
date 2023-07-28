@@ -66,21 +66,24 @@
     Combined_clouds_Fraction = Combined_clouds$reduceRegion(
       reducer = ee$Reducer$mean(),
       geometry = aoi_Shapefile,
-      scale = resolution_qaband #Quality band has a resolution of 1km
+      scale = resolution_qaband, #Quality band has a resolution of 1km
+      maxPixels=100000000
       )$get('Combined_clouds')
    
    #(C): Calculate the fraction of pixels within aoi_Shapefile that are marked as PGE35 clouds
     PGE11_clouds_Fraction = PGE11_clouds$reduceRegion(
       reducer = ee$Reducer$mean(),
       geometry = aoi_Shapefile,
-      scale = resolution_qaband #Quality band has a resolution of 1km
+      scale = resolution_qaband, #Quality band has a resolution of 1km
+      maxPixels=100000000
       )$get('PGE11_clouds')
    
    #(D): Calculate the fraction of pixels within aoi_Shapefile that are marked as MOD35 clouds
     MOD35_clouds_Fraction = MOD35_clouds$reduceRegion(
       reducer = ee$Reducer$mean(),
       geometry = aoi_Shapefile,
-      scale = resolution_qaband #Quality band has a resolution of 1km
+      scale = resolution_qaband, #Quality band has a resolution of 1km
+      maxPixels=100000000
       )$get('MOD35_clouds')
    
    #(E): Add CloudFraction within aoi_Shapefile as an image property to each image
