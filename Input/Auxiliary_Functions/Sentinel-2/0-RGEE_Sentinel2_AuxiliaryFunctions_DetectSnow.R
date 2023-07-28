@@ -32,7 +32,8 @@
      SnowFraction = snow$reduceRegion(
        reducer = ee$Reducer$mean(),
        geometry = aoi_Shapefile,
-       scale = resolution
+       scale = resolution,
+       maxPixels=100000000
        )$get('SNOW')
     
       #Note that the Reducer function ee$Reducer$mean() results in a fraction of pixels covered in snow as the band
