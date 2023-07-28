@@ -59,21 +59,14 @@
      #Specify name of study area
      area_name <- "ZAC"
 
-     #Approximate central point of study area
-     coordinates_point <- c(-20.49, 74.49)
-
-     #Bounding box for study area (general area of interest)
-     aoi <- ee$Geometry$Polygon(list(c(-20.34, 74.542),
-                                     c(-20.7,  74.542),
-                                     c(-20.7,  74.442),
-                                     c(-20.34, 74.442)))
-
      #Name of Shapefile located in Input folder (specific area of interest)
-     shapefile <- "ZAC_Outline_EPSG32627.shp"
+     #Follow the guide "Manual_CreateShapefilePolygons.docx" when creating this shapefile.
+     shapefile <- "ZAC_Outline_EPSG4326.shp"
 
-     #Coordinate reference system
-     #UTM: use "epsg:326XX" for northern hemisphere, "epsg:327XX" for southern hemisphere, where XX is the specific zone
-     crs <- "epsg:32627"
+     #Coordinate reference system used for calculations
+     #EPSG:4326 is recommended for areas spanning multiple UTM zones, but increased computation time (i.e. spherical coordinate system).
+     #EPSG:326XX is results in reduced computation time for areas located within a single UTM zone (i.e. planar coordinate system).
+     crs <- "EPSG:4326"
 
    #(c) Dates
 
@@ -147,7 +140,39 @@
          
 ##################################################################################################################################
 
-      #(7) Extract MODIS satellite Surface Reflectance images for specified daterange and general area of interest
+      #(7) Read study area shapefile as a feature collection and clip image collection to area of interest
+         
+        #Read aoi_Shapefile shapefile in root folder
+         root_fldr <- here()
+         aoi_Shapefile <- st_read(paste0(root_fldr, "/Input/Shapefiles/", shapefile), quiet=T)
+         aoi_Shapefile <- st_transform(aoi_Shapefile, crs="EPSG:4326")
+         aoi_Shapefile <- sf_as_ee(aoi_Shapefile)
+         aoi_Shapefile <- ee$FeatureCollection(aoi_Shapefile)
+         #This feature collection will be used to clip the satellite imagery to the study area
+         
+          #Calculate bounding box for aoi_Shapefile
+           aoi <- aoi_Shapefile$geometry()$bounds()
+           
+          #Calculate central point
+           coordinates_point <- aoi_Shapefile$geometry()$centroid()
+           
+          #Plot shapefile and bounding box (for debugging)
+           Map$setCenter(coordinates_point$getInfo()$coordinates[1], coordinates_point$getInfo()$coordinates[2], 10)
+           Map$addLayer(aoi_Shapefile)+
+             Map$addLayer(ee$FeatureCollection(aoi)$style(color='red', fillColor='00000000'))+
+             Map$addLayer(coordinates_point, list(color="blue"))
+         
+        #Calculate the size of the study area in km2:
+         img <- ee$Image$pixelArea()$divide(1000000)
+         area2 <- img$reduceRegion(
+           reducer= ee$Reducer$sum(),
+           geometry= aoi_Shapefile,
+           crs= crs,
+           scale= 10,
+           maxPixels= 1E13)
+         paste0('Size of study area calculated using the pixel area method: ', round(ee$Number(area2$get('area'))$getInfo(),3), ' km2')
+
+      #(8) Extract MODIS satellite Surface Reflectance images for specified daterange and general area of interest
        
        #Note that specifying a region of interest using a polygon does not function properly for the MODIS data. 
        #Instead, providing an initial point and then afterwards clipping the image to a desired area of interest works better.
@@ -158,40 +183,17 @@
        
         #Extract Sentinel-2 Surface Reflectance satellite data
          MODIS_col <- ee$ImageCollection('MODIS/006/MOD09GA')
-         point <- ee$Geometry$Point(coordinates_point[1], coordinates_point[2])
          MODIS_col <- MODIS_col$
-           filterBounds(point)$
+           filterBounds(coordinates_point)$
            filterDate(start_date, end_date)
          
-      #(8) Read study area shapefile as a feature collection and clip image collection to area of interest
-        
-         #Make sure that the shapefile is in EPSG:326XX format (UTM). In addition the 'id' column of the shapefile should not be 
-         #empty (i.e. add 0 instead of NULL or NA in QGIS layer attribute table)
-                 
-         #Read aoi_Shapefile shapefile in root folder
-         root_fldr <- here()
-         aoi_Shapefile <- st_read(paste0(root_fldr, "/Input/Shapefiles/", shapefile), quiet=T)
-         aoi_Shapefile <- st_transform(aoi_Shapefile, crs=crs)
-         aoi_Shapefile <- sf_as_ee(aoi_Shapefile)
-         aoi_Shapefile <- ee$FeatureCollection(aoi_Shapefile)
-        
-        #Calculate the size of the study area in km2:
-         img <- ee$Image$pixelArea()$divide(1000000)
-         area2 <- img$reduceRegion(
-           reducer= ee$Reducer$sum(),
-           geometry= aoi_Shapefile,
-           crs= crs,
-           scale= 10,
-           maxPixels= 1E13)
-         paste0('Size of study area calculated using the pixel area method: ', round(ee$Number(area2$get('area'))$getInfo(),3), ' km2')
-        
         #Clip all images to area of interest (aoi). Clipping to shapefile will occur at step 16B of this script
          MODIS_col <- MODIS_col$map(function(img){return(img$clip(aoi))})
         
         #Plot a single clipped image: 
          
           #Select a single image for initial plot, clipped to aoi_Shapefile:
-           image <- MODIS_col$filterDate(paste0(year_ID, "-06-10"), paste0(year_ID, "-08-15"))$first()$clipToCollection(aoi_Shapefile)
+           image <- MODIS_col$filterDate(paste0(year_ID, "-06-10"), end_date)$first()$clipToCollection(aoi_Shapefile)
   
           #Add Normalized difference snow index to this image:
            ndsi_MODIS <-  image$expression('(B4 - B6) / (B4 + B6)',
@@ -214,7 +216,7 @@
                                             'B2'=image$select('sur_refl_b02')))
     
           #Plot all image Bands
-           Map$setCenter(coordinates_point[1], coordinates_point[2], 10)
+           Map$setCenter(coordinates_point$getInfo()$coordinates[1], coordinates_point$getInfo()$coordinates[2], 10)
            Map$addLayer(image,list(bands=c("sur_refl_b01", "sur_refl_b04", "sur_refl_b03"), min=100, max=8000, gamma=c(1.9, 1.7, 1.7)), 'TRUE COLOR')+ 
            Map$addLayer(ndsi_MODIS,list(min=-1, max=1.5, palette=c('black', '0dffff', '0524ff', 'ffffff')), 'NDSI')+
            Map$addLayer(ndvi_MODIS,list(min=-1, max=1, palette=c('#FF0000','#00FF00')), 'NDVI')+
@@ -327,11 +329,11 @@
         # #Thus, make sure to manually alter the date below to check how MODIS cloudcover algorithms correspond to the underlying
         # #RGB images at different points in time. Note that white colours in each mask indicate clouds.
         #  image <- MODIS_col$
-        #     filterDate(paste0(year_ID, "-06-20"), paste0(year_ID, "-08-15"))$
+        #     filterDate(paste0(year_ID, "-06-20"), end_date)$
         #     first()$
         #     clipToCollection(aoi_Shapefile)$
         #     select('MOD35_clouds', 'PGE11_clouds', 'Combined_clouds', "sur_refl_b01", "sur_refl_b04", "sur_refl_b03")      
-        #  Map$setCenter(coordinates_point[1], coordinates_point[2], 10)
+        #  Map$setCenter(coordinates_point$getInfo()$coordinates[1], coordinates_point$getInfo()$coordinates[2], 10)
         #  Map$addLayer(image, list(bands=c("sur_refl_b01", "sur_refl_b04", "sur_refl_b03"), min=100, max=8000, gamma=c(1.9, 1.7, 1.7)), 'TRUE COLOR')+ 
         #  Map$addLayer(image, list(bands='MOD35_clouds', min=0, max=1, opacity=1), 'MOD35_clouds')+
         #  Map$addLayer(image, list(bands='PGE11_clouds', min=0, max=1, opacity=1), 'PGE11_clouds')+
@@ -412,8 +414,8 @@
       #(C): Apply the water masking function to each image in the collection:
       
         # #Plot permanent waterbodies(for debugging)
-        # Map$setCenter(coordinates_point[1], coordinates_point[2], 10)
-        # Map$addLayer(MODIS_clouds_filtered$filterDate(paste0(year_ID, "-08-04"), paste0(year_ID, "-09-18"))$first(), list(bands=c("sur_refl_b01", "sur_refl_b04", "sur_refl_b03"), min=100, max=8000, gamma=c(1.9, 1.7, 1.7)), 'TRUE COLOR')+
+        # Map$setCenter(coordinates_point$getInfo()$coordinates[1], coordinates_point$getInfo()$coordinates[2], 10)
+        # Map$addLayer(MODIS_clouds_filtered$filterDate(paste0(year_ID, "-08-04"), end_date)$first(), list(bands=c("sur_refl_b01", "sur_refl_b04", "sur_refl_b03"), min=100, max=8000, gamma=c(1.9, 1.7, 1.7)), 'TRUE COLOR')+
         # Map$addLayer(water_mask,list(min=0, max = 1, palette = c('ffffff', '000000')), 'Water_mask')
       
         #Load auxilliary function to mask water-pixels
@@ -475,22 +477,22 @@
             a=Sys.time()
             task_vector1 <- ee_table_to_drive(
               collection = FC_merged,
-              description = paste0(data_ID, "_Pixel_NDSI"),
+              description = paste0(data_ID, "_Pixel_NDSI_Snowmelt"),
               fileFormat = "CSV",
               selectors = c('NDSI', 'Date', 'doy', 'lat', 'lon')
               )
 
             task_vector1$start()
             print("Transform each image to a feature Collection of NDSI values for all pixels:")
-            ee_monitoring(task_vector1, max_attempts = 5000)
+            ee_monitoring(task_vector1, max_attempts = 1000000)
 
-            exported_stats <- ee_drive_to_local(task = task_vector1, dsn=paste0("Output/", data_ID, "_Pixel_NDSI"))
+            exported_stats <- ee_drive_to_local(task = task_vector1, dsn=paste0("Output/", data_ID, "_Pixel_NDSI_Snowmelt"))
             df_pixel_ndsi <- read.csv(exported_stats)
             b=Sys.time()
             print(paste0("Computation finished in ",  round(as.numeric(difftime(b, a, units="mins")),2), " minutes"))
 
            # #Load dataframe (takes ca 2 minutes):
-           #  df_pixel_ndsi <- read.csv(paste0(data_ID, "_Pixel_NDSI.csv"))
+           #  df_pixel_ndsi <- read.csv(paste0(data_ID, "_Pixel_NDSI_Snowmelt.csv"))
 
            #Make sure each latitude/longitude combination gets its own pixel_ID (takes ca 1 minute):
             df_pixel_ndsi$pixel_ID <- paste0(format(df_pixel_ndsi$lat, nsmall = 5), "_", format(df_pixel_ndsi$lon, nsmall = 5))
@@ -741,7 +743,7 @@
                    )
                task_vector2$start()
                print("Optimize further calculations with FC_Combined by uploading it to the asset folder:")
-               ee_monitoring(task_vector2, max_attempts = 5000)
+               ee_monitoring(task_vector2, max_attempts = 1000000)
              
               #Check assets folder:
                #ee_manage_quota()
@@ -760,8 +762,8 @@
                  filter(ee$Filter$notNull(list('doy_snowmelt')))$ #pre-filter data for nulls that cannot be turned into an image
                  filter(ee$Filter$neq(name='doy_snowmelt', value=-9999))$ #pre-filter data for -9999 values
                  reduceToImage(properties=list('doy_snowmelt'), reducer=ee$Reducer$first()$setOutputs(list('doy_snowmelt')))$
-                 reproject(crs=crs, crsTransform=NULL, scale=resolution) #ensures sure that reduceToImage above is done in the crs projection
-                 #reproject(crs=modisProjection, crsTransform=NULL) #ensures sure that reduceToImage above is done in the MODIS projection
+                 #reproject(crs=crs, crsTransform=NULL, scale=resolution) #ensures sure that reduceToImage above is done in the crs projection
+                 reproject(crs=modisProjection, crsTransform=NULL, scale=resolution) #ensures sure that reduceToImage above is done in the MODIS projection
                
                #image_snowmelt$projection()$getInfo()
                
@@ -769,11 +771,11 @@
                image_snowmelt <- image_snowmelt$clipToCollection(aoi_Shapefile)
                
               #(C): Extract day of snowmelt in year of interest for a single point
-               ee_extract(x=image_snowmelt, y=ee$Geometry$Point(coordinates_point[1], coordinates_point[2]), fun=ee$Reducer$first(), scale=resolution, sf=TRUE)
+               ee_extract(x=image_snowmelt, y=coordinates_point, fun=ee$Reducer$first(), scale=resolution, sf=TRUE)
              
               #(D): Plot snowmelt day of year as a coloured image
-               MODIS_image <- MODIS_clouds_filtered$filterDate(paste0(year_ID, "-07-20"), paste0(year_ID, "-08-01"))$first()#$reproject(crs=crs, crsTransform=NULL, scale=resolution)
-               Map$setCenter(coordinates_point[1], coordinates_point[2], 10)
+               MODIS_image <- MODIS_clouds_filtered$filterDate(paste0(year_ID, "-07-20"), end_date)$first()#$reproject(crs=crs, crsTransform=NULL, scale=resolution)
+               Map$setCenter(coordinates_point$getInfo()$coordinates[1], coordinates_point$getInfo()$coordinates[2], 10)
                Map$addLayer(MODIS_image,list(bands=c("sur_refl_b01", "sur_refl_b04", "sur_refl_b03"), min=100, max=8000, gamma=c(1.9, 1.7, 1.7)), 'TRUE COLOR')+ 
                Map$addLayer(image_snowmelt,list(bands="doy_snowmelt", min=start_date_doy, max=end_date_doy, palette=c('green', 'yellow', 'red')), 'Snowmelt_doy')
           
@@ -786,7 +788,7 @@
                   description=paste0(data_ID, '_PixelSnowmeltDoy_Image_DoySnowmelt'),
                   region=aoi,
                   #scale=ee$Number(resolution), #defaults to native resolution of image asset.
-                  crs=crs, #Coordinate reference system of projection of exported image
+                  crs="EPSG:3857", #Coordinate reference system of projection of exported image
                   maxPixels=1e9, #maximum allowed number of pixels in exported image
                   dimensions=ee$Number(1024) #maximum dimension
                   )
@@ -794,7 +796,7 @@
                 #Start and monitor export task:
                  task_vector3$start()
                  print("Export original image to Google Drive:")
-                 ee_monitoring(task_vector3, max_attempts = 5000)
+                 ee_monitoring(task_vector3, max_attempts = 1000000)
                  ee_drive_to_local(task = task_vector3, dsn=paste0("Output/", data_ID, "_PixelSnowmeltDoy_Image_DoySnowmelt"))
                  
               #(F): Export RGB image to Google Drive (takes c.a. 2 minutes):
@@ -811,7 +813,7 @@
                    description=paste0(data_ID, '_PixelSnowmeltDoy_Image_RGB'),
                    region=aoi,
                    #scale=ee$Number(resolution), #defaults to native resolution of image asset.
-                   crs=crs, #Coordinate reference system of projection of exported image
+                   crs="EPSG:3857", #Coordinate reference system of projection of exported image
                    maxPixels=1e9, #maximum allowed number of pixels in exported image
                    dimensions=ee$Number(1024) #maximum dimension
                    )
@@ -819,7 +821,7 @@
                 #Start and monitor export task:
                  print("Export RGB image to Google Drive:")
                  task_vector4$start()
-                 ee_monitoring(task_vector4, max_attempts = 5000)
+                 ee_monitoring(task_vector4, max_attempts = 1000000)
                  ee_drive_to_local(task = task_vector4, dsn=paste0("Output/", data_ID, "_PixelSnowmeltDoy_Image_RGB"))
                  
         #18: Extract the date of snowmelt for all pixels within image_snowmelt (i.e. clipped by aoi_Shapefile)         
@@ -861,7 +863,7 @@
                 #Execute task  
                  task_vector5$start()
                  print("Transform image_snowmelt to a feature Collection of doy_snowmelt values for all pixels:")
-                 ee_monitoring(task_vector5, max_attempts = 5000)
+                 ee_monitoring(task_vector5, max_attempts = 1000000)
                  exported_stats <- ee_drive_to_local(task = task_vector5, dsn=paste0("Output/", data_ID, "_Pixel_Snowmelt_shapefile"))
                  df_pixel_snowmelt_shapefile <- read.csv(exported_stats)
                  b=Sys.time()
@@ -923,8 +925,10 @@
   #     #(b): Approximate central point of study area
   #       coordinates_point <- c(-20.49, 74.49)
   # 
-  #     #(c): Coordinate reference system (EPSG:326XX)
-  #       crs <- "epsg:32627" #"+proj=utm +zone=27 +datum=WGS84"
+  #     #(c): Coordinate reference system used for calculations
+  #       #EPSG:4326 is recommended for areas spanning multiple UTM zones, but increased computation time (i.e. spherical coordinate system).
+  #       #EPSG:326XX is results in reduced computation time for areas located within a single UTM zone (i.e. planar coordinate system).
+  #       crs <- "EPSG:4326"
   # 
   #     #(d): Date range for all images considered in analysis
   #       start_date <- paste0(year_ID, "-03-15") #choose date (well) before the first snowmelt occurs within the study site
@@ -941,7 +945,7 @@
   #       data_ID <- paste0(data_ID, "_", MODIS_cloud_masking_algorithm)
   # 
   #     #(h): Name of shapefile
-  #       shapefile <- "ZAC_Outline_EPSG32627.shp"
+  #       shapefile <- "ZAC_Outline_EPSG4326.shp"
   # 
   #   #(5): Create a unique Asset folder
   #      path_asset <- paste0(ee_get_assethome(), "/", data_ID)
@@ -953,7 +957,7 @@
   #   #(7): Read aoi_Shapefile shapefile in root folder
   #      root_fldr <- here()
   #      aoi_Shapefile <- st_read(paste0(root_fldr, "/Input/Shapefiles/", shapefile), quiet=T)
-  #      aoi_Shapefile <- st_transform(aoi_Shapefile, crs=crs)
+  #      aoi_Shapefile <- st_transform(aoi_Shapefile, crs="EPSG:4326")
   #      aoi_Shapefile <- sf_as_ee(aoi_Shapefile)
   #      aoi_Shapefile <- ee$FeatureCollection(aoi_Shapefile)
   # 
@@ -982,20 +986,20 @@
   #        image_snowmelt <- image_snowmelt$clipToCollection(aoi_Shapefile)
   # 
   #      #Plot snowmelt image on a map. Note that 'Map' automatically converts to mercator projection!
-  #       Map$setCenter(coordinates_point[1], coordinates_point[2], 10)
+  #       Map$setCenter(coordinates_point$getInfo()$coordinates[1], coordinates_point$getInfo()$coordinates[2], 10)
   #       Map$addLayer(image_snowmelt,list(bands="doy_snowmelt", min=start_date_doy, max=end_date_doy, palette=c('green', 'yellow', 'red')), 'Snowmelt_doy')
   # 
   #   #(10): Define a featurecollection of points corresponding to movement trajectories of chicks in Zackenberg in 2019
-  #     ZAC_Paths <- read.csv(paste0("Input/ZAC19_ChickMovement.csv"), header=T)[,c("ChickID", "UTM_x", "UTM_y", "DateTime", "Hatch_Date")]
-  #     colnames(ZAC_Paths) <- c("ChickID", "Lon_UTM", "Lat_UTM", "DateTime", "Hatch_Date")
+  #     ZAC_Paths <- read.csv(paste0("Input/ZAC19_ChickMovement.csv"), header=T)[,c("ChickID", "LON_x", "LAT_y", "DateTime", "Hatch_Date")]
+  #     colnames(ZAC_Paths) <- c("ChickID", "LON_x", "LAT_y", "DateTime", "Hatch_Date")
   # 
   #     #Add a unique LocationID to every unique lat/lon combination in ZAC_Paths
-  #      Locations <- unique(ZAC_Paths[,c("Lon_UTM", "Lat_UTM")])
+  #      Locations <- unique(ZAC_Paths[,c("LON_x", "LAT_y")])
   #      Locations$LocationID <- paste0("Location_", 1:nrow(Locations))
-  #      ZAC_Paths <- left_join(ZAC_Paths, Locations, by=c("Lon_UTM", "Lat_UTM"))
+  #      ZAC_Paths <- left_join(ZAC_Paths, Locations, by=c("LON_x", "LAT_y"))
   # 
   #     #Transform Locations to an ee-object with MODIS sinusoidal projection
-  #      Locations <- st_as_sf(Locations, coords = c("Lon_UTM", "Lat_UTM"), crs=crs)
+  #      Locations <- st_as_sf(Locations, coords = c("LON_x", "LAT_y"), crs=crs)
   #      Locations <- st_transform(Locations, crs=crs) #as an intermediate step
   #      Locations <- sf_as_ee(Locations[,c("LocationID", "geometry")], proj='epsg:4326') #as an intermediate step
   # 
@@ -1025,7 +1029,7 @@
   #      #(i.e. a collection of different Locations, with their respective feature types, LocationIDs, DateTimes and coordinates).
   # 
   #     #Plot feature collection on a map (i.e. locations as points). Note that 'this'Map' automatically converts to Mercator projection!
-  #      Map$setCenter(coordinates_point[1], coordinates_point[2], 10)
+  #      Map$setCenter(coordinates_point$getInfo()$coordinates[1], coordinates_point$getInfo()$coordinates[2], 10)
   #      Map$addLayer(image_snowmelt,list(bands="doy_snowmelt", min=start_date_doy, max=end_date_doy, palette=c('green', 'yellow', 'red')), 'Snowmelt_doy')+
   #      Map$addLayer(Locations, list(color="red"), paste0("MovementPositions_", year_ID))
   # 
@@ -1187,8 +1191,8 @@
 #     #Plot movement data on top of snowmelt map
 #      for(i in 1:length(ChickID)){
 #        p3 <- p3+
-#          geom_point(data=df[df$ChickID==ChickID[i],], aes(x=UTM_x, y=UTM_y, col=Age), size = 2)+
-#          geom_path(data=df[df$ChickID==ChickID[i],], aes(x=UTM_x, y=UTM_y, color=Age), size=1.25)+
+#          geom_point(data=df[df$ChickID==ChickID[i],], aes(x=LON_x, y=LAT_y, col=Age), size = 2)+
+#          geom_path(data=df[df$ChickID==ChickID[i],], aes(x=LON_x, y=LAT_y, color=Age), size=1.25)+
 #          scale_color_gradient(low=ChickID_all$col_start[ChickID_all$ChickID==ChickID[i]],
 #                               high=ChickID_all$col_end[ChickID_all$ChickID==ChickID[i]],
 #                               breaks = seq(0, max(na.omit(df$Age)), by = 1))+
