@@ -9,6 +9,7 @@
 #The user can specify three methods to look at snowmelt over time:
 # (I):   'avg_NDSI':     Calculate the average NDSI value over time within each point's bufferzone, fit a GAM through these 
 #                        data and calculate when this model passes the specified NDSI threshold representing the moment of snowmelt.
+#                        In addition, time series of the average NDVI and NDMI are extracted within each point's buffer zone.
 # (II):  'snowfraction': Calculate the fraction of pixels within each bufferzone over time where NDSI > 'NDSI_threshold', 
 #                        fit a GAM through these data and extract the moment when this model passes a user-specified 
 #                       'Snowfraction_threshold'.
@@ -118,8 +119,8 @@
 
     #Define the preferred method for the analysis of snowmelt
     method=c("avg_NDSI", "snowfraction", "pixel_gam") #either "avg_NDSI", "snowfraction", "pixel_gam", or a combination using c() (default is "pixel_gam").
-    #(1) "avg_NDSI":     Calculates the average NDSI value within the area of interest over time and extracts the moment when this value 
-    #                    is equal to 'NDSI_threshold'.
+    #(1) "avg_NDSI":     Calculates the average NDSI, NDVI and NDMI values within each point's bufferzone over time and extracts the moment 
+    #                    when the NDSI value is equal to 'NDSI_threshold'.
     #(2) "snowfraction": Counts the fraction of pixels within the aoi with NDSI > 'NDSI_threshold' over time and extracts the moment 
     #                    when this fraction is equal to 'Snowfraction_threshold'.
     #(3) "pixel_gam":    Fits a GAM through the NDSI data per pixel and calculates when this function passes NDSI_threshold. Then use these
@@ -181,6 +182,9 @@
     ee_manage_create(path_asset=path_asset, asset_type="Folder")
     ee_manage_assetlist()
 
+   #Create output folder
+    if(dir.exists(paste0(here(), "/Output/MODIS/Points_Snowmelt"))==FALSE){dir.create(paste0(here(), "/Output/MODIS/Points_Snowmelt"), recursive = TRUE)}
+    
     
 ##################################################################################################################################
 
@@ -561,7 +565,7 @@
             ee_monitoring(task_vector, quiet=TRUE, max_attempts=1000000)
 
            #Import results
-            exported_stats <- ee_drive_to_local(task=task_vector, dsn=paste0("Output/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_", Location_ID, "_Data_Mean_Bandvalues"))
+            exported_stats <- ee_drive_to_local(task=task_vector, dsn=paste0("Output/MODIS/Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_", Location_ID, "_Data_Mean_Bandvalues"))
             Locations_BandValues_new <- read.csv(exported_stats)
             unlink(exported_stats)
 
@@ -607,7 +611,7 @@
             df_Locations_BandValues <- rbind(df_Locations_BandValues, Locations_BandValues_new)
 
            # #Save dataframe for current location
-           #  write.csv(Locations_BandValues_new, paste0(here(), "/Output/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Location_", Location_i, "_Data_MeanBandvalues.csv"), row.names = FALSE)
+           #  write.csv(Locations_BandValues_new, paste0(here(), "/Output/MODIS/Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Location_", Location_i, "_Data_MeanBandvalues.csv"), row.names = FALSE)
 
        }
      
@@ -674,7 +678,7 @@
             ee_monitoring(task_vector, quiet=TRUE, max_attempts=1000000)
 
            #Import results
-            exported_stats <- ee_drive_to_local(task=task_vector, dsn=paste0("Output/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_", Location_ID, "_Data_SnowFraction"))
+            exported_stats <- ee_drive_to_local(task=task_vector, dsn=paste0("Output/MODIS/Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_", Location_ID, "_Data_SnowFraction"))
             df_Locations_SnowFraction_new <- read.csv(exported_stats)
             unlink(exported_stats)
             
@@ -701,7 +705,7 @@
             df_Locations_SnowFraction <- rbind(df_Locations_SnowFraction, df_Locations_SnowFraction_new)
 
            # #Save dataframe for current location
-           #  write.csv(df_Locations_SnowFraction_new, paste0(here(), "/Output/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Location_", Location_i, "_Data_SnowFraction.csv"), row.names = FALSE)
+           #  write.csv(df_Locations_SnowFraction_new, paste0(here(), "/Output/MODIS/Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Location_", Location_i, "_Data_SnowFraction.csv"), row.names = FALSE)
 
        }
            
@@ -761,13 +765,13 @@
            print("-----------------------------------------------------------------------------------------------------------")
            ee_monitoring(task_vector1, quiet=TRUE, max_attempts = 100000)
 
-           exported_stats <- ee_drive_to_local(task = task_vector1, dsn=paste0("Output/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Location_", Location_i, "_Data_Pixel_NDSI_bbox"))
+           exported_stats <- ee_drive_to_local(task = task_vector1, dsn=paste0("Output/MODIS/Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Location_", Location_i, "_Data_Pixel_NDSI_bbox"))
            df_pixel_ndsi <- read.csv(exported_stats)
            b=Sys.time()
            #print(paste0("Computation finished in ",  round(as.numeric(difftime(b, a, units="mins")),2), " minutes"))
 
           # #Load dataframe (takes ca 2 minutes):
-          #  df_pixel_ndsi <- read.csv(paste0("Output/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Location_", Location_i, "_Data_Pixel_NDSI_bbox.csv"))
+          #  df_pixel_ndsi <- read.csv(paste0("Output/MODIS/Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Location_", Location_i, "_Data_Pixel_NDSI_bbox.csv"))
 
           #Make sure each latitude/longitude combination gets its own pixel_ID (takes ca 1 minute):
            df_pixel_ndsi$pixel_ID <- paste0(format(df_pixel_ndsi$lat, nsmall = 5), "_", format(df_pixel_ndsi$lon, nsmall = 5))
@@ -846,16 +850,16 @@
             df_pixel_snowmelt <- lapply(results, "[[", 1)
             df_pixel_snowmelt <- as.data.frame(do.call(rbind, do.call(c, df_pixel_snowmelt)))
             colnames(df_pixel_snowmelt)[colnames(df_pixel_snowmelt)=="x_threshold"] <- "doy_snowmelt"
-            write.csv(df_pixel_snowmelt, file=paste0(here(), "/Output/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Location_", Location_i, "_Data_Pixel_Snowmelt_bbox.csv"), quote = FALSE, row.names=FALSE)
+            write.csv(df_pixel_snowmelt, file=paste0(here(), "/Output/MODIS/Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Location_", Location_i, "_Data_Pixel_Snowmelt_bbox.csv"), quote = FALSE, row.names=FALSE)
             ##Read dataframe
-            #df_pixel_snowmelt <- read.csv(file=paste0(here(), "/Output/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Location_", Location_i, "_Data_Pixel_Snowmelt_bbox.csv"), header=TRUE)
+            #df_pixel_snowmelt <- read.csv(file=paste0(here(), "/Output/MODIS/Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Location_", Location_i, "_Data_Pixel_Snowmelt_bbox.csv"), header=TRUE)
 
            #Store plots
             plot_pixel_snowmelt <- lapply(results, "[[", 2)
             plots_per_page = 25
             plot_pixel_snowmelt <- lapply(plot_pixel_snowmelt, function(x){split(x, ceiling(seq_along(plot_pixel_snowmelt[[1]])/plots_per_page))})
             plot_pixel_snowmelt <- unname(unlist(plot_pixel_snowmelt, recursive = F))
-            pdf(paste0("Output/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Location_", Location_i, "_Plot_Pixel_NDSI_Snowmelt_bbox.pdf"), width=20, height=16, onefile = TRUE)
+            pdf(paste0("Output/MODIS/Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Location_", Location_i, "_Plot_Pixel_NDSI_Snowmelt_bbox.pdf"), width=20, height=16, onefile = TRUE)
             for (i in seq(length(plot_pixel_snowmelt))) { do.call("grid.arrange", plot_pixel_snowmelt[[i]]) }
             dev.off()
   
@@ -1090,7 +1094,7 @@
                     print("Step 6: Transform the featurecollection to a snowmelt image and export it to Google Drive:")
                     print("-----------------------------------------------------------------------------------------------------------")
                     ee_monitoring(task_vector3, quiet=TRUE, max_attempts = 1000000)
-                    ee_drive_to_local(task = task_vector3, dsn=paste0("Output/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Location_", Location_i, '_PixelSnowmeltDoy_Image_DoySnowmelt'))
+                    ee_drive_to_local(task = task_vector3, dsn=paste0("Output/MODIS/Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Location_", Location_i, '_PixelSnowmeltDoy_Image_DoySnowmelt'))
                     
                  #(F): Export RGB image to Google Drive (takes c.a. 2 minutes):
 
@@ -1118,7 +1122,7 @@
                     print("-----------------------------------------------------------------------------------------------------------")
                     task_vector4$start()
                     ee_monitoring(task_vector4, quiet=TRUE, max_attempts = 1000000)
-                    ee_drive_to_local(task = task_vector4, dsn=paste0("Output/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Location_", Location_i, '_PixelSnowmeltDoy_Image_RGB'))
+                    ee_drive_to_local(task = task_vector4, dsn=paste0("Output/MODIS/Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Location_", Location_i, '_PixelSnowmeltDoy_Image_RGB'))
                     
                 }
                       
@@ -1165,7 +1169,7 @@
                   print("Step 8: Extract the date of snowmelt from the snowmelt image for all pixels within aoi_shapefile:")
                   print("-----------------------------------------------------------------------------------------------------------")
                   ee_monitoring(task_vector5, quiet=TRUE, max_attempts = 1000000)
-                  exported_stats <- ee_drive_to_local(task = task_vector5, dsn=paste0("Output/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Location_", Location_i, "_Data_Pixel_Snowmelt_shapefile"))
+                  exported_stats <- ee_drive_to_local(task = task_vector5, dsn=paste0("Output/MODIS/Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Location_", Location_i, "_Data_Pixel_Snowmelt_shapefile"))
                   df_pixel_snowmelt_shapefile <- read.csv(exported_stats)
                   unlink(exported_stats)
                   b=Sys.time()
@@ -1178,7 +1182,7 @@
                   df_pixel_snowmelt_shapefile <- df_pixel_snowmelt_shapefile[,c("pixel_ID", "doy_snowmelt")]
 
                #(E): Save dataframe
-                 write.csv(df_pixel_snowmelt_shapefile, file=paste0(here(), "/Output/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Location_", Location_i, "_Data_Pixel_Snowmelt_polygon.csv"), quote = FALSE, row.names=FALSE)
+                 write.csv(df_pixel_snowmelt_shapefile, file=paste0(here(), "/Output/MODIS/Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Location_", Location_i, "_Data_Pixel_Snowmelt_polygon.csv"), quote = FALSE, row.names=FALSE)
 
          #(I.8): Calculate the fraction of snowcovered pixels within aoi_shapefile per doy
                  
@@ -1221,7 +1225,7 @@
                  df_Locations_Pixel_SnowFraction <- rbind(df_Locations_Pixel_SnowFraction, df_Locations_Pixel_SnowFraction_new)
 
                  # #Save dataframe for current location
-                 # write.csv(df_Locations_Pixel_SnowFraction_new, paste0(here(), "/Output/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Location_", Location_i, "_Data_Pixel_SnowFraction_polygon.csv"), row.names = FALSE)
+                 # write.csv(df_Locations_Pixel_SnowFraction_new, paste0(here(), "/Output/MODIS/Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Location_", Location_i, "_Data_Pixel_SnowFraction_polygon.csv"), row.names = FALSE)
 
            }
      
@@ -1231,20 +1235,20 @@
   
    #Store dataframe when method="avg_NDSI"
    if("avg_NDSI" %in% method){ 
-    write.csv(df_Locations_BandValues, paste0(here(), "/Output/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Data_MeanBandvalues_polygon.csv"), row.names = FALSE)
-    #df_Locations_BandValues <- read.csv(paste0(here(), "/Output/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Data_MeanBandvalues_polygon.csv"), header = T)
+    write.csv(df_Locations_BandValues, paste0(here(), "/Output/MODIS/Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Data_MeanBandvalues_polygon.csv"), row.names = FALSE)
+    #df_Locations_BandValues <- read.csv(paste0(here(), "/Output/MODIS/Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Data_MeanBandvalues_polygon.csv"), header = T)
     }
     
    #Store dataframe when method="snowfraction"
    if("snowfraction" %in% method){ 
-    write.csv(df_Locations_SnowFraction, paste0(here(), "/Output/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Data_SnowFraction_polygon.csv"), row.names = FALSE)
-    #df_Locations_SnowFraction <- read.csv(paste0(here(), "/Output/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Data_SnowFraction_polygon.csv"), header=T)
+    write.csv(df_Locations_SnowFraction, paste0(here(), "/Output/MODIS/Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Data_SnowFraction_polygon.csv"), row.names = FALSE)
+    #df_Locations_SnowFraction <- read.csv(paste0(here(), "/Output/MODIS/Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Data_SnowFraction_polygon.csv"), header=T)
     }
     
    #Store dataframe when method="pixel_gam"
    if("pixel_gam" %in% method){
-    write.csv(df_Locations_Pixel_SnowFraction, paste0(here(), "/Output/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Data_Pixel_SnowFraction_polygon.csv"), row.names = FALSE)
-    #df_Locations_Pixel_SnowFraction <- read.csv(paste0(here(), "/Output/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Data_Pixel_SnowFraction_polygon.csv"), header=T)
+    write.csv(df_Locations_Pixel_SnowFraction, paste0(here(), "/Output/MODIS/Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Data_Pixel_SnowFraction_polygon.csv"), row.names = FALSE)
+    #df_Locations_Pixel_SnowFraction <- read.csv(paste0(here(), "/Output/MODIS/Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Data_Pixel_SnowFraction_polygon.csv"), header=T)
     }
 
   
@@ -1340,7 +1344,7 @@
      #    ylab("NDSI") +
      #    theme_tom()
      # 
-     #  ggsave(plot=p_Locations_NDSI, paste0(here(), "/Output/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Plot_NDSI_polygon.pdf"), width=10, height = 8)
+     #  ggsave(plot=p_Locations_NDSI, paste0(here(), "/Output/MODIS/Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Plot_NDSI_polygon.pdf"), width=10, height = 8)
 
      # #Plot NDSI and model predictions in a separate plot per location
       p_Locations_NDSI_grid = ggplot()+
@@ -1354,7 +1358,7 @@
         ylab("NDSI") +
         theme_tom()
 
-     #  ggsave(plot=p_Locations_NDSI_grid, paste0(here(), "/Output/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Plot_Locations_NDSI_grid_polygon.pdf"), width=12, height = 10)
+     #  ggsave(plot=p_Locations_NDSI_grid, paste0(here(), "/Output/MODIS/Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Plot_Locations_NDSI_grid_polygon.pdf"), width=12, height = 10)
 
    #(E) Calculate at which day of year the average NDSI is equal to NDSI_threshold for each location using predictions from mod_gam
 
@@ -1445,7 +1449,7 @@
       p_Locations_NDSI_Snowmelt_grid <- p_Locations_NDSI_grid +
           geom_point(data=df_Snowmelt_Locations[!is.na(df_Snowmelt_Locations$doy),], aes(x=doy, y=NDSI_threshold), col="red", size=3)
 
-      ggsave(plot=p_Locations_NDSI_Snowmelt_grid, paste0(here(), "/Output/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Plot_NDSI_Snowmelt_grid_polygon.pdf"), width=12, height = 10)
+      ggsave(plot=p_Locations_NDSI_Snowmelt_grid, paste0(here(), "/Output/MODIS/Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Plot_NDSI_Snowmelt_grid_polygon.pdf"), width=12, height = 10)
 
     #(G): Save the dataframe with average snowmelt dates per location
 
@@ -1453,7 +1457,7 @@
         df_Snowmelt_Locations <- left_join(df_Snowmelt_Locations, df_locations, by=c("LocationID"))
 
        #Save date of average NDSI within aoi equal to NDSI_threshold per location as a csv file
-        write.csv(df_Snowmelt_Locations, paste0(here(), "/Output/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Snowmelt_NDSI_", NDSI_threshold, "_polygon.csv"), row.names = FALSE)
+        write.csv(df_Snowmelt_Locations, paste0(here(), "/Output/MODIS/Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Snowmelt_NDSI_", NDSI_threshold, "_polygon.csv"), row.names = FALSE)
 
   }
 
@@ -1527,7 +1531,7 @@
     #    ylab(paste0("Snowcover fraction within study area in ", year_ID)) +
     #    theme_tom()
     # 
-    #   ggsave(plot=p_Locations_SnowFraction, paste0(here(), "/Output/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Plot_SnowFraction_polygon.pdf"), width=10, height = 8)
+    #   ggsave(plot=p_Locations_SnowFraction, paste0(here(), "/Output/MODIS/Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Plot_SnowFraction_polygon.pdf"), width=10, height = 8)
 
     #Plot SnowFraction and model predictions in a separate plot per location
       p_Locations_SnowFraction_grid = ggplot()+
@@ -1541,7 +1545,7 @@
        ylab(paste0("Snowcover fraction within study area in ", year_ID)) +
        theme_tom()
 
-      # ggsave(plot=p_Locations_SnowFraction_grid, paste0(here(), "/Output/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Plot_SnowFraction_grid_polygon.pdf"), width=12, height = 10)
+      # ggsave(plot=p_Locations_SnowFraction_grid, paste0(here(), "/Output/MODIS/Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Plot_SnowFraction_grid_polygon.pdf"), width=12, height = 10)
 
    #(E) Calculate at which day of year the SnowFraction is equal to Snowfraction_threshold for each location using predictions from mod_gam
 
@@ -1633,7 +1637,7 @@
      p_Locations_SnowFraction_Snowmelt_grid <- p_Locations_SnowFraction_grid +
        geom_point(data=df_SnowFraction_Locations[!is.na(df_SnowFraction_Locations$doy),], aes(x=doy, y=Snowfraction_threshold), col="red", size=3)
 
-     ggsave(plot=p_Locations_SnowFraction_Snowmelt_grid, paste0(here(), "/Output/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Plot_SnowFraction_Snowmelt_grid_polygon.pdf"), width=12, height = 10)
+     ggsave(plot=p_Locations_SnowFraction_Snowmelt_grid, paste0(here(), "/Output/MODIS/Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Plot_SnowFraction_Snowmelt_grid_polygon.pdf"), width=12, height = 10)
 
    #(G): Save the dataframe with snowfraction dates per location
 
@@ -1641,7 +1645,7 @@
       df_SnowFraction_Locations <- left_join(df_SnowFraction_Locations, df_locations, by=c("LocationID"))
 
      #Save date when Snowfraction within aoi is equal to 'Snowfraction_threshold' per location as a csv file
-      write.csv(df_SnowFraction_Locations, paste0(here(), "/Output/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Snowmelt_SnowFraction_", Snowfraction_threshold, "_polygon.csv"), row.names = FALSE)
+      write.csv(df_SnowFraction_Locations, paste0(here(), "/Output/MODIS/Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Snowmelt_SnowFraction_", Snowfraction_threshold, "_polygon.csv"), row.names = FALSE)
 
   }
 
@@ -1715,7 +1719,7 @@
     #    ylab(paste0("Snowcover fraction within study area in ", year_ID)) +
     #    theme_tom()
     # 
-    #   ggsave(plot=p_Locations_Pixel_SnowFraction, paste0(here(), "/Output/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Plot_Pixel_SnowFraction_polygon.pdf"), width=10, height = 8)
+    #   ggsave(plot=p_Locations_Pixel_SnowFraction, paste0(here(), "/Output/MODIS/Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Plot_Pixel_SnowFraction_polygon.pdf"), width=10, height = 8)
 
     #Plot SnowFraction and model predictions in a separate plot per location
       p_Locations_Pixel_SnowFraction_grid = ggplot()+
@@ -1729,7 +1733,7 @@
        ylab(paste0("Snowcover fraction within study area in ", year_ID)) +
        theme_tom()
 
-      # ggsave(plot=p_Locations_Pixel_SnowFraction_grid, paste0(here(), "/Output/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Plot_Pixel_SnowFraction_grid_polygon.pdf"), width=12, height = 10)
+      # ggsave(plot=p_Locations_Pixel_SnowFraction_grid, paste0(here(), "/Output/MODIS/Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Plot_Pixel_SnowFraction_grid_polygon.pdf"), width=12, height = 10)
 
    #(E) Calculate at which day of year the pixel-level SnowFraction is equal to Snowfraction_threshold for each location using predictions from mod_gam
 
@@ -1821,7 +1825,7 @@
      p_Locations_Pixel_SnowFraction_Snowmelt_grid <- p_Locations_Pixel_SnowFraction_grid +
        geom_point(data=df_Pixel_SnowFraction_Locations[!is.na(df_Pixel_SnowFraction_Locations$doy),], aes(x=doy, y=Snowfraction_threshold), col="red", size=3)
 
-     ggsave(plot=p_Locations_Pixel_SnowFraction_Snowmelt_grid, paste0(here(), "/Output/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Plot_Pixel_SnowFraction_Snowmelt_grid_polygon.pdf"), width=12, height = 10)
+     ggsave(plot=p_Locations_Pixel_SnowFraction_Snowmelt_grid, paste0(here(), "/Output/MODIS/Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Plot_Pixel_SnowFraction_Snowmelt_grid_polygon.pdf"), width=12, height = 10)
 
    #(G): Save the dataframe with snowfraction dates per location
 
@@ -1829,7 +1833,7 @@
       df_Pixel_SnowFraction_Locations <- left_join(df_Pixel_SnowFraction_Locations, df_locations, by=c("LocationID"))
 
      #Save date when Snowfraction within aoi is equal to 'Snowfraction_threshold' per location as a csv file
-      write.csv(df_Pixel_SnowFraction_Locations, paste0(here(), "/Output/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Snowmelt_Pixel_SnowFraction_", Snowfraction_threshold, "_polygon.csv"), row.names = FALSE)
+      write.csv(df_Pixel_SnowFraction_Locations, paste0(here(), "/Output/MODIS/Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Snowmelt_Pixel_SnowFraction_", Snowfraction_threshold, "_polygon.csv"), row.names = FALSE)
 
   }
 
