@@ -132,7 +132,9 @@
          ee_manage_create(path_asset=path_asset, asset_type="Folder")
          ee_manage_assetlist()
 
-         
+        #Create output folder
+         if(dir.exists(paste0(here(), "/Output/MODIS/Shapefile_Pixel_Snowfall"))==FALSE){dir.create(paste0(here(), "/Output/MODIS/Shapefile_Pixel_Snowfall"), recursive = TRUE)}
+      
 ##################################################################################################################################
          
 #IV: Read and display the unfiltered data
@@ -484,13 +486,13 @@
             print("Transform each image to a feature Collection of NDSI values for all pixels:")
             ee_monitoring(task_vector1, max_attempts = 1000000)
 
-            exported_stats <- ee_drive_to_local(task = task_vector1, dsn=paste0("Output/", data_ID, "_Pixel_NDSI_Snowfall"))
+            exported_stats <- ee_drive_to_local(task = task_vector1, dsn=paste0("Output/MODIS/Shapefile_Pixel_Snowfall/", data_ID, "_Pixel_NDSI_Snowfall"))
             df_pixel_ndsi <- read.csv(exported_stats)
             b=Sys.time()
             print(paste0("Computation finished in ",  round(as.numeric(difftime(b, a, units="mins")),2), " minutes"))
 
            # #Load dataframe (takes ca 2 minutes):
-           #  df_pixel_ndsi <- read.csv(paste0("Output/", data_ID, "_Pixel_NDSI_Snowfall.csv"))
+           #  df_pixel_ndsi <- read.csv(paste0("Output/MODIS/Shapefile_Pixel_Snowfall/", data_ID, "_Pixel_NDSI_Snowfall.csv"))
 
            #Make sure each latitude/longitude combination gets its own pixel_ID (takes ca 1 minute):
             df_pixel_ndsi$pixel_ID <- paste0(format(df_pixel_ndsi$lat, nsmall = 5), "_", format(df_pixel_ndsi$lon, nsmall = 5))
@@ -543,7 +545,7 @@
              outlier_thresh_2=outlier_thresh_2
              outlier_removal=outlier_removal
             
-           #Load a function that iterates through all data subsets. Within each data subset it calculates day of snowmelt 
+           #Load a function that iterates through all data subsets. Within each data subset it calculates day of snowfall
            #for every pixel, by fitting a GAM with sequential outlier removal and then linearly approximating at which day of 
            #year the predicted NDSI value of this GAM changes from above outlier_threshold to below (direction="down") or
            #from below outlier_threshold to above (direction="up"). The code employs parallel processing using foreach
@@ -566,16 +568,16 @@
             df_pixel_snowfall <- lapply(results, "[[", 1)
             df_pixel_snowfall <- as.data.frame(do.call(rbind, do.call(c, df_pixel_snowfall)))
             colnames(df_pixel_snowfall)[colnames(df_pixel_snowfall)=="x_threshold"] <- "doy_snowfall"
-            write.csv(df_pixel_snowfall, file=paste0(here(), "/Output/", data_ID, "_Pixel_Snowfall_aoi.csv"), quote = FALSE, row.names=FALSE)
+            write.csv(df_pixel_snowfall, file=paste0(here(), "/Output/MODIS/Shapefile_Pixel_Snowfall/", data_ID, "_Pixel_Snowfall_aoi.csv"), quote = FALSE, row.names=FALSE)
             ##Read dataframe
-            #df_pixel_snowfall <- read.csv(file=paste0(here(), "/Output/", data_ID, "_Pixel_Snowfall_aoi.csv"), header=TRUE)  
+            #df_pixel_snowfall <- read.csv(file=paste0(here(), "/Output/MODIS/Shapefile_Pixel_Snowfall/", data_ID, "_Pixel_Snowfall_aoi.csv"), header=TRUE)  
             
            #Store plots
             plot_pixel_snowfall <- lapply(results, "[[", 2)
             plots_per_page = 25
             plot_pixel_snowfall <- lapply(plot_pixel_snowfall, function(x){split(x, ceiling(seq_along(plot_pixel_snowfall[[1]])/plots_per_page))})
             plot_pixel_snowfall <- unname(unlist(plot_pixel_snowfall, recursive = F))
-            pdf(paste0("Output/", data_ID, "_Pixel_NDSI_Snowfall_aoi.pdf"), width=20, height=16, onefile = TRUE)
+            pdf(paste0("Output/MODIS/Shapefile_Pixel_Snowfall/", data_ID, "_Pixel_NDSI_Snowfall_aoi.pdf"), width=20, height=16, onefile = TRUE)
             for (i in seq(length(plot_pixel_snowfall))) { do.call("grid.arrange", plot_pixel_snowfall[[i]]) }
             dev.off()
         
@@ -795,7 +797,7 @@
                  task_vector3$start()
                  print("Export original image to Google Drive:")
                  ee_monitoring(task_vector3, max_attempts = 1000000)
-                 ee_drive_to_local(task = task_vector3, dsn=paste0("Output/", data_ID, "_PixelSnowfallDoy_Image_DoySnowfall"))
+                 ee_drive_to_local(task = task_vector3, dsn=paste0("Output/MODIS/Shapefile_Pixel_Snowfall/", data_ID, "_PixelSnowfallDoy_Image_DoySnowfall"))
                
               #(F): Export RGB image to Google Drive (takes c.a. 2 minutes):
              
@@ -821,7 +823,7 @@
                  print("Export RGB image to Google Drive:")
                  task_vector4$start()
                  ee_monitoring(task_vector4, max_attempts = 1000000)
-                 ee_drive_to_local(task = task_vector4, dsn=paste0("Output/", data_ID, "_PixelSnowfallDoy_Image_RGB"))
+                 ee_drive_to_local(task = task_vector4, dsn=paste0("Output/MODIS/Shapefile_Pixel_Snowfall/", data_ID, "_PixelSnowfallDoy_Image_RGB"))
 
        #17: Extract the date of snowfall for all pixels within image_snowfall (i.e. clipped by aoi_Shapefile)         
                  
@@ -863,7 +865,7 @@
                  task_vector5$start()
                  print("Transform image_snowfall to a feature Collection of doy_snowfall values for all pixels:")
                  ee_monitoring(task_vector5, max_attempts = 1000000)
-                 exported_stats <- ee_drive_to_local(task = task_vector5, dsn=paste0("Output/", data_ID, "_Pixel_Snowfall_shapefile"))
+                 exported_stats <- ee_drive_to_local(task = task_vector5, dsn=paste0("Output/MODIS/Shapefile_Pixel_Snowfall/", data_ID, "_Pixel_Snowfall_shapefile"))
                  df_pixel_snowfall_shapefile <- read.csv(exported_stats)
                  b=Sys.time()
                  print(paste0("Computation finished in ",  round(as.numeric(difftime(b, a, units="mins")),2), " minutes"))
@@ -875,11 +877,11 @@
                  df_pixel_snowfall_shapefile <- df_pixel_snowfall_shapefile[,c("pixel_ID", "doy_snowfall")]
                  
               #(E): Save dataframe
-               write.csv(df_pixel_snowfall_shapefile, file=paste0(here(), "/Output/", data_ID, "_Pixel_Snowfall_shapefile.csv"), quote = FALSE, row.names=FALSE)
+               write.csv(df_pixel_snowfall_shapefile, file=paste0(here(), "/Output/MODIS/Shapefile_Pixel_Snowfall/", data_ID, "_Pixel_Snowfall_shapefile.csv"), quote = FALSE, row.names=FALSE)
                  
 
         #(18): Save workspace
-         #save.image(paste0(here(), "/Output/", data_ID, "_Backup_Workspace_PixelDateOfSnowfall.RData"))
+         #save.image(paste0(here(), "/Output/MODIS/Shapefile_Pixel_Snowfall/", data_ID, "_Backup_Workspace_PixelDateOfSnowfall.RData"))
          
     #The snowfall image is now completed and can be downloaded as .tif file from the RGEE_backup folder on the specified Google Drive.
     #The optional code below uses the generated snowfall image to extract the snowfall day of year at specific points of interest.
@@ -1075,7 +1077,7 @@
   #    #(13) Add Snowfall_doy values per location to the corresponding date-location combination in ZAC_Paths
   #        ZAC_Paths$Date_doy <- as.numeric(strftime(ZAC_Paths$DateTime , format = "%j"))
   #        ZAC_Paths <- left_join(ZAC_Paths, Locations_BandValues, by=c("LocationID"))
-  #        write.csv(ZAC_Paths, paste0(here(), "/Output/", data_ID, "_ChickMovement_Snowfall_doy_Buffer", Buffer_radius_m, ".csv"), row.names = FALSE)
+  #        write.csv(ZAC_Paths, paste0(here(), "/Output/MODIS/Shapefile_Pixel_Snowfall/", data_ID, "_ChickMovement_Snowfall_doy_Buffer", Buffer_radius_m, ".csv"), row.names = FALSE)
   # 
   #    #(14) Plot each individuals path through a landscape of Snowfall doy values
   #        p1 <- ggplot()+
@@ -1088,7 +1090,7 @@
   #          ylab("Day of snowfall") +
   #          theme_tom()
   #
-  #          ggsave(plot=p1, paste0(here(), "/Output/", data_ID, "_MovementPaths_Snowfall_doy_Grid_Buffer", Buffer_radius_m, ".pdf"), width=10, height = 8)
+  #          ggsave(plot=p1, paste0(here(), "/Output/MODIS/Shapefile_Pixel_Snowfall/", data_ID, "_MovementPaths_Snowfall_doy_Grid_Buffer", Buffer_radius_m, ".pdf"), width=10, height = 8)
   # 
   #     #(15): There do not seem to be any clear trajectories in individuals moving up to areas with a later snowfall (except maybe 8218556)
   #     #We therefore calculate the average encountered Snowfall_doy values along each individual's foraging trajectory
@@ -1110,7 +1112,7 @@
   #          ylab("Upper asymptote bodymass (gram)") +
   #          theme_tom()
   #
-  #          ggsave(plot=p2, paste0(here(), "/Output/", data_ID, "_GrowthParameter_Mean_Snowfall_doy_Buffer", Buffer_radius_m, ".pdf"), width=10, height = 8)
+  #          ggsave(plot=p2, paste0(here(), "/Output/MODIS/Shapefile_Pixel_Snowfall/", data_ID, "_GrowthParameter_Mean_Snowfall_doy_Buffer", Buffer_radius_m, ".pdf"), width=10, height = 8)
   # 
   #        #Construct linear mixed models:
   #        lmm0 <- lme(d ~ 1, random=~1|Brood, data=ZAC_Chicks_MeanBandvalue, method="ML")
@@ -1199,7 +1201,7 @@
 #                               breaks = seq(0, max(na.omit(df$Age)), by = 1))+
 #          new_scale_color()
 #          }
-#      ggsave(plot=p3, paste0(here(), "/Output/", data_ID, "_Chick_Movement_Snowfall.pdf"), width=13 , height=12 , units="in")
+#      ggsave(plot=p3, paste0(here(), "/Output/MODIS/Shapefile_Pixel_Snowfall/", data_ID, "_Chick_Movement_Snowfall.pdf"), width=13 , height=12 , units="in")
          
          
 ##############################################################################################################################################################         
