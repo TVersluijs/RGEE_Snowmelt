@@ -25,6 +25,8 @@
 
 #Copyright Tom Versluijs 2023-07-28. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
 
+#Before running this script make sure to install RGEE according to the instructions in script "00-RGEE_TomVersluijs_Installation.R". 
+#Note that a GoogleDrive is required.
 
 ##################################################################################################################################
 
