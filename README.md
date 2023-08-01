@@ -46,21 +46,21 @@ For a more thorough description of all RGEE scripts, see the section 'DETAILED D
 
 ### Which years do you want to analyse?
 * MODIS: 	 	
-	years: 2000 - current
-	scripts: 01 - 04
+	* years: 2000 - current
+	* scripts: 01 - 04
 
 * Sentinel-2: 	
-	years: 2016 - current
-	scripts: 05 - 11
+	* years: 2016 - current
+	* scripts: 05 - 11
 
 ### What is the required spatial resolution of your analysis?
 * MODIS: 	 	
-	resolution: 500 meter			
-	scripts: 01 - 04
+	* resolution: 500 meter			
+	* scripts: 01 - 04
 
 * Sentinel-2:  	
-	resolution: 10 meter
-	scripts: 05 - 11
+	* resolution: 10 meter
+	* scripts: 05 - 11
 
 ### MODIS scripts: what kind of data do you want to analyse?
 * Date of snowmelt, and average NDSI, NDVI and NDMI at point locations located across the globe							
