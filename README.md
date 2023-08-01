@@ -189,4 +189,3 @@ calculate the relative band vale of each pixel compared to the average value of 
 provide an estimate fo the relative value of each band value over time. E.g.: Do certain pixels consistently have a lower NDSI
 value than the rest of the study area, or does this change over time?
 
-#######################################################################################
