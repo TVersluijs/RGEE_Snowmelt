@@ -42,30 +42,61 @@
 
 #######################################################################################
 
-### For a more thorough description of all RGEE scripts, see the section 'DETAILED DESCRIPTION OF RGEE SCRIPTS' below.
+For a more thorough description of all RGEE scripts, see the section 'DETAILED DESCRIPTION OF RGEE SCRIPTS' below.
 
-## Which years do you want to analyse?
-*MODIS: 	 	2000 - current		--> 	scripts 01 - 04
-*Sentinel-2: 	2016 - current 		-->		scripts 05 - 11
+### Which years do you want to analyse?
+* MODIS: 	 	
+	years: 2000 - current
+	scripts: 01 - 04
 
-## What is the required spatial resolution of your analysis?
-*MODIS: 	 	500 meter			-->		scripts 01 - 04
-*Sentinel-2:  	10 meter 			-->		scripts 05 - 11
+* Sentinel-2: 	
+	years: 2016 - current
+	scripts: 05 - 11
 
-## MODIS scripts: what kind of data do you want to analyse?
-*Date of snowmelt, and average NDSI, NDVI and NDMI at point locations located across the globe							-->		Script 01
-*Date of snowmelt at all pixels within a shapefile area																	-->		Script 02
-*Date of snowfall at all pixels within a shapefile area																	-->		Script 03
-*Change in date of snowmelt per pixel within a shapefile area 															-->		Script 04
+### What is the required spatial resolution of your analysis?
+* MODIS: 	 	
+	resolution: 500 meter			
+	scripts: 01 - 04
 
-## Sentinel-2 scripts: what kind of data do you want to analyse?
-*Date of snowmelt, and average NDSI, NDVI and NDMI at point locations located across the globe							-->		Script 05
-*Date of snowmelt, and average NDSI, NDVI and NDMI within a small shapefile (<50km2)									-->		Script 06
-*Date of snowmelt, and average NDSI, NDVI and NDMI at subareas located within a small shapefile	area (<50km2)			-->		Script 07
-*Date of snowmelt, and average NDSI, NDVI and NDMI at point locations located within a small shapefile area (<50km2)	-->		Script 08
-*Date of snowmelt at all pixels within a small shapefile (area < 50km2)													--> 	Script 09	
-*Date of snowmelt at all pixels within a large shapefile (area < 200km2)												--> 	Script 10
-*Relative pixelvalues per timestep within a small shapefile (area < 50km2)												-->		Script 11
+* Sentinel-2:  	
+	resolution: 10 meter
+	scripts: 05 - 11
+
+### MODIS scripts: what kind of data do you want to analyse?
+* Date of snowmelt, and average NDSI, NDVI and NDMI at point locations located across the globe							
+	* Script 01
+
+* Date of snowmelt at all pixels within a shapefile area																
+	* Script 02
+
+* Date of snowfall at all pixels within a shapefile area																
+	* Script 03
+
+* Change in date of snowmelt per pixel within a shapefile area 															
+	* Script 04
+
+
+### Sentinel-2 scripts: what kind of data do you want to analyse?
+* Date of snowmelt, and average NDSI, NDVI and NDMI at point locations located across the globe							
+	* Script 05
+
+* Date of snowmelt, and average NDSI, NDVI and NDMI within a small shapefile (<50km2)									
+	* Script 06
+
+* Date of snowmelt, and average NDSI, NDVI and NDMI at subareas located within a small shapefile area (<50km2)			
+	* Script 07
+
+* Date of snowmelt, and average NDSI, NDVI and NDMI at point locations located within a small shapefile area (<50km2)	
+	* Script 08
+
+* Date of snowmelt at all pixels within a small shapefile (area < 50km2)												
+	* Script 09
+	
+* Date of snowmelt at all pixels within a large shapefile (area < 200km2)												
+	* Script 10
+
+* Relative pixelvalues per timestep within a small shapefile (area < 50km2)												
+	* Script 11
 
 
 #######################################################################################
