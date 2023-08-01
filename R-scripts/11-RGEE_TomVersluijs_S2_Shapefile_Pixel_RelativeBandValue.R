@@ -2,8 +2,8 @@
 
 #Extract Sentinel 2 NDSI, NDVI and NDMI data for all pixels within a shapefile area. For each point in time (i.e. image)
 #we calculate the relative band vale of each pixel compared to the average value of that band at that point in time. This will
-#provide an estimate fo the relative value of each band value over time. E.g.: Do pixels high up the Aucella always have a lower
-#NDSI value than the rest of the study area, or does this change over time?
+#provide an estimate fo the relative value of each band value over time. E.g.: Do certain pixels consistently have a lower NDSI
+#value than the rest of the study area, or does this change over time?
 
 #Copyright Tom Versluijs 2023-07-31. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
 

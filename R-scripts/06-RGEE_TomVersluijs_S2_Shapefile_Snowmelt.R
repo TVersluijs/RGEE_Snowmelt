@@ -1,6 +1,7 @@
 ##################################################################################################################################
 
-#Extract Sentinel-2 data to calculate the change in the fraction of snowcover within a shapefile area
+#Use Sentinel-2 data to extract time series of the average NDVI, NDMI, and NDSI and the fraction of snowcover for a single area of 
+#interest (i.e. a single shapefile).
 
 #Copyright Tom Versluijs 2023-07-31. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
 

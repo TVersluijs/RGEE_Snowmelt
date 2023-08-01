@@ -1,10 +1,11 @@
 ##################################################################################################################################
 
-#This script calculates the timing of snowmelt within a bufferzone surrounding points of interest using MODIS data. 
-#As input it requires a dataset with point locations. This script then loops through all points, calculates the 
-#point specific bounding box (taking into account a specified buffer zone) and makes sure that if this bounding
-#box overlaps with multiple MODIS-tiles for a certain day that these data are mosaicked (picking the pixel with
-#the least cloudcover). Snowmelt is then calculated within this bounding box according to the specification below.
+#In this script the timing of snow melt is calculated based on MODIS data for all locations specified in an input file. 
+#The user can specify a bufferzone (radius) to depict the area in which snow melt will be analysed per location. All 
+#locations are analysed consecutively (using a loop). First, a location specific bounding box is drawn per point location 
+#(taking into account the specified buffer zone) and MODIS satellite data is extracted within this bounding box. Second, 
+#clouds and permanent water bodies are filtered within this bounding box. Finally, snow melt is analysed within each 
+#locations's buffer zone based on one of the following methods (specified by the user by setting the parameter 'method'):
 
 #The user can specify three methods to look at snowmelt over time:
 # (I):   'avg_NDSI':     Calculate the average NDSI value over time within each point's bufferzone, fit a GAM through these 

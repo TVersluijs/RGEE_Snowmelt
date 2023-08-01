@@ -1,6 +1,8 @@
 ##################################################################################################################################
 
-#Extract Sentinel 2 NDSI data and Calculate the date of snowmelt for every 10mx10m pixel in a shapefile area
+#Use Sentinel-2 data to create pixel-level maps (10m resolution) of the timing of snowmelt in for an area smaller than c.a. 50km2. 
+#Snowmelt is calculated per pixel by fitting a GAM through the average NDSI data and extracting the moment this GAM crosses a user 
+#specified NDSI threshold. This script requires a single shapefile of the study area as input.
 
 #Copyright Tom Versluijs 2023-07-27. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
 

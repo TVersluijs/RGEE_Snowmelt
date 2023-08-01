@@ -5,8 +5,8 @@
 #consecutively (using a loop). First, a location specific bounding box is drawn per point location (taking into account the specified 
 #buffer zone) and Sentinel-2 satellite data is extracted within this bounding box. Second, clouds and permanent water bodies are
 #filtered within this bounding box. Third, if this bounding box overlaps with multiple satellite tiles for a certain day, a composite
-#image is created (picking the pixel with least cloud cover). Finally, snow melt is analysed within the buffer zone based on one of
-#the following methods (specified by the user by setting the parameter 'method'):
+#image is created (picking the pixel with least cloud cover). Finally, snow melt is analysed within each locations's buffer zone based 
+#on one of the following methods (specified by the user by setting the parameter 'method'):
 
 # (I): 'snowfraction': Calculates the fraction of pixels within each buffer zone over time where NDSI > 'NDSI_threshold', fits a GAM
 #       through these data and extract the moment when this model passes a user-specified 'Snowfraction_threshold'.
