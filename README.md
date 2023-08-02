@@ -142,20 +142,23 @@ This script requires a shapefile of the study area as input.
 </p>
 
 														   
-### *03-RGEE_TomVersluijs_MODIS_Shapefile_Pixel_Snowfall.R
-Create pixel-level maps (500m resolution) of the timing of snowfall in a study area based on MODIS data. Snowfall is calculated 
-per pixel by fitting a GAM through the average NDSI data and extracting the moment this GAM crosses a user specified NDSI threshold. 
-This script requires a shapefile of the study area as input.														   
-														   
-### *04-RGEE_TomVersluijs_MODIS_Shapefile_Pixel_ChangeInSnowmelt.R
+### *03-RGEE_TomVersluijs_MODIS_Shapefile_Pixel_ChangeInSnowmelt.R
 This script requires MODIS snowmelt maps generated using script "02-RGEE_TomVersluijs_MODIS_Shapefile_Pixel_Snowmelt.R" as input.
 It imports the pixel-level snowmelt images for all analyzed years and transforms them into an image with the change in the timing 
 of snowmelt over the years for each pixel (i.e. slope of linear regression) and another image with the average timing of snowmelt 
 over the years for each pixel (i.e. intercept of linear regression).
 
+<p float="left">
+  <img align="top" src="./_pictures/03A-MODIS_Zackenberg_Pixels_Regressions_ChangeInSnowmelt.png" width="32%" title="Linear regressions fitted to pixel-specific timeseries of the date of snowmelt" />
+  <img align="top" src="./_pictures/03B-MODIS_Zackenberg_Image_ChangeInSnowmelt.png" width="32%" title="Image of the change in timing of snowmelt (slope) for all pixels within the shapefile" /> 
+  <img align="top" src="./_pictures/03C-MODIS_Zackenberg_Image_SnowmeltIntercept.png" width="32%" title="Image of the average date of snowmelt (intercept at average year) for all pixels within the shapefile" /> 
+</p>
+
+
+
 ## SENTINEL-2 SCRIPTS:
 
-### *05-RGEE_TomVersluijs_S2_Points_Snowmelt.R
+### *04-RGEE_TomVersluijs_S2_Points_Snowmelt.R
 In this script the timing of snow melt is calculated based on Sentinel-2 data for all locations specified in an input file. The 
 user can specify a bufferzone (radius) to depict the area in which snow melt will be analysed per location. All locations are 
 analysed consecutively (using a loop). First, a location specific bounding box is drawn per point location (taking into account 
@@ -166,15 +169,15 @@ locations's buffer zone based on one of the following methods (specified by the 
 fitting a GAM through the average NDSI, NDVI and NDMI values over time, (2) Fitting a GAM through the fraction of snow-covered 
 pixels over time. No shapefile is required as input for this script.												
 												
-### *06-RGEE_TomVersluijs_S2_Shapefile_Snowmelt.R 
+### *05-RGEE_TomVersluijs_S2_Shapefile_Snowmelt.R 
 Use Sentinel-2 data to extract time series of the average NDVI, NDMI, and NDSI and the fraction of snowcover for a single area of 
 interest (i.e. a single shapefile).
 
-### *07-RGEE_TomVersluijs_S2_Shapefile_SubAreas_Snowmelt.R
+### *06-RGEE_TomVersluijs_S2_Shapefile_SubAreas_Snowmelt.R
 Use Sentinel-2 data to extract time series of the average NDVI, NDMI, and NDSI and the fraction of snowcover for all sub areas located
 within a shapefile (these sub areas can be specified by creating a multipolygon in e.g. QGIS).
 
-### *08-RGEE_TomVersluijs_S2_Shapefile_Points_Snowmelt.R
+### *07-RGEE_TomVersluijs_S2_Shapefile_Points_Snowmelt.R
 In this script the timing of snow melt is calculated based on Sentinel-2 data for all locations specified in an input file. The
 user can specify a bufferzone (radius) to depict the area in which snow melt will be analysed per location. All locations are
 required to be located within a single shapefile and are then analysed simultaneously. First, clouds and permanent water bodies 
@@ -187,22 +190,16 @@ consecutively using a loop, which makes that script significantly slower to run.
 thus works for points spaced much further apart (i.e. tracking data of birds migratory birds). The current script only works for 
 small areas of c.a. 50-100 km2 (larger areas might result in computation errors).
 																
-### *09-RGEE_TomVersluijs_S2_Shapefile_Pixel_Snowmelt.R
+### *08-RGEE_TomVersluijs_S2_Shapefile_Pixel_Snowmelt.R
 Use Sentinel-2 data to create pixel-level maps (10m resolution) of the timing of snowmelt for an area smaller than c.a. 50km2. 
 Snowmelt is calculated per pixel by fitting a GAM through the average NDSI data and extracting the moment this GAM crosses a user 
 specified NDSI threshold. This script requires a single shapefile of the study area as input.
 
 ![Shapefile_Pixel_Snowmelt](<./_pictures/Zackenberg_Pixel_Snowmelt_Resolution_10m.png>)										
 
-### *10-RGEE_TomVersluijs_S2_Shapefile_Pixel_Snowmelt_LargeAreas.R
+### *09-RGEE_TomVersluijs_S2_Shapefile_Pixel_Snowmelt_LargeAreas.R
 Use Sentinel-2 data to create pixel-level maps (10m resolution) of the timing of snowmelt for an area larger than c.a. 50km2.
 Snowmelt is calculated per pixel by fitting a GAM through the average NDSI data and extracting the moment this GAM crosses a user 
 specified NDSI threshold. This script requires that the shapefile of the study area is split-up into several smaller shapefiles to 
 prevent memory issues on the GEE-server.
 																
-### *11-RGEE_TomVersluijs_S2_Shapefile_Pixel_RelativeBandValue.R
-Extract Sentinel 2 NDSI, NDVI and NDMI data for all pixels within a shapefile area. For each point in time (i.e. image) we 
-calculate the relative band vale of each pixel compared to the average value of that band at that point in time. This will
-provide an estimate fo the relative value of each band value over time. E.g.: Do certain pixels consistently have a lower NDSI
-value than the rest of the study area, or does this change over time?
-
