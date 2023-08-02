@@ -118,17 +118,17 @@ can specify a bufferzone (radius) to depict the area in which snow melt will be 
 consecutively (using a loop). First, a location specific bounding box is drawn per point location taking into account the specified 
 buffer zone) and MODIS satellite data is extracted within this bounding box. Second, clouds and permanent water bodies are filtered 
 within this bounding box. Finally, snow melt is analysed within each locations's buffer zone based on one of the following methods 
-(specified by the user by setting the parameter 'method'):(1) fitting a GAM through the average NDSI, NDVI and NDMI values over 
+(specified by the user by setting the parameter 'method'): (1) fitting a GAM through the average NDSI, NDVI and NDMI values over 
 time, (2) Fitting a GAM through the fraction of snow-covered pixels over time, or (3) Fitting a GAM through the NDSI values per 
 pixel. No shapefile is required as input for this script.
 
 <p float="left">
-  <img src="./_pictures/01A-MODIS_Wrangel_Locations_buffer5000m.png" width="300" />
-  <img src="./_pictures/01B-MODIS_Wrangel_Location4_Snowmelt_Pixels_GAMS.png" width="300" /> 
+  <img align="top" src="./_pictures/01A-MODIS_Wrangel_Locations_buffer5000m.png" width="50%" title="hover text" />
+  <img align="top" src="./_pictures/01B-MODIS_Wrangel_Location4_Snowmelt_Pixels_GAMS.png" width="50%" alt="alt text" /> 
 </p>
 <p float="left">
-  <img src="./_pictures/01D-MODIS_Wrangel_Locations_Snowmelt_GAMS.png" width="300" />
-  <img src="./_pictures/01C-MODIS_Wrangel_Location4_Snowmelt_Resolution_500m_buffer5000m.png" width="300" />
+  <img align="top" src="./_pictures/01D-MODIS_Wrangel_Locations_Snowmelt_GAMS.png" width="50%" />
+  <img align="top" src="./_pictures/01C-MODIS_Wrangel_Location4_Snowmelt_Resolution_500m_buffer5000m.png" width="50%" />
 </p>
 				
 ### *02-RGEE_TomVersluijs_MODIS_Shapefile_Pixel_Snowmelt.R
