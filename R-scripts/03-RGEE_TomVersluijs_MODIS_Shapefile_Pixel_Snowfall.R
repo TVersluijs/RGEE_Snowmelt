@@ -53,7 +53,7 @@
    #(a): MODIS satellite
 
      #Specify resolution of images in meters
-     resolution=500 # native resolution of satellite image (MODIS=500m)
+     resolution=500 #default maximum resolution for MODIS = 500m
 
    #(b) Area of interest
 
@@ -187,7 +187,7 @@
         #Extract Sentinel-2 Surface Reflectance satellite data
          MODIS_col<-ee$ImageCollection('MODIS/006/MOD09GA')
          MODIS_col <- MODIS_col$
-           filterBounds(coordinates_point)$
+           filterBounds(aoi)$
            filterDate(start_date, end_date)
        
         #Clip all images to area of interest (aoi). Clipping to shapefile will occur at step 16B of this script
@@ -943,7 +943,7 @@
   #       Buffer_radius_m=0
   # 
   #     #(f): Resolution of sampling in meters
-  #       resolution=500 # native resolution of satellite image (sentinel-2=10m, MODIS=500m)
+  #       resolution=500 #default maximum resolution for MODIS = 500m
   # 
   #     #(g): Define which MODIS cloud masking algorithm has been used ("PGE11", "MOD35", or "Combined)
   #       MODIS_cloud_masking_algorithm = 'PGE11'
