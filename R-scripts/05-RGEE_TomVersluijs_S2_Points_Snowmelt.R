@@ -79,7 +79,7 @@
      #'AddSnowFraction' and the calculation of average bandvalues using the function 'Extract_BandValuesAtPoins'.
      #Detection of cloud-pixels occurs at resolution 'resolution_cldmsk' specified above. Detection of water-pixels
      #occurs at the native resolution of the sentinel-2 dataset (10m).
-     resolution=10 #(default for sentinel-2=10m)
+     resolution=10 # default maximum resolution for Sentinel-2 = 10m
 
    #(b) Area of interest
 
@@ -94,7 +94,7 @@
    #(c) Point locations
 
      #Name of file with Locations of interest
-     input_locations <- "ZAC19_ChickMovement_test.csv"
+     input_locations <- "TestLocations.csv"
      #Make sure it has the columns "LON_x", "LAT_y" and "DateTime"
      #DateTime should be in format 'dd/mm/yyyy hh:mm:ss'
 

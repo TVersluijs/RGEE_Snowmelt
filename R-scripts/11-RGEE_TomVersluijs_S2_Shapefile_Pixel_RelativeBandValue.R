@@ -59,7 +59,7 @@
      #Use S2_SR_HARMONIZED (level 2a product) for data starting from 2019
 
      #Resolution of sampling in meters
-     resolution=100 # native resolution of satellite image (sentinel-2=10m)
+     resolution=20 #default maximum resolution for Sentinel-2 = 10m
 
    #(b) Area of interest
 
@@ -206,13 +206,13 @@
       #Extract Sentinel-2 Surface Reflectance data for a given area and date range:
        s2_col <- ee$ImageCollection(paste0('COPERNICUS/', s2_dataset))
        s2_col <- s2_col$
-         filterBounds(coordinates_point)$ #For areas that do not span multiple tiles, change aoi to coordinates_point to greatly speed-up code.
+         filterBounds(aoi)$ #For areas that do not span multiple tiles, change aoi to coordinates_point to greatly speed-up code.
          filterDate(start_date, end_date)
   
       #Load cloud information from S2_CLOUD_PROBABILITY
        s2_cloudless_col <-ee$ImageCollection('COPERNICUS/S2_CLOUD_PROBABILITY')
        s2_cloudless_col <- s2_cloudless_col$
-         filterBounds(coordinates_point)$ #For areas that do not span multiple tiles, change aoi to coordinates_point to greatly speed-up code.
+         filterBounds(aoi)$ #For areas that do not span multiple tiles, change aoi to coordinates_point to greatly speed-up code.
          filterDate(start_date, end_date) 
        
       #Store sentinel-2 projection (of band "probability")
