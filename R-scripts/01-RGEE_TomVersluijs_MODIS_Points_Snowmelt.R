@@ -78,10 +78,10 @@
     #Spatial resolution of satellite image
     #Note that this parameter only affects the calculation of the fraction of snowcover using the function
     #'AddSnowFraction' and the calculation of average bandvalues using the function 'Extract_BandValuesAtPoins'.
-    #Detection of cloud-pixels occurs at resolution 'resolution_cldmsk' specified below Detection of water-pixels
+    #Detection of cloud-pixels occurs at resolution 'resolution_cldmsk' specified below. Detection of water-pixels
     #occurs at the native resolution of the MODIS dataset (500m). Therefore, adjusting this parameter only has
     #limited effect on computation time.
-    resolution=500 #(default for MODIS=500m)
+    resolution=500 #default maximum resolution for MODIS = 500m
 
   #(b) Area of interest
 
