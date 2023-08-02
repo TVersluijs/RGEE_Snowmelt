@@ -123,15 +123,13 @@ time, (2) Fitting a GAM through the fraction of snow-covered pixels over time, o
 pixel. No shapefile is required as input for this script.
 
 <p float="left">
-  <img src="./_pictures/01A-MODIS_Wrangel_Locations_buffer5000m.png" width="100" />
-  <img src="./_pictures/01B-MODIS_Wrangel_Location4_Snowmelt_Pixels_GAMS.png" width="100" /> 
-  <img src="./_pictures/01C-MODIS_Wrangel_Location4_Snowmelt_Resolution_500m_buffer5000m.png" width="100" />
-  <img src="./_pictures/01D-MODIS_Wrangel_Locations_Snowmelt_GAMS.png" width="100" />
+  <img src="./_pictures/01A-MODIS_Wrangel_Locations_buffer5000m.png" width="300" />
+  <img src="./_pictures/01B-MODIS_Wrangel_Location4_Snowmelt_Pixels_GAMS.png" width="300" /> 
 </p>
-
-				
-#![MODIS_Locations_Wrangel](<.>)	![MODIS_WrangelLocation4_SnowmeltPerPixel_GAMS](<>)	
-#![MODIS_WrangelLocation4_SnowmeltPerPixel_Image](<.>)	![MODIS_Locations_Wrangel_Snowmelt](<.>)	
+<p float="left">
+  <img src="./_pictures/01D-MODIS_Wrangel_Locations_Snowmelt_GAMS.png" width="300" />
+  <img src="./_pictures/01C-MODIS_Wrangel_Location4_Snowmelt_Resolution_500m_buffer5000m.png" width="300" />
+</p>
 				
 ### *02-RGEE_TomVersluijs_MODIS_Shapefile_Pixel_Snowmelt.R
 Create pixel-level maps (500m resolution) of the timing of snowmelt in a study area based on MODIS data. Snowmelt is calculated 
