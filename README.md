@@ -1,6 +1,6 @@
 #######################################################################################
 
-# Automated RGEE scripts to analyze the timing of snowmelt, and timeseries of NDSI, NDVI and NDMI based on MODIS or Sentinel-2 satellite data.
+# Automated RGEE scripts to analyze the date of snowmelt, and timeseries of NDSI, NDVI and NDMI based on MODIS or Sentinel-2 satellite data.
 
 ## Copyright: Tom Versluijs 2023
 
@@ -107,7 +107,7 @@ Script to install RGEE by manually setting the Python path. This script is adapt
 ## MODIS SCRIPTS:
 
 ### *01-RGEE_TomVersluijs_MODIS_Points_Snowmelt.R
-In this script the timing of snow melt is calculated based on MODIS data for all locations specified in an input file. The user 
+In this script the date of snow melt is calculated based on MODIS data for all locations specified in an input file. The user 
 can specify a bufferzone (radius) to depict the area in which snow melt will be analysed per location. All locations are analysed 
 consecutively (using a loop). First, a location specific bounding box is drawn per point location taking into account the specified 
 buffer zone) and MODIS satellite data is extracted within this bounding box. Second, clouds and permanent water bodies are filtered 
@@ -121,12 +121,12 @@ pixel. No shapefile is required as input for this script.
   <img align="top" src="./_pictures/01B-MODIS_Wrangel_Location4_Pixels_NDSI_GAMS.png" width="49%" title="Method 3: GAMS fitted through NDSI values per pixel for a single location" /> 
  </p>
  <p float="left">
-  <img align="top" src="./_pictures/01C-MODIS_Wrangel_Location4_Image_Snowmelt.png" width="49%" title="Method 3: Image of the pixel-specific timing of snowmelt for a single location" />
+  <img align="top" src="./_pictures/01C-MODIS_Wrangel_Location4_Image_Snowmelt.png" width="49%" title="Method 3: Image of the pixel-specific date of snowmelt for a single location" />
   <img align="top" src="./_pictures/01D-MODIS_Wrangel_Locations_Snowmelt_GAMS.png" width="49%" title="Method 3: GAMS fitted through the fraction of snow-covered pixels for each location" />
 </p>
 				
 ### *02-RGEE_TomVersluijs_MODIS_Shapefile_Pixel_Snowmelt.R
-Create pixel-level maps (500m resolution) of the timing of snowmelt in a study area based on MODIS data. Snowmelt is calculated 
+Create pixel-level maps (500m resolution) of the date of snowmelt in a study area based on MODIS data. Snowmelt is calculated 
 per pixel by fitting a GAM through the average NDSI data and extracting the moment this GAM crosses a user specified NDSI threshold. 
 This script requires a shapefile of the study area as input. The user can specify whether clouds and permanent waterbodies need to
 be masked from the analysis.
@@ -136,13 +136,13 @@ be masked from the analysis.
   <img align="top" src="./_pictures/02A-MODIS_Zackenberg_Pixels_NDSI_GAMS.png" width="49%" title="GAMS fitted through NDSI values for each pixel within the shapefile" />
 </p>
 <p float="left">
-  <img align="top" src="./_pictures/02B-MODIS_Zackenberg_Image_Snowmelt.png" width="49%" title="Image of the timing of snowmelt for all pixels within the shapefile" /> 
+  <img align="top" src="./_pictures/02B-MODIS_Zackenberg_Image_Snowmelt.png" width="49%" title="Image of the date of snowmelt for all pixels within the shapefile (500m resolution)" /> 
 </p>
 														   
 ### *03-RGEE_TomVersluijs_MODIS_Shapefile_Pixel_ChangeInSnowmelt.R
 This script requires MODIS snowmelt maps generated using script "02-RGEE_TomVersluijs_MODIS_Shapefile_Pixel_Snowmelt.R" as input.
-It imports the pixel-level snowmelt images for all analyzed years and transforms them into an image with the change in the timing 
-of snowmelt over the years for each pixel (i.e. slope of linear regression) and another image with the average timing of snowmelt 
+It imports the pixel-level snowmelt images for all analyzed years and transforms them into an image with the change in the date 
+of snowmelt over the years for each pixel (i.e. slope of linear regression) and another image with the average date of snowmelt 
 over the years for each pixel (i.e. intercept of linear regression).
 
 <p float="left">
@@ -150,7 +150,7 @@ over the years for each pixel (i.e. intercept of linear regression).
   <img align="top" src="./_pictures/03A-MODIS_Zackenberg_Pixels_Regressions_ChangeInSnowmelt.png" width="49%" title="Linear regressions fitted to pixel-specific timeseries of the date of snowmelt" />
 </p>
 <p float="left">
-  <img align="top" src="./_pictures/03B-MODIS_Zackenberg_Image_ChangeInSnowmelt.png" width="49%" title="Image of the change in timing of snowmelt (slope) for all pixels within the shapefile" /> 
+  <img align="top" src="./_pictures/03B-MODIS_Zackenberg_Image_ChangeInSnowmelt.png" width="49%" title="Image of the change in date of snowmelt (slope) for all pixels within the shapefile" /> 
   <img align="top" src="./_pictures/03C-MODIS_Zackenberg_Image_SnowmeltIntercept.png" width="49%" title="Image of the average date of snowmelt (intercept at average year) for all pixels within the shapefile" /> 
 </p>
 
@@ -158,7 +158,7 @@ over the years for each pixel (i.e. intercept of linear regression).
 ## SENTINEL-2 SCRIPTS:
 
 ### *04-RGEE_TomVersluijs_S2_Points_Snowmelt.R
-In this script the timing of snow melt is calculated based on Sentinel-2 data for all locations specified in an input file. The 
+In this script the date of snow melt is calculated based on Sentinel-2 data for all locations specified in an input file. The 
 user can specify a bufferzone (radius) to depict the area in which snow melt will be analysed per location. All locations are 
 analysed consecutively (using a loop). First, a location specific bounding box is drawn per point location (taking into account 
 the specified buffer zone) and Sentinel-2 satellite data is extracted within this bounding box. Second, clouds and permanent 
@@ -200,7 +200,7 @@ photos for that day).
 </p>
 
 ### *07-RGEE_TomVersluijs_S2_Shapefile_Points_Snowmelt.R
-In this script the timing of snow melt is calculated based on Sentinel-2 data for all locations specified in an input file. The
+In this script the date of snow melt is calculated based on Sentinel-2 data for all locations specified in an input file. The
 user can specify a bufferzone (radius) to depict the area in which snow melt will be analysed per location. All locations are
 required to be located within a single shapefile and are then analysed simultaneously. First, clouds and permanent water bodies 
 are filtered within the shapefile. Second, if the shapefile overlaps with multiple satellite tiles for a certain day, a composite
@@ -219,16 +219,22 @@ areas of c.a. 50-100 km2 (larger areas might result in computation errors).
 
 	
 ### *08-RGEE_TomVersluijs_S2_Shapefile_Pixel_Snowmelt.R
-Use Sentinel-2 data to create pixel-level maps (10m resolution) of the timing of snowmelt for an area smaller than c.a. 50km2. 
+Use Sentinel-2 data to create pixel-level maps (10m resolution) of the date of snowmelt for an area smaller than c.a. 50km2. 
 Snowmelt is calculated per pixel by fitting a GAM through the average NDSI data and extracting the moment this GAM crosses a user 
 specified NDSI threshold. This script requires a single shapefile of the study area as input. The user can specify whether clouds 
 and permanent waterbodies need to be masked. No composite image can be generated because this will result in computation errors.
 
-![Shapefile_Pixel_Snowmelt](<./_pictures/Zackenberg_Pixel_Snowmelt_Resolution_10m.png>)										
+<p float="left">
+  <img align="top" src="./_pictures/08A_Sentinel2_Zackenberg_Shapefile_Image_Snowmelt.png" width="49%" title="Image of the date of snowmelt at Zackenberg for all pixels within the shapefile (10m resolution)" />
+</p>								
 
 ### *09-RGEE_TomVersluijs_S2_Shapefile_Pixel_Snowmelt_LargeAreas.R
-Use Sentinel-2 data to create pixel-level maps (10m resolution) of the timing of snowmelt for an area larger than c.a. 50km2.
+Use Sentinel-2 data to create pixel-level maps (10m resolution) of the date of snowmelt for an area larger than c.a. 50km2.
 Snowmelt is calculated per pixel by fitting a GAM through the average NDSI data and extracting the moment this GAM crosses a user 
 specified NDSI threshold. This script requires that the shapefile of the study area is split-up into several smaller shapefiles to 
-prevent memory issues on the GEE-server. No composite image can be generated because this will result in computation errors.
-																
+prevent memory issues on the GEE-server. No composite image can be generated because this will result in computation errors. This 
+script currently only works by splitting the main shapefile into exactly four smaller shapefiles.
+
+<p float="left">
+  <img align="top" src="./_pictures/09A_Sentinel2_Taymir_Shapefile_Image_Snowmelt.png" width="49%" title="Image of the date of snowmelt at Taymir for all pixels within the shapefile (10m resolution)" />
+</p>																	
