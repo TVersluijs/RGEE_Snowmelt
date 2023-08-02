@@ -121,9 +121,17 @@ within this bounding box. Finally, snow melt is analysed within each locations's
 (specified by the user by setting the parameter 'method'):(1) fitting a GAM through the average NDSI, NDVI and NDMI values over 
 time, (2) Fitting a GAM through the fraction of snow-covered pixels over time, or (3) Fitting a GAM through the NDSI values per 
 pixel. No shapefile is required as input for this script.
+
+<p float="left">
+  <img src="./_pictures/01A-MODIS_Wrangel_Locations_buffer5000m.png" width="100" />
+  <img src="./_pictures/01B-MODIS_Wrangel_Location4_Snowmelt_Pixels_GAMS.png" width="100" /> 
+  <img src="./_pictures/01C-MODIS_Wrangel_Location4_Snowmelt_Resolution_500m_buffer5000m.png" width="100" />
+  <img src="./_pictures/01D-MODIS_Wrangel_Locations_Snowmelt_GAMS.png" width="100" />
+</p>
+
 				
-![MODIS_Locations_Wrangel](<./_pictures/01A-MODIS_Wrangel_Locations_buffer5000m.png>)	![MODIS_WrangelLocation4_SnowmeltPerPixel_GAMS](<./_pictures/01B-MODIS_Wrangel_Location4_Snowmelt_Pixels_GAMS.png>)	
-![MODIS_WrangelLocation4_SnowmeltPerPixel_Image](<./_pictures/01C-MODIS_Wrangel_Location4_Snowmelt_Resolution_500m_buffer5000m.png>)	![MODIS_Locations_Wrangel_Snowmelt](<./_pictures/01D-MODIS_Wrangel_Locations_Snowmelt_GAMS.png>)	
+#![MODIS_Locations_Wrangel](<.>)	![MODIS_WrangelLocation4_SnowmeltPerPixel_GAMS](<>)	
+#![MODIS_WrangelLocation4_SnowmeltPerPixel_Image](<.>)	![MODIS_Locations_Wrangel_Snowmelt](<.>)	
 				
 ### *02-RGEE_TomVersluijs_MODIS_Shapefile_Pixel_Snowmelt.R
 Create pixel-level maps (500m resolution) of the timing of snowmelt in a study area based on MODIS data. Snowmelt is calculated 
