@@ -132,10 +132,12 @@ This script requires a shapefile of the study area as input. The user can specif
 be masked from the analysis.
 
 <p float="left">
+  <img align="top" src="./_pictures/05A-Sentinel2_Zackenberg_Shapefile.png" width="49%" title="Shapefile area for Zackenberg (c.a. 50km2)" />
   <img align="top" src="./_pictures/02A-MODIS_Zackenberg_Pixels_NDSI_GAMS.png" width="49%" title="GAMS fitted through NDSI values for each pixel within the shapefile" />
+</p>
+<p float="left">
   <img align="top" src="./_pictures/02B-MODIS_Zackenberg_Image_Snowmelt.png" width="49%" title="Image of the timing of snowmelt for all pixels within the shapefile" /> 
 </p>
-
 														   
 ### *03-RGEE_TomVersluijs_MODIS_Shapefile_Pixel_ChangeInSnowmelt.R
 This script requires MODIS snowmelt maps generated using script "02-RGEE_TomVersluijs_MODIS_Shapefile_Pixel_Snowmelt.R" as input.
@@ -144,10 +146,11 @@ of snowmelt over the years for each pixel (i.e. slope of linear regression) and 
 over the years for each pixel (i.e. intercept of linear regression).
 
 <p float="left">
+  <img align="top" src="./_pictures/05A-Sentinel2_Zackenberg_Shapefile.png" width="49%" title="Shapefile area for Zackenberg (c.a. 50km2)" />
   <img align="top" src="./_pictures/03A-MODIS_Zackenberg_Pixels_Regressions_ChangeInSnowmelt.png" width="49%" title="Linear regressions fitted to pixel-specific timeseries of the date of snowmelt" />
-  <img align="top" src="./_pictures/03B-MODIS_Zackenberg_Image_ChangeInSnowmelt.png" width="49%" title="Image of the change in timing of snowmelt (slope) for all pixels within the shapefile" /> 
 </p>
 <p float="left">
+  <img align="top" src="./_pictures/03B-MODIS_Zackenberg_Image_ChangeInSnowmelt.png" width="49%" title="Image of the change in timing of snowmelt (slope) for all pixels within the shapefile" /> 
   <img align="top" src="./_pictures/03C-MODIS_Zackenberg_Image_SnowmeltIntercept.png" width="49%" title="Image of the average date of snowmelt (intercept at average year) for all pixels within the shapefile" /> 
 </p>
 
