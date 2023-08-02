@@ -123,18 +123,24 @@ time, (2) Fitting a GAM through the fraction of snow-covered pixels over time, o
 pixel. No shapefile is required as input for this script.
 
 <p float="left">
-  <img align="top" src="./_pictures/01A-MODIS_Wrangel_Locations_buffer5000m.png" width="49%" title="Five locations at Wrangel Island with buffer 5000m" />
-  <img align="top" src="./_pictures/01B-MODIS_Wrangel_Location4_Snowmelt_Pixels_GAMS.png" width="49%" title="GAMS fitted through NDSI values per pixel (only 4 shown) for a single location" /> 
+  <img align="top" src="./_pictures/01A-MODIS_Wrangel_Locations.png" width="49%" title="Five locations at Wrangel Island, each with a buffer of 5000m" />
+  <img align="top" src="./_pictures/01B-MODIS_Wrangel_Location4_Pixels_NDSI_GAMS.png" width="49%" title="Method 3: GAMS fitted through NDSI values per pixel for a single location" /> 
 </p>
 <p float="left">
-  <img align="top" src="./_pictures/01D-MODIS_Wrangel_Locations_Snowmelt_GAMS.png" width="49%" title="GAMS fitted through the fraction of snow-covered pixels for each location" />
-  <img align="top" src="./_pictures/01C-MODIS_Wrangel_Location4_Snowmelt_Resolution_500m_buffer5000m.png" width="49%" title="Image of the pixel-specific timing of snowmelt for a single location" />
+    <img align="top" src="./_pictures/01C-MODIS_Wrangel_Location4_Image_Snowmelt.png" width="49%" title="Method 3: Image of the pixel-specific timing of snowmelt for a single location" />
+	<img align="top" src="./_pictures/01D-MODIS_Wrangel_Locations_Snowmelt_GAMS.png" width="49%" title="Method 3: GAMS fitted through the fraction of snow-covered pixels for each location" />
 </p>
 				
 ### *02-RGEE_TomVersluijs_MODIS_Shapefile_Pixel_Snowmelt.R
 Create pixel-level maps (500m resolution) of the timing of snowmelt in a study area based on MODIS data. Snowmelt is calculated 
 per pixel by fitting a GAM through the average NDSI data and extracting the moment this GAM crosses a user specified NDSI threshold. 
 This script requires a shapefile of the study area as input.
+
+<p float="left">
+  <img align="top" src="./_pictures/02A-MODIS_Zackenberg_Pixels_NDSI_GAMS.png" width="49%" title="GAMS fitted through NDSI values for each pixel within the shapefile" />
+  <img align="top" src="./_pictures/02B-MODIS_Zackenberg_Image_Snowmelt.png" width="49%" title="Image of the timing of snowmelt for all pixels within the shapefile" /> 
+</p>
+
 														   
 ### *03-RGEE_TomVersluijs_MODIS_Shapefile_Pixel_Snowfall.R
 Create pixel-level maps (500m resolution) of the timing of snowfall in a study area based on MODIS data. Snowfall is calculated 
