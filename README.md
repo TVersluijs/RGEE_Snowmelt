@@ -123,12 +123,12 @@ time, (2) Fitting a GAM through the fraction of snow-covered pixels over time, o
 pixel. No shapefile is required as input for this script.
 
 <p float="left">
-  <img align="top" src="./_pictures/01A-MODIS_Wrangel_Locations_buffer5000m.png" width="50%" title="hover text" />
-  <img align="top" src="./_pictures/01B-MODIS_Wrangel_Location4_Snowmelt_Pixels_GAMS.png" width="50%" alt="alt text" /> 
+  <img align="top" src="./_pictures/01A-MODIS_Wrangel_Locations_buffer5000m.png" width="49%" title="Five locations at Wrangel Island with buffer 5000m" />
+  <img align="top" src="./_pictures/01B-MODIS_Wrangel_Location4_Snowmelt_Pixels_GAMS.png" width="49%" title="GAMS fitted through NDSI values per pixel (only 4 shown) for a single location" /> 
 </p>
 <p float="left">
-  <img align="top" src="./_pictures/01D-MODIS_Wrangel_Locations_Snowmelt_GAMS.png" width="50%" />
-  <img align="top" src="./_pictures/01C-MODIS_Wrangel_Location4_Snowmelt_Resolution_500m_buffer5000m.png" width="50%" />
+  <img align="top" src="./_pictures/01D-MODIS_Wrangel_Locations_Snowmelt_GAMS.png" width="49%" title="GAMS fitted through the fraction of snow-covered pixels for each location" />
+  <img align="top" src="./_pictures/01C-MODIS_Wrangel_Location4_Snowmelt_Resolution_500m_buffer5000m.png" width="49%" title="Image of the pixel-specific timing of snowmelt for a single location" />
 </p>
 				
 ### *02-RGEE_TomVersluijs_MODIS_Shapefile_Pixel_Snowmelt.R
