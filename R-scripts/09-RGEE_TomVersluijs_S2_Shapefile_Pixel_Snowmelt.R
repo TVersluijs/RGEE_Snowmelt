@@ -18,9 +18,11 @@
       #(0): Clear workspace and set python environment
        rm(list=ls())
        library(here)
-       rgee_environment_dir <- readRDS(paste0(here::here(), "/Input/rgee_environment_dir.rds"))
-       reticulate::use_python(rgee_environment_dir, required=T)
-       reticulate::py_config()
+       if(file.exists(paste0(here::here(), "/Input/rgee_environment_dir.rds"))){
+         rgee_environment_dir <- readRDS(paste0(here::here(), "/Input/rgee_environment_dir.rds"))
+         reticulate::use_python(rgee_environment_dir, required=T)
+         reticulate::py_config()
+         }
         
       #(1): Load packages
        library(pacman)
