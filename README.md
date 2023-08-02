@@ -123,12 +123,10 @@ time, (2) Fitting a GAM through the fraction of snow-covered pixels over time, o
 pixel. No shapefile is required as input for this script.
 
 <p float="left">
-  <img align="top" src="./_pictures/01A-MODIS_Wrangel_Locations.png" width="49%" title="Five locations at Wrangel Island, each with a buffer of 5000m" />
-  <img align="top" src="./_pictures/01B-MODIS_Wrangel_Location4_Pixels_NDSI_GAMS.png" width="49%" title="Method 3: GAMS fitted through NDSI values per pixel for a single location" /> 
-</p>
-<p float="left">
-    <img align="top" src="./_pictures/01C-MODIS_Wrangel_Location4_Image_Snowmelt.png" width="49%" title="Method 3: Image of the pixel-specific timing of snowmelt for a single location" />
-	<img align="top" src="./_pictures/01D-MODIS_Wrangel_Locations_Snowmelt_GAMS.png" width="49%" title="Method 3: GAMS fitted through the fraction of snow-covered pixels for each location" />
+  <img align="top" src="./_pictures/01A-MODIS_Wrangel_Locations.png" width="24%" title="Five locations at Wrangel Island, each with a buffer of 5000m" />
+  <img align="top" src="./_pictures/01B-MODIS_Wrangel_Location4_Pixels_NDSI_GAMS.png" width="24%" title="Method 3: GAMS fitted through NDSI values per pixel for a single location" /> 
+  <img align="top" src="./_pictures/01C-MODIS_Wrangel_Location4_Image_Snowmelt.png" width="24%" title="Method 3: Image of the pixel-specific timing of snowmelt for a single location" />
+  <img align="top" src="./_pictures/01D-MODIS_Wrangel_Locations_Snowmelt_GAMS.png" width="24%" title="Method 3: GAMS fitted through the fraction of snow-covered pixels for each location" />
 </p>
 				
 ### *02-RGEE_TomVersluijs_MODIS_Shapefile_Pixel_Snowmelt.R
@@ -149,9 +147,9 @@ of snowmelt over the years for each pixel (i.e. slope of linear regression) and 
 over the years for each pixel (i.e. intercept of linear regression).
 
 <p float="left">
-  <img align="top" src="./_pictures/03A-MODIS_Zackenberg_Pixels_Regressions_ChangeInSnowmelt.png" width="32%" title="Linear regressions fitted to pixel-specific timeseries of the date of snowmelt" />
-  <img align="top" src="./_pictures/03B-MODIS_Zackenberg_Image_ChangeInSnowmelt.png" width="32%" title="Image of the change in timing of snowmelt (slope) for all pixels within the shapefile" /> 
-  <img align="top" src="./_pictures/03C-MODIS_Zackenberg_Image_SnowmeltIntercept.png" width="32%" title="Image of the average date of snowmelt (intercept at average year) for all pixels within the shapefile" /> 
+  <img align="top" src="./_pictures/03A-MODIS_Zackenberg_Pixels_Regressions_ChangeInSnowmelt.png" width="33%" title="Linear regressions fitted to pixel-specific timeseries of the date of snowmelt" />
+  <img align="top" src="./_pictures/03B-MODIS_Zackenberg_Image_ChangeInSnowmelt.png" width="33%" title="Image of the change in timing of snowmelt (slope) for all pixels within the shapefile" /> 
+  <img align="top" src="./_pictures/03C-MODIS_Zackenberg_Image_SnowmeltIntercept.png" width="33%" title="Image of the average date of snowmelt (intercept at average year) for all pixels within the shapefile" /> 
 </p>
 
 
@@ -167,8 +165,17 @@ water bodies are filtered within this bounding box. Third, if this bounding box 
 certain day, a composite image is created (picking the pixel with least cloud cover). Finally, snow melt is analysed within each 
 locations's buffer zone based on one of the following methods (specified by the user by setting the parameter 'method'): (1) 
 fitting a GAM through the average NDSI, NDVI and NDMI values over time, (2) Fitting a GAM through the fraction of snow-covered 
-pixels over time. No shapefile is required as input for this script.												
-												
+pixels over time. Note that calculations of the date of snowmelt per pixel are not conducted in this script because these are
+too memory intensive for this high resolution sentinel-2 data and will result in a computation error. No shapefile is required 
+as input for this script.												
+
+<p float="left">
+  <img align="top" src="./_pictures/04A-Sentinel2_Zackenberg_Locations.png" width="33%" title="Five locations at Zackenberg, each with a buffer of 250" />
+  <img align="top" src="./_pictures/04B-Sentinel2_Zackenberg_Locations_NDSI_Snowmelt.png" width="33%" title="Method 1: GAMS fitted through average NDSI values per location" /> 
+  <img align="top" src="./_pictures/04C-Sentinel2_Zackenberg_Locations_SnowFraction_Snowmelt.png" width="33%" title="Method 2: GAMS fitted through the fraction of snow-covered pixels per location" />
+ </p>
+
+											
 ### *05-RGEE_TomVersluijs_S2_Shapefile_Snowmelt.R 
 Use Sentinel-2 data to extract time series of the average NDVI, NDMI, and NDSI and the fraction of snowcover for a single area of 
 interest (i.e. a single shapefile).
