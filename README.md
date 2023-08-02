@@ -47,20 +47,20 @@ For a more thorough description of all RGEE scripts, see the section 'DETAILED D
 ### Which years do you want to analyse?
 * MODIS: 	 	
 	* years: 2000 - current
-	* scripts: 01 - 04
+	* scripts: 01 - 03
 
 * Sentinel-2: 	
 	* years: 2016 - current
-	* scripts: 05 - 11
+	* scripts: 04 - 09
 
 ### What is the required spatial resolution of your analysis?
 * MODIS: 	 	
 	* resolution: 500 meter			
-	* scripts: 01 - 04
+	* scripts: 01 - 03
 
 * Sentinel-2:  	
 	* resolution: 10 meter
-	* scripts: 05 - 11
+	* scripts: 04 - 09
 
 ### MODIS scripts: what kind of data do you want to analyse?
 * Date of snowmelt, and average NDSI, NDVI and NDMI at point locations located across the globe							
@@ -69,34 +69,28 @@ For a more thorough description of all RGEE scripts, see the section 'DETAILED D
 * Date of snowmelt at all pixels within a shapefile area																
 	* Script 02
 
-* Date of snowfall at all pixels within a shapefile area																
-	* Script 03
-
 * Change in date of snowmelt per pixel within a shapefile area 															
-	* Script 04
+	* Script 03
 
 
 ### Sentinel-2 scripts: what kind of data do you want to analyse?
-* Date of snowmelt, and average NDSI, NDVI and NDMI at point locations located across the globe							
-	* Script 05
+* Date of snowmelt, and average NDSI, NDVI and NDMI at a set of point locations located across the globe							
+	* Script 04
 
 * Date of snowmelt, and average NDSI, NDVI and NDMI within a small shapefile (<50km2)									
-	* Script 06
+	* Script 05
 
 * Date of snowmelt, and average NDSI, NDVI and NDMI at subareas located within a small shapefile area (<50km2)			
+	* Script 06
+
+* Date of snowmelt, and average NDSI, NDVI and NDMI at a set of point locations located within a small shapefile area (<50km2)	
 	* Script 07
 
-* Date of snowmelt, and average NDSI, NDVI and NDMI at point locations located within a small shapefile area (<50km2)	
+* Date of snowmelt for all pixels within a small shapefile (area < 50km2)												
 	* Script 08
-
-* Date of snowmelt at all pixels within a small shapefile (area < 50km2)												
-	* Script 09
 	
-* Date of snowmelt at all pixels within a large shapefile (area < 200km2)												
-	* Script 10
-
-* Relative pixelvalues per timestep within a small shapefile (area < 50km2)												
-	* Script 11
+* Date of snowmelt for all pixels within a large shapefile (area < 200km2)												
+	* Script 09
 
 
 #######################################################################################
@@ -134,7 +128,8 @@ pixel. No shapefile is required as input for this script.
 ### *02-RGEE_TomVersluijs_MODIS_Shapefile_Pixel_Snowmelt.R
 Create pixel-level maps (500m resolution) of the timing of snowmelt in a study area based on MODIS data. Snowmelt is calculated 
 per pixel by fitting a GAM through the average NDSI data and extracting the moment this GAM crosses a user specified NDSI threshold. 
-This script requires a shapefile of the study area as input.
+This script requires a shapefile of the study area as input. The user can specify whether clouds and permanent waterbodies need to
+be masked from the analysis.
 
 <p float="left">
   <img align="top" src="./_pictures/02A-MODIS_Zackenberg_Pixels_NDSI_GAMS.png" width="49%" title="GAMS fitted through NDSI values for each pixel within the shapefile" />
@@ -170,7 +165,7 @@ locations's buffer zone based on one of the following methods (specified by the 
 fitting a GAM through the average NDSI, NDVI and NDMI values over time, (2) Fitting a GAM through the fraction of snow-covered 
 pixels over time. Note that calculations of the date of snowmelt per pixel are not conducted in this script because these are
 too memory intensive for this high resolution sentinel-2 data and will result in a computation error. No shapefile is required 
-as input for this script.												
+as input for this script, which allows for input locations to be spaced far apart.											
 
 <p float="left">
   <img align="top" src="./_pictures/04A-Sentinel2_Zackenberg_Locations.png" width="49%" title="Five locations at Zackenberg, each with a buffer of 250" />
@@ -179,15 +174,27 @@ as input for this script.
 <p float="left">
   <img align="top" src="./_pictures/04C-Sentinel2_Zackenberg_Locations_SnowFraction_Snowmelt.png" width="49%" title="Method 2: GAMS fitted through the fraction of snow-covered pixels per location" />
 </p>
-
-											
+									
 ### *05-RGEE_TomVersluijs_S2_Shapefile_Snowmelt.R 
 Use Sentinel-2 data to extract time series of the average NDVI, NDMI, and NDSI and the fraction of snowcover for a single area of 
-interest (i.e. a single shapefile).
+interest (i.e. a single shapefile). The user can specify whether clouds and permanent waterbodies need to be masked, and whether
+a composite image per day of year needs to be generated (merging multiple satellite photos for that day).
+
+<p float="left">
+  <img align="top" src="./_pictures/05A-Sentinel2_Zackenberg_Shapefile.png" width="49%" title="Shapefile area for Zackenberg (c.a. 50km2)" />
+  <img align="top" src="./_pictures/05B-Sentinel2_Zackenberg_Shapefile_SnowFraction.png" width="49%" title="GAM fitted through fraction of snowcover over time within the shapefile area" /> 
+</p>
 
 ### *06-RGEE_TomVersluijs_S2_Shapefile_SubAreas_Snowmelt.R
 Use Sentinel-2 data to extract time series of the average NDVI, NDMI, and NDSI and the fraction of snowcover for all sub areas located
-within a shapefile (these sub areas can be specified by creating a multipolygon in e.g. QGIS).
+within a shapefile (these sub areas can be specified by creating a multipolygon in e.g. QGIS). The user can specify whether clouds and 
+permanent waterbodies need to be masked, and whether a composite image per day of year needs to be generated (merging multiple satellite 
+photos for that day).
+
+<p float="left">
+  <img align="top" src="./_pictures/06A-Sentinel2_Zackenberg_Shapefile_SubAreas.png" width="49%" title="Shapefile area for 10 subareas in Zackenberg (each c.a. 5km2)" />
+  <img align="top" src="./_pictures/06B-Sentinel2_Zackenberg_Shapefile_SubAreas_FractionSnowCover.png" width="49%" title="GAM fitted through fraction of snowcover over time within each subarea" /> 
+</p>
 
 ### *07-RGEE_TomVersluijs_S2_Shapefile_Points_Snowmelt.R
 In this script the timing of snow melt is calculated based on Sentinel-2 data for all locations specified in an input file. The
@@ -199,13 +206,20 @@ on one of the following methods (specified by the user by setting the parameter 
 NDSI, NDVI and NDMI values over time, (2) Fitting a GAM through the fraction of snow-covered pixels over time. Note that this 
 script is similar to script "*05-RGEE_TomVersluijs_S2_Points_Snowmelt.R". However, in the latter script all points are analysed 
 consecutively using a loop, which makes that script significantly slower to run. It does however not rely on a shapefile and 
-thus works for points spaced much further apart (i.e. tracking data of birds migratory birds). The current script only works for 
-small areas of c.a. 50-100 km2 (larger areas might result in computation errors).
-																
+thus works for points spaced much further apart (e.g. tracking data of migratory birds). The current script only works for small
+areas of c.a. 50-100 km2 (larger areas might result in computation errors).
+	
+<p float="left">
+  <img align="top" src="./_pictures/07A-Sentinel2_Zackenberg_Shapefile_Points.png" width="49%" title="Five point locations with a buffer zone of 250m located within a shapefile area in Zackenberg" />
+  <img align="top" src="./_pictures/07B-Sentinel2_Zackenberg_Shapefile_Points_FractionSnowCover.png" width="49%" title="GAM fitted through fraction of snowcover over time within each location's bufferzone" /> 
+</p>
+
+	
 ### *08-RGEE_TomVersluijs_S2_Shapefile_Pixel_Snowmelt.R
 Use Sentinel-2 data to create pixel-level maps (10m resolution) of the timing of snowmelt for an area smaller than c.a. 50km2. 
 Snowmelt is calculated per pixel by fitting a GAM through the average NDSI data and extracting the moment this GAM crosses a user 
-specified NDSI threshold. This script requires a single shapefile of the study area as input.
+specified NDSI threshold. This script requires a single shapefile of the study area as input. The user can specify whether clouds 
+and permanent waterbodies need to be masked. No composite image can be generated because this will result in computation errors.
 
 ![Shapefile_Pixel_Snowmelt](<./_pictures/Zackenberg_Pixel_Snowmelt_Resolution_10m.png>)										
 
@@ -213,5 +227,5 @@ specified NDSI threshold. This script requires a single shapefile of the study a
 Use Sentinel-2 data to create pixel-level maps (10m resolution) of the timing of snowmelt for an area larger than c.a. 50km2.
 Snowmelt is calculated per pixel by fitting a GAM through the average NDSI data and extracting the moment this GAM crosses a user 
 specified NDSI threshold. This script requires that the shapefile of the study area is split-up into several smaller shapefiles to 
-prevent memory issues on the GEE-server.
+prevent memory issues on the GEE-server. No composite image can be generated because this will result in computation errors.
 																
