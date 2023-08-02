@@ -177,7 +177,7 @@ Use Sentinel-2 data to create pixel-level maps (10m resolution) of the timing of
 Snowmelt is calculated per pixel by fitting a GAM through the average NDSI data and extracting the moment this GAM crosses a user 
 specified NDSI threshold. This script requires a single shapefile of the study area as input.
 
-![Shapefile_Pixel_Snowmelt](./pictures/Zackenberg_Pixel_Snowmelt_Resolution_10m.png)										
+![Shapefile_Pixel_Snowmelt](<./_pictures/Zackenberg_Pixel_Snowmelt_Resolution_10m.png>)										
 
 ### *10-RGEE_TomVersluijs_S2_Shapefile_Pixel_Snowmelt_LargeAreas.R
 Use Sentinel-2 data to create pixel-level maps (10m resolution) of the timing of snowmelt for an area larger than c.a. 50km2.
