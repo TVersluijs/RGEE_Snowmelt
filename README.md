@@ -89,7 +89,7 @@ For a more thorough description of all RGEE scripts, see the section 'DETAILED D
 * Date of snowmelt for all pixels within a small shapefile (area < 50km2)												
 	* Script 08
 	
-* Date of snowmelt for all pixels within a large shapefile (area < 200km2)												
+* Date of snowmelt for all pixels within a large shapefile (area < 250km2)												
 	* Script 09
 
 
@@ -225,6 +225,7 @@ specified NDSI threshold. This script requires a single shapefile of the study a
 and permanent waterbodies need to be masked. No composite image can be generated because this will result in computation errors.
 
 <p float="left">
+  <img align="top" src="./_pictures/05A-Sentinel2_Zackenberg_Shapefile.png" width="49%" title="Shapefile area for Zackenberg (c.a. 50km2)" />
   <img align="top" src="./_pictures/08A_Sentinel2_Zackenberg_Shapefile_Image_Snowmelt.png" width="49%" title="Image of the date of snowmelt at Zackenberg for all pixels within the shapefile (10m resolution)" />
 </p>								
 
@@ -236,5 +237,6 @@ prevent memory issues on the GEE-server. No composite image can be generated bec
 script currently only works by splitting the main shapefile into exactly four smaller shapefiles.
 
 <p float="left">
-  <img align="top" src="./_pictures/09A_Sentinel2_Taymir_Shapefile_Image_Snowmelt.png" width="49%" title="Image of the date of snowmelt at Taymir for all pixels within the shapefile (10m resolution)" />
+  <img align="top" src="./_pictures/09A-Sentinel2_Taymir_Shapefile_Subareas.png" width="49%" title="Shapefile split up into 4 subareas for Taymir (c.a. 250km2)" />
+  <img align="top" src="./_pictures/09B_Sentinel2_Taymir_Shapefile_Image_Snowmelt.png" width="49%" title="Image of the date of snowmelt at Taymir for all pixels within the shapefile (10m resolution)" />
 </p>																	
