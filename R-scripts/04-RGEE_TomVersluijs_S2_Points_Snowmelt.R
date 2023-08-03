@@ -96,7 +96,7 @@
    #(c) Point locations
 
      #Name of file with Locations of interest
-     input_locations <- "TestLocations.csv"
+     input_locations <- "TestLocations_Zackenberg.csv"
      #Make sure it has the columns "LON_x", "LAT_y" and "DateTime"
      #DateTime should be in format 'dd/mm/yyyy hh:mm:ss'
 
