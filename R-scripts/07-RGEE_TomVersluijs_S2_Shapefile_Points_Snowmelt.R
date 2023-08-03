@@ -91,12 +91,12 @@
     #Coordinate reference system used for calculations
     #EPSG:4326 is recommended for areas spanning multiple UTM zones, but increased computation time (i.e. spherical coordinate system).
     #EPSG:326XX is results in reduced computation time for areas located within a single UTM zone (i.e. planar coordinate system).
-    crs <- "EPSG:32627"
+    crs <- "EPSG:4326"
 
   #(c) Point locations
 
     #Name of file with point locations located in Input folder
-    input_locations <- "ZAC19_ChickMovement_test.csv"
+    input_locations <- "TestLocations_Zackenberg.csv"
     #Make sure it has the columns "LON_x", "LAT_y" and "DateTime"
     #DateTime should be in format 'dd/mm/yyyy hh:mm:ss'
 
@@ -345,6 +345,7 @@
       #Plot feature collection on a map (i.e. locations as points)
       image <- s2_col$filterDate(paste0(year_ID, "-06-15"), end_date)$first()
       Map$setCenter(coordinates_point$getInfo()$coordinates[1], coordinates_point$getInfo()$coordinates[2], 10)
+      Map$addLayer(aoi_Shapefile)+
       Map$addLayer(image,list(bands=c("B4", "B3", "B2"), min=0, max=10000, gamma=c(1.9, 1.7, 1.7)), 'TRUE COLOR')+
       Map$addLayer(Locations, list(color="red"), paste0("Locations_", year_ID))    
       
