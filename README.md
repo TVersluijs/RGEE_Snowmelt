@@ -44,7 +44,7 @@ Copyright: Tom Versluijs 2023 (tom.versluijs@gmail.com)
 	 computation error then your spatial extend is probably to large for the specified resolution. Either decrease the spatial resolution of the analysis by setting the parameter 'resolution',
 	 or reduce the spatial extent of the analysis.
 	 
--(10)For questions regarding potential errors and bugs please contact tom.versluijs@gmail.com.
+-(10) For questions regarding potential errors and bugs please contact tom.versluijs@gmail.com.
 <br />
 <br />
 
