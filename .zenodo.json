@@ -1,0 +1,28 @@
+{
+    "description": "<p>Automated RGEE scripts to analyse the timing of snowmelt, and timeseries of NDSI, NDVI and NDMI based on MODIS or Sentinel-2 satellite data.</p>", 
+    "license": "MIT", 
+    "title": "RGEE_Snowmelt", 
+    "notes": "If you use any of these scripts for scientific publications, please cite it using the metadata from this file.", 
+    "version": "RGEE_Snowmelt_v1.0.2", 
+    "upload_type": "software", 
+    "publication_date": "2023-08-09", 
+    "creators": [
+        {
+            "orcid": "0000-0002-6938-663X", 
+            "name": "Versluijs, Tom Sebastiaan Laurens"
+        }
+    ], 
+    "access_right": "open", 
+    "related_identifiers": [
+        {
+            "scheme": "url", 
+            "identifier": "https://github.com/TVersluijs/RGEE_Snowmelt/tree/RGEE_Snowmelt_v1.0.2", 
+            "relation": "isSupplementTo"
+        }, 
+        {
+            "scheme": "doi", 
+            "identifier": "10.5072/zenodo.", 
+            "relation": "isVersionOf"
+        }
+    ]
+}
