@@ -1,7 +1,7 @@
 
 <br />
 
-[![DOI](https://sandbox.zenodo.org/badge/638558766.svg)](https://sandbox.zenodo.org/badge/latestdoi/638558766)
+[![DOI](https://zenodo.org/badge/638558766.svg)](https://zenodo.org/badge/latestdoi/638558766)
 
 # Automated RGEE scripts to analyze the date of snowmelt, and timeseries of NDSI, NDVI and NDMI based on MODIS or Sentinel-2 satellite data.
 All scripts in this Github respository rely on the R-package RGEE by Cesar Aybar et al. (https://github.com/r-spatial/rgee). These 
