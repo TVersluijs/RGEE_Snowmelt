@@ -1,6 +1,8 @@
 
 <br />
+
 [![DOI](https://sandbox.zenodo.org/badge/638558766.svg)](https://sandbox.zenodo.org/badge/latestdoi/638558766)
+
 <br />
 
 # Automated RGEE scripts to analyze the date of snowmelt, and timeseries of NDSI, NDVI and NDMI based on MODIS or Sentinel-2 satellite data.
