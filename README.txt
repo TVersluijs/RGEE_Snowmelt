@@ -11,7 +11,7 @@ etc) the rest of the script is automated and generates the required output data.
 Copyright: Tom S.L. Versluijs 2023 (tom.versluijs@gmail.com)
 
 When using any of these scripts for scientific publications, please cite the original Github repository by following the provided
-information in the file 'CITATION.dff' found in the root folder.
+information in the file 'CITATION.dff' found in the root folder of this Github repository.
 <br />
 <br />
 
