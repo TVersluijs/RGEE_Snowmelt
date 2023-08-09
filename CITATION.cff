@@ -1,12 +1,11 @@
 cff-version: 1.2.0
-title: RGEE_Snowmelt
-message: >-
-  If you use this software, please cite it using the
-  metadata from this file.
+message: 'If you use any of these scripts for scientific publications, please cite it using the metadata from this file.'
 type: software
+license: MIT
+title: 'RGEE_Snowmelt'
 authors:
-  - given-names: Tom Sebastiaan Laurens
-    family-names: Versluijs
+  - family-names: Versluijs
+    given-names: Tom Sebastiaan Laurens    
     email: tom.versluijs@gmail.com
     orcid: 'https://orcid.org/0000-0002-6938-663X'
 identifiers:
