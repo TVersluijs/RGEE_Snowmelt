@@ -1,4 +1,3 @@
-#######################################################################################
 <br />
 [![DOI](https://sandbox.zenodo.org/badge/638558766.svg)](https://sandbox.zenodo.org/badge/latestdoi/638558766)
 <br />
