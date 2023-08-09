@@ -2,14 +2,16 @@
 
 # Automated RGEE scripts to analyze the date of snowmelt, and timeseries of NDSI, NDVI and NDMI based on MODIS or Sentinel-2 satellite data.
 
-##Repository description:
 All scripts in this Github respository rely on the R-package RGEE by Cesar Aybar et al. My scripts provide an automated workflow
 to extract the timing of snowmelt at the level of pixels, points, subareas, or larger polygons based on either MODIS or Sentinel-2 
 satellite data. While the user can specify the required parameters (resolution, spatial extent, date ranges, cloud/water filtering
-etc) the rest of the script is automated and generates the required data in an output folder. In this ReadMe file you can find (I)
-Usage Notes, (II) Which script to use? and (III) Detailed description of RGEE scripts.
+etc) the rest of the script is automated and generates the required output data. In this ReadMe file you can find (I)Usage Notes, 
+(II) Which script to use? and (III) Detailed description of RGEE scripts.
 
-Copyright: Tom Versluijs 2023 (tom.versluijs@gmail.com)
+Copyright: Tom S.L. Versluijs 2023 (tom.versluijs@gmail.com)
+
+When using any of these scripts for scientific publications, please cite the original Github repository by following the provided
+information in the file 'CITATION.dff' found in the root folder.
 <br />
 <br />
 
@@ -19,11 +21,11 @@ Copyright: Tom Versluijs 2023 (tom.versluijs@gmail.com)
 
 #######################################################################################
 
--(1) Make sure to download the complete github folder 'RGEE' to make sure all dependencies between input files, scripts and output files function properly.
+-(1) Make sure to download the complete github folder 'RGEE' to make sure all dependencies between input files, scripts and output files function properly. The complete repository can be cloned to your own Github repository using '<>Code/Clone' or '<>Code/Download ZIP'. 
 
 -(2) Update to the newest versions of R and R-Studio before running the scripts.
 
--(3) If RGEE has not yet been installed, or does no function properly, make sure to install RGEE and its python dependencies using the script "00-RGEE_TomVersluijs_Installation.R". Note that
+-(3) If RGEE has not yet been installed, or does not function properly, make sure to install RGEE and its python dependencies using the script "00-RGEE_TomVersluijs_Installation.R". Note that
      getting RGEE to function properly can be quite a frustrating first hurdle to take. Things will get easier once everything is up and running!
 	 
 -(4) All scripts in this Github folder need to be run from within the R-project "RGEE.Rproj" in the root directory. Thus, first open the 'RGEE.Rproj' file in RStudio, and then select
