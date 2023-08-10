@@ -25,6 +25,7 @@
          }
 
       #(1): Load packages
+       #renv::revert() #revert to last version of R-packages used to successfully run this script (optional).
        library(pacman)
        p_load(sf, rgee, ggplot2, mgcv, googledrive, dplyr, foreach, parallel, doSNOW, gridExtra)       
 
@@ -902,6 +903,7 @@
   #    rm(list=ls())
   # 
   #   #(1): Load packages
+  #    #renv::revert() #revert to last version of R-packages used to successfully run this script (optional).
   #    library(pacman)
   #    library(rgee)
   #    p_load(sf,
@@ -1136,6 +1138,7 @@
 #    rm(list=ls())
 # 
 #   #(1): Load packages
+#    #renv::revert() #revert to last version of R-packages used to successfully run this script (optional).
 #    library(pacman)
 #    library(rgee)
 #    p_load(stars,
