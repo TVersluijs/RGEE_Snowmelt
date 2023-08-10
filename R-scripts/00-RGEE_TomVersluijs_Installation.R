@@ -12,7 +12,7 @@
   rm(list = ls()); gc()
 
  # general libraries
-  #renv::revert() #revert to last version of R-packages used to successfully run this script (optional).
+  #renv::restore() #revert to last version of R-packages used to successfully run this script (optional).
   library(pacman)
   p_load(here)
 
