@@ -23,7 +23,7 @@ information in the file 'CITATION.dff' found in the root folder of this Github r
 
 #######################################################################################
 
--(1) Make sure to download the complete github folder 'RGEE' to make sure all dependencies between input files, scripts and output files function properly. The complete repository can be cloned
+-(1) Make sure to download the complete github folder 'RGEE_Snowmelt' to make sure all dependencies between input files, scripts and output files function properly. The complete repository can be cloned
      to your own Github repository using '<>Code/Clone' or to your local drive using '<>Code/Download ZIP'. 
 
 -(2) Update to the newest versions of R and R-Studio before running the scripts.
