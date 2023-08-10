@@ -23,33 +23,37 @@ information in the file 'CITATION.dff' found in the root folder of this Github r
 
 #######################################################################################
 
--(1) Make sure to download the complete github folder 'RGEE_Snowmelt' to make sure all dependencies between input files, scripts and output files function properly. The complete repository can be cloned
-     to your own Github repository using '<>Code/Clone' or to your local drive using '<>Code/Download ZIP'. 
-
--(2) Update to the newest versions of R and R-Studio before running the scripts.
+-(1) Make sure to download the complete github folder 'RGEE_Snowmelt' to make sure all dependencies between input files, scripts and output folders function properly. The complete repository can be
+     cloned to your own Github repository using '<>Code/Clone' or to your local drive using '<>Code/Download ZIP'.
+	 
+-(2) Update to the newest versions of R and R-Studio before running the scripts. The scripts were developed with R-version 4.3.0 and R-Studio 2023.06.1 build 524.
 
 -(3) If RGEE has not yet been installed, or does not function properly, make sure to install RGEE and its python dependencies using the script "00-RGEE_TomVersluijs_Installation.R". Note that
      getting RGEE to function properly can be quite a frustrating first hurdle to take. Things will get easier once everything is up and running!
 	 
--(4) All scripts in this Github folder need to be run from within the R-project "RGEE_Snowmelt.Rproj" in the root directory. Thus, first open the 'RGEE_Snowmelt.Rproj' file in RStudio, and then
+-(4) It is recommended to use the library() and p_load() functions in each script to install the newest versions of all required R-packages and their dependencies.	However, if this results in 
+     an error then the latest versions of R-packages (including dependencies) that were used to succesfully run the scripts are stored in the file "renv.lock". These specific versions can be 
+	 downloaded and installed by running renv::restore() at the beginning of each script.	  
+	 
+-(5) All scripts in this Github folder need to be run from within the R-project "RGEE_Snowmelt.Rproj" in the root directory. Thus, first open the 'RGEE_Snowmelt.Rproj' file in RStudio, and then
      select the required script under 'Files/RGEE/R-scripts', or "/File/Open file..."
 	 
--(5) All scripts rely on auxiliary scripts in the /RGEE/Input folder that specify commonly used functions. These auxiliary scripts are automatically sourced at the beginning of all main scripts. 
+-(6) All scripts rely on auxiliary scripts in the /RGEE/Input folder that specify commonly used functions. These auxiliary scripts are automatically sourced at the beginning of all main scripts. 
 
--(6) Several scripts rely on a shapefile of the study area as input. To construct these shapefiles follow the QGIS manual "Manual_QGIS_CreateShapefilePolygons" found in /RGEE/Manuals. After 
+-(7) Several scripts rely on a shapefile of the study area as input. To construct these shapefiles follow the QGIS manual "Manual_QGIS_CreateShapefilePolygons" found in /RGEE/Manuals. After 
      creating your own shapefile(s), place them in the /RGEE/Input/Shapefiles directory.
 	 
--(7) Each script generates its own output folder in the /RGEE/Output folder in the root directory.
+-(8) Each script generates its own output folder in the /RGEE/Output folder in the root directory.
 
--(8) All scripts are completely automated and require the user to only alter parameters in the "#Specify parameters of interest" section at the start of each script. After adjusting these 
+-(9) All scripts are completely automated and require the user to only alter parameters in the "#Specify parameters of interest" section at the start of each script. After adjusting these 
      parameters the complete code can be selected (CTRL-A) and can be run at once (CTRL + ENTER, or CTRL + R, or by clicking Run in R-Studio).
 	 
--(9) Sentinel-2 scripts can be computationally demanding and depending on the occupancy of the Google Earth Engine servers might take up to 16 hours to complete! The servers can sometimes be
+-(10) Sentinel-2 scripts can be computationally demanding and depending on the occupancy of the Google Earth Engine servers might take up to 16 hours to complete! The servers can sometimes be
      so busy that the script returns a 'computation time out' or 'computation error'. If this happens, please try to run the script again at some other time. If the code still results in an
 	 computation error then your spatial extend is probably to large for the specified resolution. Either decrease the spatial resolution of the analysis by setting the parameter 'resolution',
 	 or reduce the spatial extent of the analysis.
 	 
--(10) For questions regarding potential errors and bugs please contact tom.versluijs@gmail.com.
+-(11) For questions regarding potential errors and bugs please contact tom.versluijs@gmail.com.
 <br />
 <br />
 
