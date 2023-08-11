@@ -16,6 +16,7 @@
 
       #(1): Clear workspace and set python environment
        rm(list=ls())
+       utils::install.packages("here")
        library(here)
        if(file.exists(paste0(here::here(), "/Input/rgee_environment_dir.rds"))){
          rgee_environment_dir <- readRDS(paste0(here::here(), "/Input/rgee_environment_dir.rds"))
@@ -25,6 +26,7 @@
         
       #(2): Load packages
        #renv::restore() #revert to last version of R-packages used to successfully run this script (optional).
+       utils::install.packages("pacman")
        library(pacman)
        p_load(sf, rgee, ggplot2, mgcv, googledrive, dplyr)
 
