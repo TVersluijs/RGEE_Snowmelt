@@ -324,7 +324,7 @@
       # 
       # #Create a timelapse video of RGB band
       # videoArgs <- list(dimensions=380, region=aoi,framesPerSecond=5, crs='EPSG:3857', bands=c("B4", "B3", "B2"), min=0, max=10000, gamma=c(1.9, 1.7, 1.7))
-      # browseURL(s2_col$getVideoThumbURL(videoArgs)) 
+      # tryCatch({browseURL(s2_col$getVideoThumbURL(videoArgs))}, error = function(cond){return("Too many pixels. Reduce dimensions.")})
         
         
 ##################################################################################################################################
@@ -413,7 +413,7 @@
       
       # #Create timelapse video of the cloud filtered/masked RGB images
       # videoArgs <- list(dimensions=350, region=aoi,framesPerSecond=5, crs='EPSG:3857', bands=c("B4", "B3", "B2"), min=100, max=10000, gamma=c(1.9, 1.7, 1.7))
-      # browseURL(s2_clouds_filtered$getVideoThumbURL(videoArgs)) 
+      # tryCatch({browseURL(s2_clouds_filtered$getVideoThumbURL(videoArgs))}, error = function(cond){return("Too many pixels. Reduce dimensions.")})
 
       }
    if(mask_clouds==FALSE){
@@ -491,7 +491,7 @@
           
       # #Create a timeseries GIF of RGB images of the water and cloud filtered image collection (for debugging)
       # videoArgs <- list(dimensions=200, region=aoi,framesPerSecond=5, crs='EPSG:3857', bands=c("B4", "B3", "B2"), min=0, max=10000, gamma=c(1.9, 1.7, 1.7))
-      # browseURL(s2_clouds_filtered$getVideoThumbURL(videoArgs))
+      # tryCatch({browseURL(s2_clouds_filtered$getVideoThumbURL(videoArgs))}, error = function(cond){return("Too many pixels. Reduce dimensions.")})
           
     }
    if(mask_water==FALSE){

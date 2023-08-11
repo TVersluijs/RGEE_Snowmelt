@@ -279,7 +279,7 @@
         }
        MODIS_images_snowmelt_RGB <- MODIS_images_snowmelt$map(clip_to_aoi_Outline)$map(visFun_Snowmelt)
        videoArgs <- list(dimensions=600, region=aoi, framesPerSecond=4, crs='EPSG:3857', bands=c('vis-red', 'vis-green', 'vis-blue'), min=0, max=255)
-       browseURL(MODIS_images_snowmelt_RGB$getVideoThumbURL(videoArgs)) 
+       tryCatch({browseURL(MODIS_images_snowmelt_RGB$getVideoThumbURL(videoArgs)) }, error = function(cond){return("Too many pixels. Reduce dimensions.")})
       
      #(B): Transform the feature collection for region 'aoi' to a dataframe where each row contains a pixel_ID, year and date of snow melt:
        a=Sys.time()

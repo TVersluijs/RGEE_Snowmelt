@@ -247,7 +247,7 @@
         # #Create a timelapse video of RGB band
         #  videoArgs <- list(dimensions=380, region=aoi,framesPerSecond=5, crs='EPSG:3857', bands=c("sur_refl_b01", "sur_refl_b04", "sur_refl_b03"), 
         #                    min=0, max=12000, gamma=c(1.9, 1.7, 1.7))
-        #  browseURL(MODIS_col$map(function(img){return(img$clipToCollection(aoi_Shapefile))})$getVideoThumbURL(videoArgs)) 
+        #  tryCatch({browseURL(MODIS_col$map(function(img){return(img$clipToCollection(aoi_Shapefile))})$getVideoThumbURL(videoArgs)) }, error = function(cond){return("Too many pixels. Reduce dimensions.")})
         
         # #Create a timelapse video of NDSI band  
         #  palette=c('black', '0dffff', '0524ff', 'ffffff')
@@ -256,7 +256,7 @@
         #    }
         #  MODIS_snow_RGB <- MODIS_col$map(function(img){return(img$clipToCollection(aoi_Shapefile))})$map(visFun_NDSI)
         #  videoArgs <- list(dimensions=380, region=aoi, framesPerSecond=5, crs='EPSG:3857', bands=c('vis-red', 'vis-green', 'vis-blue'), min=0, max=255)
-        #  browseURL(MODIS_snow_RGB$getVideoThumbURL(videoArgs)) 
+        #  tryCatch({browseURL(MODIS_snow_RGB$getVideoThumbURL(videoArgs)) }, error = function(cond){return("Too many pixels. Reduce dimensions.")})
       
          #Note that MODIS_col is only clipped by 'aoi' and not yet by aoi_Shapefile.
          
@@ -370,7 +370,7 @@
          
         # #Create timelapse video of the cloud filtered/masked RGB images (for debugging)
         #  videoArgs <- list(dimensions=380, region=aoi,framesPerSecond=5, crs='EPSG:3857', bands=c("sur_refl_b01", "sur_refl_b04", "sur_refl_b03"), min=100, max=10000, gamma=c(1.9, 1.7, 1.7))
-        #  browseURL(MODIS_clouds_filtered$map(function(img){return(img$clipToCollection(aoi_Shapefile))})$getVideoThumbURL(videoArgs)) 
+        #  tryCatch({browseURL(MODIS_clouds_filtered$map(function(img){return(img$clipToCollection(aoi_Shapefile))})$getVideoThumbURL(videoArgs)) }, error = function(cond){return("Too many pixels. Reduce dimensions.")})
      
         # #Create a timelapse video of the cloud filtered/masked NDSI band (for debugging) 
         #  palette=c('black', '0dffff', '0524ff', 'ffffff')
@@ -379,7 +379,7 @@
         #             copyProperties(img, img$propertyNames()))}
         #  MODIS_snow_masked_RGB <- MODIS_clouds_filtered$map(function(img){return(img$clipToCollection(aoi_Shapefile))})$map(visFun_NDSI)
         #  videoArgs <- list(dimensions=380, region=aoi, framesPerSecond=5, crs='EPSG:3857', bands=c('vis-red', 'vis-green', 'vis-blue'), min=0, max=255)
-        #  browseURL(MODIS_snow_masked_RGB$getVideoThumbURL(videoArgs)) 
+        #  tryCatch({browseURL(MODIS_snow_masked_RGB$getVideoThumbURL(videoArgs)) }, error = function(cond){return("Too many pixels. Reduce dimensions.")})
 
        }
    if(mask_clouds==FALSE){
@@ -434,7 +434,7 @@
       
         # #Create a timeseries GIF of RGB images of the water and cloud filtered image collection (for debugging)
         # videoArgs <- list(dimensions=380, region=aoi,framesPerSecond=5, crs='EPSG:3857', bands=c("sur_refl_b01", "sur_refl_b04", "sur_refl_b03"), min=100, max=10000, gamma=c(1.9, 1.7, 1.7))
-        # browseURL(MODIS_clouds_filtered$getVideoThumbURL(videoArgs))
+        # tryCatch({browseURL(MODIS_clouds_filtered$getVideoThumbURL(videoArgs))}, error = function(cond){return("Too many pixels. Reduce dimensions.")})
       
       }
    if(mask_water==FALSE){
