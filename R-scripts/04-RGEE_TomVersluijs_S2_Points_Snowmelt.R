@@ -149,7 +149,7 @@
      cld_buffer=270 #270 for conservative cloud estimation
 
      #Define resolution of cloud-filtering (in meters)
-     resolution_cldmsk=60 #(default = 60)
+     resolution_cldmsk=150 #(default = 150)
 
      #Maximum fraction of cloud cover allowed in each image
      max_cloud_fraction=0.75 #(default = 0.75)
