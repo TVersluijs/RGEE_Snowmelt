@@ -123,7 +123,7 @@
      cld_buffer=270 #270 for conservative cloud estimation
 
      #Define resolution of cloud-filtering (in meters)
-     resolution_cldmsk=60 #(default = 60)
+     resolution_cldmsk=150 #(default = 150)
 
      #Maximum fraction of cloud cover allowed in each image
      max_cloud_fraction=1.0
@@ -331,7 +331,7 @@
           map(Add_CloudFraction)$
           #Add NULL to those images in which cloudfraction could not be calculated
           map(Add_NULL_CloudFraction)$
-          #Add date and time characteristics to each image
+          #Add date characteristics to each image
           map(add_Date)
         
         ##Check if CloudFraction property has been added to each image
@@ -398,7 +398,7 @@
       #print message   
       print("Cloud masking = FALSE")
       
-      #Add Date and Time characteristics to each image
+      #Add Date characteristics to each image
       s2_clouds_filtered <- s2_col$
         map(add_Date)
     
