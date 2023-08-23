@@ -17,8 +17,8 @@
 #The 'snowfraction' method is preferred, because it intuitively makes sense to look a the fraction of snow-covered pixels
 #over time. It is harder to justify the avg_NDSI method, because it is rather unclear what this average NDSI value entails.
 
-#This script is similar to the script '2-RGEE_TomVersluijs_Points.R'. However, in the latter script all points are analysed
-#simultaneously. This has the restriction that it only works for rather small areas (<100km2) and that the user must load a 
+#This script is similar to the script '07-RGEE_TomVersluijs_S2_Shapefile_Points_Snowmelt'. However, in the latter script all points are 
+#analysed simultaneously. This has the restriction that it only works for rather small areas (<100km2) and that the user must load a 
 #shapefile to specify the outline of the study area in which all points of interest should be located. This works well when looking 
 #at a small area like Zackenberg. However, when points of interest are spaced further apart (like tracking data of migratory birds) 
 #the shapefile required to cover all these points is so large that this likely results in computation errors. The current script
@@ -815,7 +815,7 @@
         description = paste0(data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_", Location_ID, "_Data_MeanBandvalues"),
         folder="RGEE_tmp",
         fileFormat="CSV",
-        selectors=c('LocationID', 'Date', 'doy', 'NDSI', 'NDVI', 'NDMI')
+        selectors=c('LocationID', 'Date', 'NDSI', 'NDVI', 'NDMI')
         )
     
       #Run and monitor task
@@ -828,6 +828,9 @@
        Locations_BandValues_new <- read.csv(exported_stats)
        unlink(exported_stats)
     
+      #Add day of year
+       Locations_BandValues_new$doy <- as.numeric(format(as.POSIXct(Locations_BandValues_new$Date, format = "%Y-%m-%d %H:%M:%S"), "%j"))
+       
     # #(II): Asset folder (alternative option to Google Drive, but slightly slower)
     # 
     #   #Create an asset folder on local machine
