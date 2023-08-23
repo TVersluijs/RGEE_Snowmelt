@@ -13,6 +13,7 @@
 
  # general libraries
   #renv::restore() #revert to last version of R-packages used to successfully run this script (optional).
+  utils::install.packages("pacman")
   library(pacman)
   p_load(here)
 
@@ -106,7 +107,6 @@
   p_load(raster,
          rgdal,
          rgeos,
-         gdalUtils,
          sp,
          sf,
          leaflet,
@@ -114,11 +114,11 @@
          caret)
 
   ##Manually install some other packages
-  #install.packages("devtools")
+  #utils::install.packages("devtools")
   #devtools:::install_github("gearslaboratory/gdalUtils")
 
   # now some more specific packages related to using rgee
-  p_load(geojsonio, remotes, reticulate, devtools, googledrive)
+  p_load(geojsonio, remotes, reticulate, devtools, googledrive, gdalUtils)
   devtools:::install_github("r-spatial/rgee")
 
   ## IMPORTANT! Restart R before proceeding with the code below. Also try restarting if the installation
