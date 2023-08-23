@@ -16,8 +16,8 @@
 #The 'snowfraction' method is preferred, because it intuitively makes sense to look a the fraction of snow-covered pixels
 #over time. It is harder to justify the avg_NDSI method, because it is rather unclear what this average NDSI value entails.
 
-#This script is similar to the script '2-RGEE_TomVersluijs_Points_LargeAreas.R'. However, in the latter script all points are 
-#analysed consecutively using a loop, which makes that script significantly slower to run. It does however not rely on a 
+#This script is similar to the script '04-RGEE_TomVersluijs_S2_Points_Snowmelt.R'. However, in the latter script all points  
+#are analysed consecutively using a loop, which makes that script significantly slower to run. It does however not rely on a 
 #shapefile and thus works for points spaced much further apart (i.e. tracking data of birds migratory birds). The current
 #script only works for small areas of c.a. 50-100 km2 (larger areas might result in computation errors).
 
