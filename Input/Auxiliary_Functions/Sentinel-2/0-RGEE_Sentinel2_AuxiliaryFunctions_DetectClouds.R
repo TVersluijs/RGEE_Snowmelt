@@ -75,7 +75,7 @@
    clouds_buffered <- clouds$
                         focalMin(radius=cld_erosion, units="meters")$
                         focalMax(radius=cld_buffer, units="meters")$
-                        #reproject(crs=crs, scale=resolution_cldmsk)$ #if error revert crs to "crs=img$select(0)$projection()", and uncomment
+                        reproject(crs=crs, scale=resolution_cldmsk)$ #if error revert crs to "crs=img$select(0)$projection()", and uncomment
                         rename('clouds')
    
    #(D): Create an inverse of the clouds_buffered band
