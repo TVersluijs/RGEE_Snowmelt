@@ -33,6 +33,7 @@
         region=aoi, #All pixels within aoi will be stored as a separate feature
         geometries=TRUE,  #if TRUE, add center of sampled pixel as the geometry property of the output feature
         projection=modisProjection, #Set to native projection of MODIS image
+        scale=resolution, #sampling resolution in meters
         seed=23, #Create reproducible results using the same random seed
         dropNulls=TRUE) #If TRUE, the result is post-filtered to drop features that have a NULL value for NDSI
     
@@ -44,8 +45,11 @@
     
     #(C): Add date and day of year of current image as a property to each feature within the feature collection FC_image
      date <- img$date()$format("YYYY-MM-dd hh:mm:ss")
-     doy <- ee$Date(img$get('system:time_start'))$getRelative('day', 'year')
-     FC_image <- FC_image$map(function(feature){return(feature$set("Date", date)$set("doy", doy))})
+     #doy <- ee$Date(img$get('system:time_start'))$getRelative('day', 'year')
+     FC_image <- FC_image$map(function(feature){return(feature$
+                                                         set("Date", date)#$
+                                                         #set("doy", doy)
+                                                       )})
     
     #(D): Add latitude and longitude of each pixel as a property to each feature
      FC_image <- FC_image$map(function(feature){
