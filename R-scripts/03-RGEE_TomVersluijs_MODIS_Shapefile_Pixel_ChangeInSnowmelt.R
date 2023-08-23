@@ -157,7 +157,7 @@
              filter(ee$Filter$neq(name='doy_snowmelt', value=-9999))$ #pre-filter data for -9999 values
              reduceToImage(properties=list('doy_snowmelt'), reducer=ee$Reducer$first()$setOutputs(list('doy_snowmelt')))$
              #reproject(crs=crs, crsTransform=NULL, scale=resolution)
-             reproject(crs=modisProjection, crsTransform=NULL)
+             reproject(crs=modisProjection, crsTransform=NULL, scale=resolution)
          
            #Add year as a property and band to each image 
             image_snowmelt <- image_snowmelt$
@@ -180,6 +180,7 @@
               region=aoi, #All pixels within aoi will be stored as a separate feature
               geometries=TRUE,  #if TRUE, add center of sampled pixel as the geometry property of the output feature
               projection=modisProjection, #Set to native resolution of satellite image (10m)
+              scale=resolution, #sampling resolution in meters
               seed=23, #Create reproducable results using the same random seed
               dropNulls=FALSE) #If TRUE, the result is post-filtered to drop features that have a NULL value for all bands
             
@@ -222,6 +223,7 @@
               region=aoi_Shapefile, #All pixels within aoi_Shapefile will be stored as a separate feature
               geometries=TRUE,  #if TRUE, add center of sampled pixel as the geometry property of the output feature
               projection=modisProjection, #Set to native resolution of satellite image (10m)
+              scale=resolution, #sampling resolution in meters.
               seed=23, #Create reproducable results using the same random seed
               dropNulls=FALSE) #If TRUE, the result is post-filtered to drop features that have a NULL value for all bands
             
@@ -397,7 +399,7 @@
          #Calculate slope image.
           slope <- MODIS_images_snowmelt$select(list('Year', 'doy_snowmelt'))$reduce(ee$Reducer$linearFit())$select('scale')
           #slope <- slope$reproject(crs=crs, crsTransform=NULL, scale=resolution)
-          slope <- slope$reproject(crs=modisProjection, crsTransform=NULL)
+          slope <- slope$reproject(crs=modisProjection, crsTransform=NULL, scale=resolution)
           slope <- slope$clipToCollection(aoi_Shapefile)
           
          #Define visualization arguments.
@@ -465,7 +467,7 @@
           write.csv(df_pixel_ChangeInSnowmelt[index,], file=paste0(here(), "/Output/MODIS/Shapefile_Pixel_ChangeInSnowmelt/", data_ID, "_Pixel_ChangeInSnowmelt_shapefile.csv"), quote = FALSE, row.names=FALSE)
           
           #Calculate the change in timing of snowmelt within aoi_Shapefile
-          hist(df_pixel_ChangeInSnowmelt$snowmelt_change[index], nclass = 30)
+          hist(na.omit(df_pixel_ChangeInSnowmelt$snowmelt_change[index]), nclass = 30)
           mean(na.omit(df_pixel_ChangeInSnowmelt$snowmelt_change[index]))
           #An average DELAY in the date of snowmelt of 0.011 days per year! But, this is largely due to the very late year 2018.
           
@@ -563,6 +565,7 @@
             region=aoi, #Sample all pixels within aoi_Shapefile
             geometries=TRUE,  #Store lat/lon in geometry property
             projection=modisProjection, #Set to native projection of MODIS image
+            scale=resolution, #sampling resolution in meters
             seed=23, #set fixed seed to be able to reproduce the sample (same as for FC_merged above)
             dropNulls=FALSE) #Make sure NULL pixels are not dropped from image collection
           
