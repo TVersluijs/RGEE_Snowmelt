@@ -33,7 +33,7 @@ Extract_BandValuesAtPixels = function(img, FC_initial) {
         region=aoi_Shapefile, #All pixels within aoi_Shapefile will be stored as a separate feature
         geometries=TRUE,  #if TRUE, add center of sampled pixel as the geometry property of the output feature
         projection=S2Projection, #Set to native projection of S2 image
-        #scale=resolution, #Set to native resolution of satellite image (implicitly set using projection above)
+        scale=resolution, #Set to native resolution of satellite image (implicitly set using projection above)
         seed=23, #Create reproducible results using the same random seed
         dropNulls=TRUE) #If TRUE, the result is post-filtered to drop features that have a NULL value for NDSI
     
@@ -45,8 +45,11 @@ Extract_BandValuesAtPixels = function(img, FC_initial) {
     
     #(C): Add date and day of year of current image as a property to each feature within the feature collection FC_image
      date <- img$date()$format("YYYY-MM-dd hh:mm:ss")
-     doy <- ee$Date(img$get('system:time_start'))$getRelative('day', 'year')
-     FC_image <- FC_image$map(function(feature){return(feature$set("Date", date)$set("doy", doy))})
+     #doy <- ee$Date(img$get('system:time_start'))$getRelative('day', 'year')
+     FC_image <- FC_image$map(function(feature){return(feature$
+                                                         set("Date", date)#$
+                                                         #set("doy", doy)
+                                                       )})
     
     #(D): Add latitude and longitude of each pixel as a property to each feature
      FC_image <- FC_image$map(function(feature){
