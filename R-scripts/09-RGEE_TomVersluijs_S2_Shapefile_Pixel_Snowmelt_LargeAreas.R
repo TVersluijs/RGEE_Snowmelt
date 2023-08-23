@@ -71,7 +71,7 @@
      s2_dataset <- "S2_SR_HARMONIZED"
 
      #Resolution of sampling in meters
-     resolution=10 #default maximum resolution for Sentinel-2 = 10m
+     resolution=20 #default maximum resolution for Sentinel-2 = 10m
 
    #(b) Area of interest
 
@@ -529,7 +529,7 @@
               collection = FC_merged,
               description = paste0(data_ID, "_Pixel_NDSI_Sentinel2"),
               fileFormat = "CSV",
-              selectors = c('NDSI', 'Date', 'doy', 'lat', 'lon')
+              selectors = c('NDSI', 'Date', 'lat', 'lon')
               )
 
             task_vector1$start()
@@ -545,6 +545,9 @@
            # #Load dataframe (takes ca 2 minutes):
            #  df_pixel_ndsi <- read.csv(paste0("Output/S2/Shapefile_SubAreas_Pixel_Snowmelt/", data_ID, "_Pixel_NDSI_Sentinel2.csv"))
 
+           #Add day of year
+            df_pixel_ndsi$doy <- as.numeric(format(as.POSIXct(df_pixel_ndsi$Date, format = "%Y-%m-%d %H:%M:%S"), "%j"))
+            
            #Make sure each latitude/longitude combination gets its own pixel_ID (takes ca 1 minute):
             df_pixel_ndsi$pixel_ID <- paste0(format(df_pixel_ndsi$lat, nsmall = 5), "_", format(df_pixel_ndsi$lon, nsmall = 5))
 
@@ -731,7 +734,7 @@
                region=aoi_Subarea_1, #Sample all pixels within aoi_Subarea_1
                geometries=TRUE,  #Store lat/lon in geometry property
                projection=S2Projection, #Set to native projection of S2 image
-               #scale=resolution, #10 meter native resolution of image (implicitly set using projection above)
+               scale=resolution, #10 meter native resolution of image (implicitly set using projection above)
                seed=23, #set fixed seed to be able to reproduce the sample (same as for FC_merged above)
                dropNulls=FALSE) #Make sure NULL pixels are not dropped from image collection
              
@@ -739,7 +742,7 @@
                region=aoi_Subarea_2, #Sample all pixels within aoi_Subarea_2
                geometries=TRUE,  #Store lat/lon in geometry property
                projection=S2Projection, #Set to native projection of S2 image
-               #scale=resolution, #10 meter native resolution of image (implicitly set using projection above)
+               scale=resolution, #10 meter native resolution of image (implicitly set using projection above)
                seed=23, #set fixed seed to be able to reproduce the sample (same as for FC_merged above)
                dropNulls=FALSE) #Make sure NULL pixels are not dropped from image collection
              
@@ -747,7 +750,7 @@
                region=aoi_Subarea_3, #Sample all pixels within aoi_Subarea_3
                geometries=TRUE,  #Store lat/lon in geometry property
                projection=S2Projection, #Set to native projection of S2 image
-               #scale=resolution, #10 meter native resolution of image (implicitly set using projection above)
+               scale=resolution, #10 meter native resolution of image (implicitly set using projection above)
                seed=23, #set fixed seed to be able to reproduce the sample (same as for FC_merged above)
                dropNulls=FALSE) #Make sure NULL pixels are not dropped from image collection
              
@@ -755,7 +758,7 @@
                region=aoi_Subarea_4, #Sample all pixels within aoi_Subarea_4
                geometries=TRUE,  #Store lat/lon in geometry property
                projection=S2Projection, #Set to native projection of S2 image
-               #scale=resolution, #10 meter native resolution of image (implicitly set using projection above)
+               scale=resolution, #10 meter native resolution of image (implicitly set using projection above)
                seed=23, #set fixed seed to be able to reproduce the sample (same as for FC_merged above)
                dropNulls=FALSE) #Make sure NULL pixels are not dropped from image collection
              

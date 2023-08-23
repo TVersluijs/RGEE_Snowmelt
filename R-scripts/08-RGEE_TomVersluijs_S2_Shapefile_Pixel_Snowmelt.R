@@ -71,7 +71,7 @@
      s2_dataset <- "S2_SR_HARMONIZED"
 
      #Resolution of sampling in meters
-     resolution=10 #default maximum resolution for Sentinel-2 = 10m
+     resolution=20 #default maximum resolution for Sentinel-2 = 10m
 
    #(b) Area of interest
 
@@ -90,7 +90,7 @@
    #(c) Dates
 
      #Specify the year of interest:
-     year_ID <- "2022"
+     year_ID <- "2019"
 
      #Date range of all images considered for analysis
      start_date <- paste0(year_ID, "-03-15") #choose date (well) before the first snowmelt occurs within the study site
@@ -243,14 +243,14 @@
        s2_cloudless_col <-ee$ImageCollection('COPERNICUS/S2_CLOUD_PROBABILITY')
        s2_cloudless_col <- s2_cloudless_col$
          filterBounds(aoi)$ #For areas that do not span multiple tiles, change aoi to coordinates_point to greatly speed-up code.
-         filterDate(start_date, end_date) 
-       
+         filterDate(start_date, end_date)
+
       #Store sentinel-2 projection (of band "probability")
-       s2_projection <- s2_cloudless_col$first()$select("probability")$projection() 
-       
+       s2_projection <- s2_cloudless_col$first()$select("probability")$projection()
+
       #Add Sentinel-2 cloud probability as a new property to s2_col
        s2_col <- Add_CloudProb_Property(s2_col=s2_col, s2_cloudless_col=s2_cloudless_col)
-      
+
       #Make sure that each image contains the s2cloudless property (create an empty property if it does not)
        s2_col <- s2_col$map(Add_NULL_s2cloudless)
 
@@ -339,7 +339,7 @@
         # #Visual check of cloud mask (for debugging)
         # image <- s2_col$filterDate(paste0(year_ID, "-05-31"), end_date)$first()$
         #   clipToCollection(aoi_Shapefile)$
-        #   select("clouds_unadjusted", "clouds", "clouds_inv", "clouds_prob", "B4", "B3", "B2")      
+        #   select("clouds_unadjusted", "clouds", "clouds_inv", "clouds_prob", "B4", "B3", "B2")
         # Map$setCenter(coordinates_point$getInfo()$coordinates[1], coordinates_point$getInfo()$coordinates[2], 10)
         # Map$addLayer(image,list(bands=c("B4", "B3", "B2"), min=100, max=8000, gamma=c(1.9, 1.7, 1.7)), 'TRUE COLOR')+
         #   #Map$addLayer(image, list(bands='clouds_prob', min=0, max=100, opacity=1, palette=c('000000', '0dffff', '0524ff', 'ffffff')), 'clouds_prob')+
@@ -525,7 +525,7 @@
           collection = FC_merged,
           description = paste0(data_ID, "_Pixel_NDSI_Sentinel2"),
           fileFormat = "CSV",
-          selectors = c('NDSI', 'Date', 'doy', 'lat', 'lon')
+          selectors = c('NDSI', 'Date', 'lat', 'lon')
           )
 
         task_vector1$start()
@@ -541,6 +541,9 @@
        # #Load dataframe (takes ca 2 minutes):
        #  df_pixel_ndsi <- read.csv(paste0("Output/S2/Shapefile_Pixel_Snowmelt/", data_ID, "_Pixel_NDSI_Sentinel2.csv"))
 
+       #Add day of year
+        df_pixel_ndsi$doy <- as.numeric(format(as.POSIXct(df_pixel_ndsi$Date, format = "%Y-%m-%d %H:%M:%S"), "%j"))
+        
        #Make sure each latitude/longitude combination gets its own pixel_ID (takes ca 1 minute):
         df_pixel_ndsi$pixel_ID <- paste0(format(df_pixel_ndsi$lat, nsmall = 5), "_", format(df_pixel_ndsi$lon, nsmall = 5))
 
@@ -707,7 +710,7 @@
           region=aoi_Shapefile, #Sample all pixels within aoi_Shapefile
           geometries=TRUE,  #Store lat/lon in geometry property
           projection=S2Projection, #Set to native projection of S2 image
-          #scale=resolution, #10 meter native resolution of image (implicitly set using projection above)
+          scale=resolution, #10 meter native resolution of image (implicitly set using projection above)
           seed=23, #set fixed seed to be able to reproduce the sample (same as for FC_merged above)
           dropNulls=FALSE) #Make sure NULL pixels are not dropped from image collection
       
