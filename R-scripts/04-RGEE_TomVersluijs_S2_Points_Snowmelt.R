@@ -84,7 +84,7 @@
      #'AddSnowFraction' and the calculation of average bandvalues using the function 'Extract_BandValuesAtPoins'.
      #Detection of cloud-pixels occurs at resolution 'resolution_cldmsk' specified above. Detection of water-pixels
      #occurs at the native resolution of the sentinel-2 dataset (10m).
-     resolution=10 # default maximum resolution for Sentinel-2 = 10m
+     resolution=20 # default maximum resolution for Sentinel-2 = 10m
 
    #(b) Area of interest
 

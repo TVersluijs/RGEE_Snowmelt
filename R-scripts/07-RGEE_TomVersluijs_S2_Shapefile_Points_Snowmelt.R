@@ -80,7 +80,7 @@
     #Use S2_SR_HARMONIZED (level 2a product) for data starting from 2019
 
     #Resolution of sampling in meters
-    resolution=10 #default maximum resolution for Sentinel-2 = 10m
+    resolution=20 #default maximum resolution for Sentinel-2 = 10m
 
   #(b) Area of interest
 
