@@ -489,7 +489,7 @@
               collection = FC_merged,
               description = paste0(data_ID, "_Pixel_NDSI_Snowmelt"),
               fileFormat = "CSV",
-              selectors = c('NDSI', 'Date', 'doy', 'lat', 'lon')
+              selectors = c('NDSI', 'Date', 'lat', 'lon')
               )
 
             task_vector1$start()
@@ -504,6 +504,9 @@
            # #Load dataframe (takes ca 2 minutes):
            #  df_pixel_ndsi <- read.csv(paste0(data_ID, "_Pixel_NDSI_Snowmelt.csv"))
 
+           #Add day of year
+            df_pixel_ndsi$doy <- as.numeric(format(as.POSIXct(df_pixel_ndsi$Date, format = "%Y-%m-%d %H:%M:%S"), "%j"))          
+            
            #Make sure each latitude/longitude combination gets its own pixel_ID (takes ca 1 minute):
             df_pixel_ndsi$pixel_ID <- paste0(format(df_pixel_ndsi$lat, nsmall = 5), "_", format(df_pixel_ndsi$lon, nsmall = 5))
 
@@ -676,6 +679,7 @@
               region=aoi, #Sample all pixels within aoi
               geometries=TRUE,  #Store lat/lon in geometry property
               projection=modisProjection, #set to native projection of MODIS image
+              scale=resolution, #sampling resolution in meters
               seed=23, #set fixed seed to be able to reproduce the sample (same as for FC_merged above)
               dropNulls=FALSE) #Make sure NULL pixels are not dropped from image collection
           
@@ -842,6 +846,7 @@
                  region=aoi_Shapefile, #All pixels within aoi_Shapefile will be stored as a separate feature
                  geometries=TRUE,  #if TRUE, add center of sampled pixel as the geometry property of the output feature
                  projection=modisProjection, #Set to native projection of MODIS image
+                 scale=resolution, #sampling resolution in meters
                  seed=23, #Create reproducible results using the same random seed
                  dropNulls=FALSE) #If TRUE, the result is post-filtered to drop features that have a NULL value for NDSI
                  
