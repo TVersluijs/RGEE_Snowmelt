@@ -48,8 +48,11 @@ Extract_BandValuesAtPoins = function(img, FC_initial) {
     
     #(C): Add date and day of year of current image as a property to each feature within the feature collection FC_image
      date <- img$date()$format("YYYY-MM-dd hh:mm:ss")
-     doy <- ee$Date(img$get('system:time_start'))$getRelative('day', 'year')
-     FC_image <- FC_image$map(function(feature){return(feature$set("Date", date)$set("doy", doy))})
+     #doy <- ee$Date(img$get('system:time_start'))$getRelative('day', 'year')
+     FC_image <- FC_image$map(function(feature){return(feature$
+                                                         set("Date", date)#$
+                                                         #set("doy", doy)
+                                                       )})
     
     #(D): Merge the feature collection of the current image (FC_image) onto the feature collection FC_initial.
      return (ee$FeatureCollection(FC_initial)$merge(FC_image))
