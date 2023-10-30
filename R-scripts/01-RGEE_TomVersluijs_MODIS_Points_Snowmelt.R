@@ -373,6 +373,7 @@
      if(mask_clouds==TRUE){
 
        #print message
+       cat("\n")
        print("Cloud masking = TRUE")
 
        #The MODIS quality band 'state_1km' provides several cloud flag algorithms (See Wilson 2014, MODIS user guide). The cloud flags from
@@ -568,7 +569,10 @@
              )
 
            #Run and monitor task
+            cat("\n")
+            print("-----------------------------------------------------------------------------------------------------------")
             print(paste0("Calculating the mean NDSI, NDVI and NDMI for location ", Location_i))
+            print("-----------------------------------------------------------------------------------------------------------")
             task_vector$start()
             ee_monitoring(task_vector, quiet=TRUE, max_attempts=1000000)
 
@@ -684,7 +688,10 @@
               )
 
            #Run and monitor task
+            cat("\n")
+            print("-----------------------------------------------------------------------------------------------------------")
             print(paste0("calculating the fraction of snowcover for location ", Location_i))
+            print("-----------------------------------------------------------------------------------------------------------")
             task_vector$start()
             ee_monitoring(task_vector, quiet=TRUE, max_attempts=1000000)
 
@@ -726,6 +733,12 @@
        
         #(I.1): Transform each MODIS image to a feature Collection of NDSI values for all pixels within aoi (i.e. bounding box!)
 
+          #Print message
+          cat("\n")
+          print("-----------------------------------------------------------------------------------------------------------")
+          print(paste0("calculating the fraction of snowcover on a pixel level for location ", Location_i))
+          print("-----------------------------------------------------------------------------------------------------------")
+       
           #Create an iteration function that we will use to iterate through all images of the image collection. For each image, the
           #value of the NDSI band is extracted for each pixel of the image. The resulting NDSI values (+lat/lon, datetime of the image)
           #of each pixel are stored as feature properties in a feature collection (i.e. where each pixel has a separate feature with
@@ -772,7 +785,7 @@
            task_vector1$start()
            cat("\n")
            print("-----------------------------------------------------------------------------------------------------------")
-           print("Step 1: Transform each MODIS image to a feature Collection of NDSI values for all pixels:")
+           print("  -Step 1: Transform each MODIS image to a feature Collection of NDSI values for all pixels:")
            print("-----------------------------------------------------------------------------------------------------------")
            ee_monitoring(task_vector1, quiet=TRUE, max_attempts = 100000)
 
@@ -843,16 +856,16 @@
            #year the predicted NDSI value of this GAM changes from above outlier_threshold to below (direction="down") or
            #from below outlier_threshold to above (direction="up"). The code employs parallel processing using foreach
            #and %dopar% on four local computer cores.
-            f_detect_threshold_date_parallel_2 <- f_detect_threshold_date_parallel_2 #sourced
+            f_detect_threshold_date_parallel <- f_detect_threshold_date_parallel #sourced
   
-           #Run the 'f_detect_threshold_date_parallel_2' function over all data subsets, combine the results and save the resulting dataframe and plots
+           #Run the 'f_detect_threshold_date_parallel' function over all data subsets, combine the results and save the resulting dataframe and plots
             cat("\n")
             print("-----------------------------------------------------------------------------------------------------------")
-            print("Step 2: Calculate the date of snowmelt for each pixel within each location's bounding box:")
+            print("  -Step 2: Calculate the date of snowmelt for each pixel within each location's bounding box:")
             print("-----------------------------------------------------------------------------------------------------------")
-            results <- lapply(1:length(pixelIDs_split), FUN=f_detect_threshold_date_parallel_2,
-                              df=df_pixel_ndsi, pixel_ID_column="pixel_ID", y="NDSI",
-                              x="doy", direction="down", y_threshold=NDSI_threshold)
+            results <- lapply(1:length(pixelIDs_split), FUN=f_detect_threshold_date_parallel,
+                              pixelIDs_split=pixelIDs_split, df_pixel_y=df_pixel_ndsi, pixel_ID_column="pixel_ID",
+                              y="NDSI", x="doy", pixel_gam_plots=T, y_threshold=NDSI_threshold)
   
             #Clean up the cluster after finishing the parallel runs
             stopCluster(cl)
@@ -910,7 +923,7 @@
                #Change subset-dataframe to a SF object
                 cat("\n")
                 print("-----------------------------------------------------------------------------------------------------------")
-                print("Step 3: Transform dataframe with date of snowmelt per pixel to a feature collection with random geometry:")
+                print("  -Step 3: Transform dataframe with date of snowmelt per pixel to a feature collection with random geometry:")
                 print("-----------------------------------------------------------------------------------------------------------")
                 df_sf_tmp <- st_as_sf(x = df_tmp,
                                       coords = c("lon", "lat"),
@@ -931,7 +944,7 @@
                 FC_initial <- ee$FeatureCollection(FC_initial)
 
                #print progress
-                print(paste0("Progress: ", (100*i)/(length(rowIDs_split))))
+                #print(paste0("Progress: ", (100*i)/(length(rowIDs_split))))
                 #print(paste0("Size of FC_initial: ", FC_initial$size()$getInfo()))
 
              }
@@ -958,7 +971,7 @@
              #Print progress:  
               cat("\n")
               print("-----------------------------------------------------------------------------------------------------------")
-              print("Step 4: Add geometry (latitude and longitude) to the feature collection with dates of snowmelt per pixel:")
+              print("  -Step 4: Add geometry (latitude and longitude) to the feature collection with dates of snowmelt per pixel:")
               print("-----------------------------------------------------------------------------------------------------------")
               
              #(A): Select a single image from the image collection
@@ -1048,7 +1061,7 @@
                 task_vector2$start()
                 cat("\n")
                 print("-----------------------------------------------------------------------------------------------------------")
-                print("Step 5: Optimize further calculations with this feature collection by uploading it to the asset folder:")
+                print("  -Step 5: Optimize further calculations with this feature collection by uploading it to the asset folder:")
                 print("-----------------------------------------------------------------------------------------------------------")
                 ee_monitoring(task_vector2, quiet=TRUE, max_attempts = 100000)
 
@@ -1106,7 +1119,7 @@
                     task_vector3$start()
                     cat("\n")
                     print("-----------------------------------------------------------------------------------------------------------")
-                    print("Step 6: Transform the featurecollection to a snowmelt image and export it to Google Drive:")
+                    print("  -Step 6: Transform the featurecollection to a snowmelt image and export it to Google Drive:")
                     print("-----------------------------------------------------------------------------------------------------------")
                     ee_monitoring(task_vector3, quiet=TRUE, max_attempts = 1000000)
                     ee_drive_to_local(task = task_vector3, dsn=paste0("Output/MODIS/Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Location_", Location_i, '_PixelSnowmeltDoy_Image_DoySnowmelt'))
@@ -1133,7 +1146,7 @@
                    #Start and monitor export task:
                     cat("\n")
                     print("-----------------------------------------------------------------------------------------------------------")
-                    print("Step 7: Transform snowmelt image to an RGB image and export it to Google Drive:")
+                    print("  -Step 7: Transform snowmelt image to an RGB image and export it to Google Drive:")
                     print("-----------------------------------------------------------------------------------------------------------")
                     task_vector4$start()
                     ee_monitoring(task_vector4, quiet=TRUE, max_attempts = 1000000)
@@ -1182,7 +1195,7 @@
                   task_vector5$start()
                   cat("\n")
                   print("-----------------------------------------------------------------------------------------------------------")
-                  print("Step 8: Extract the date of snowmelt from the snowmelt image for all pixels within aoi_shapefile:")
+                  print("  -Step 8: Extract the date of snowmelt from the snowmelt image for all pixels within aoi_shapefile:")
                   print("-----------------------------------------------------------------------------------------------------------")
                   ee_monitoring(task_vector5, quiet=TRUE, max_attempts = 1000000)
                   exported_stats <- ee_drive_to_local(task = task_vector5, dsn=paste0("Output/MODIS/Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Location_", Location_i, "_Data_Pixel_Snowmelt_shapefile"))
@@ -1205,7 +1218,7 @@
                 #Print progress:  
                  cat("\n")
                  print("-----------------------------------------------------------------------------------------------------------")
-                 print("Step 9: Calculate the fraction of snowcovered pixels within aoi_shapefile per doy")
+                 print("  -Step 9: Calculate the fraction of snowcovered pixels within aoi_shapefile per doy")
                  print("-----------------------------------------------------------------------------------------------------------")
                  
                #(A) Create dataframe df_Locations_Pixel_SnowFraction_new  
