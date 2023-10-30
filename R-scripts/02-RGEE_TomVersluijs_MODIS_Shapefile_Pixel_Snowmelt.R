@@ -563,14 +563,14 @@
            #year the predicted NDSI value of this GAM changes from above outlier_threshold to below (direction="down") or
            #from below outlier_threshold to above (direction="up"). The code employs parallel processing using foreach
            #and %dopar% on four local computer cores.
-            f_detect_threshold_date_parallel_2 <- f_detect_threshold_date_parallel_2 #sourced
+            f_detect_threshold_date_parallel <- f_detect_threshold_date_parallel #sourced
 
-           #Run the 'f_detect_threshold_date_parallel_2' function over all data subsets, combine the results and save the resulting dataframe and plots
+           #Run the 'f_detect_threshold_date_parallel' function over all data subsets, combine the results and save the resulting dataframe and plots
             print("Calculate the date of snowmelt for each pixel within aoi:")
-            results <- lapply(1:length(pixelIDs_split), FUN=f_detect_threshold_date_parallel_2, 
-                              df=df_pixel_ndsi, pixel_ID_column="pixel_ID", y="NDSI", 
-                              x="doy", direction="down", y_threshold=NDSI_threshold)
-              
+            results <- lapply(1:length(pixelIDs_split), FUN=f_detect_threshold_date_parallel, 
+                              pixelIDs_split=pixelIDs_split, df_pixel_y=df_pixel_ndsi, pixel_ID_column="pixel_ID",
+                              y="NDSI", x="doy", pixel_gam_plots=T, y_threshold=NDSI_threshold)
+                            
             #Clean up the cluster after finishing the parallel runs
             stopCluster(cl)
             
