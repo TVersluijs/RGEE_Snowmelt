@@ -603,17 +603,29 @@
            #for every pixel, by fitting a GAM with sequential outlier removal and then linearly approximating at which day of 
            #year the predicted NDSI value of this GAM changes from above outlier_threshold to below. The code employs
            #parallel processing using foreach and %dopar% on four local computer cores.
-            f_detect_threshold_date_parallel_1 <- f_detect_threshold_date_parallel_1 #sourced  
+            f_detect_threshold_date_parallel <- f_detect_threshold_date_parallel #sourced  
 
            #Run this function over all data subsets, combine the results and save the resulting dataframe
             system.time({
               print("Calculate the date of snowmelt for each pixel:")
-              results <- lapply(1:length(pixelIDs_split), FUN=f_detect_threshold_date_parallel_1,
-                                df=df_pixel_ndsi, pixel_ID_column="pixel_ID", y="NDSI", 
-                                x="doy", y_threshold=NDSI_threshold)
-              df_pixel_snowmelt <- as.data.frame(do.call(rbind, results))
+              results <- lapply(1:length(pixelIDs_split), FUN=f_detect_threshold_date_parallel,
+                                pixelIDs_split=pixelIDs_split, df_pixel_y=df_pixel_ndsi, pixel_ID_column="pixel_ID", 
+                                y="NDSI", x="doy", pixel_gam_plots=F, y_threshold=NDSI_threshold)
+              
+              #Store date of snowmelt per pixel
+              df_pixel_snowmelt <- lapply(results, "[[", 1)
+              df_pixel_snowmelt <- as.data.frame(do.call(rbind, do.call(c, df_pixel_snowmelt)))
               colnames(df_pixel_snowmelt)[colnames(df_pixel_snowmelt)=="x_threshold"] <- "doy_snowmelt"
               write.csv(df_pixel_snowmelt, file=paste0("Output/S2/Shapefile_SubAreas_Pixel_Snowmelt/", data_ID, "_Pixel_Snowmelt_Sentinel2.csv"), quote = FALSE, row.names=FALSE)
+              
+              # #Store plots per pixel
+              # plot_pixel_snowmelt <- lapply(results, "[[", 2)
+              # plots_per_page = 25
+              # plot_pixel_snowmelt <- lapply(plot_pixel_snowmelt, function(x){split(x, ceiling(seq_along(plot_pixel_snowmelt[[1]])/plots_per_page))})
+              # plot_pixel_snowmelt <- unname(unlist(plot_pixel_snowmelt, recursive = F))
+              # pdf(paste0("Output/S2/Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Location_", Location_i, "_Plot_Pixel_NDSI_Snowmelt_bbox.pdf"), width=20, height=16, onefile = TRUE)
+              # for (i in seq(length(plot_pixel_snowmelt))) { do.call("grid.arrange", plot_pixel_snowmelt[[i]]) }
+              # dev.off()
               })
 
            #this took 40449 seconds (11 hours). Parallel processing thus decreased computation time dramatically
