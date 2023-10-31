@@ -688,7 +688,57 @@
         
 ##################################################################################################################################       
         
-    #(24): Create a binary NDSI image and extract fraction of pixels above NDSI threshold over time
+    #(24): Extract average NDVI, NDSI and NDWI for the area of interest
+    
+      #Create an empty FeatureCollection list. This list is used as input for the first iteration of the iteration function below.
+      FC_initial_BandValues <- ee$FeatureCollection(ee$List(list()))
+      
+      #Specify the iteration function. This function takes two arguments. The first argument is the current element of the image collection
+      #(in this case the current iteration image) and the second element takes the output value from the iteration that preceeded it. The latter
+      #is not possible for the first iteration, that's why an initial object (empty feature collection) to start the iteration with 
+      #has been defined.
+      Extract_BandValuesAtPolygon = Extract_BandValuesAtPolygon #sourced
+      
+      #Iterate over the ImageCollection 
+      FC_merged_BandValues <- ee$FeatureCollection(s2_col_composite$select("NDSI", "NDVI", "NDMI")$iterate(Extract_BandValuesAtPolygon, FC_initial_BandValues))
+      
+      #Setup task
+      task_vector1 <- ee_table_to_drive(
+        collection= FC_merged_BandValues,
+        description = paste0(data_ID, "_Resolution", resolution, "_Data_MeanBandValues"),
+        folder="RGEE_tmp",
+        fileFormat="CSV",
+        selectors=c("NDSI", "NDVI", "NDMI", 'Date')
+        )
+      
+      #Run and monitor task
+      print(paste0("calculating Mean BandValues for ", data_ID))
+      task_vector1$start() 
+      ee_monitoring(task_vector1, max_attempts=1000000)
+      
+      #Import results
+      exported_stats <- ee_drive_to_local(task=task_vector1, dsn=paste0("Output/S2/Shapefile_Snowmelt/", data_ID, "_Resolution", resolution, "_Data_MeanBandValues"))
+      df_BandValues <- read.csv(exported_stats)
+      unlink(exported_stats)
+      
+      #Add day of year
+      df_BandValues$Date <- as.POSIXct(df_BandValues$Date, format="%Y-%m-%d %H:%M:%S")
+      df_BandValues$doy <- as.numeric(strftime(df_BandValues$Date, format = "%j"))
+      
+      #Remove NAs in the NDVI, NDMI and NDSI variables
+      df_BandValues$NDVI[df_BandValues$NDVI < -9000] <- NA #replace -9999 by NA
+      df_BandValues$NDSI[df_BandValues$NDSI < -9000] <- NA #replace -9999 by NA
+      df_BandValues$NDMI[df_BandValues$NDMI < -9000] <- NA #replace -9999 by NA
+
+      #Sort dataframe by doy
+      index <- with(df_BandValues, order(doy))
+      df_BandValues <- df_BandValues[index,]
+      df_BandValues <- df_BandValues[,c("Date", "doy", "NDVI", "NDSI", "NDMI")]
+      
+      #Save dataframe with Mean BandValues
+      write.csv(df_BandValues, paste0("Output/S2/Shapefile_Snowmelt/", data_ID, "_Resolution", resolution, "_Data_MeanBandValues.csv"), row.names = FALSE)
+      
+    #(25): Create a binary NDSI image and extract fraction of pixels above NDSI threshold over time
 
        #Map Snow computation functions over the cloud-filtered image collection
         s2_snow_filtered <- s2_col_composite$
@@ -707,7 +757,7 @@
        # #Check if SnowFraction property has been added to each image (for debugging)
        #  s2_snow_filtered$first()$propertyNames()$getInfo()
         
-    #(25): Extract fraction of snowcover within aoi_Shapefile for each image in the image collection   
+    #(26): Extract fraction of snowcover within aoi_Shapefile for each image in the image collection   
           
           #Create an empty feature collection:
           FC_initial <- ee$FeatureCollection(ee$Feature(NULL))
@@ -735,21 +785,21 @@
           #We export the data instead of using aggregate_array() as the latter might fail due to computation timeouts.
           
           #Setup task
-          task_vector <- ee_table_to_drive(
+          task_vector2 <- ee_table_to_drive(
             collection= FC_merged,
             description = paste0(data_ID, "_Resolution", resolution, "_Data_SnowFraction"),
             folder="RGEE_tmp",
             fileFormat="CSV",
             selectors=c('SnowFraction', 'Date')
-          )
+            )
           
           #Run and monitor task
           print(paste0("calculating the fraction of snowcover for ", data_ID))
-          task_vector$start() 
-          ee_monitoring(task_vector, max_attempts=1000000) #250s at 100m. 2 hours for Alaska shapefile!
+          task_vector2$start() 
+          ee_monitoring(task_vector2, max_attempts=1000000) #250s at 100m. 2 hours for Alaska shapefile!
           
           #Import results
-          exported_stats <- ee_drive_to_local(task=task_vector, dsn=paste0("Output/S2/Shapefile_Snowmelt/", data_ID, "_Resolution", resolution, "_Data_SnowFraction"))
+          exported_stats <- ee_drive_to_local(task=task_vector2, dsn=paste0("Output/S2/Shapefile_Snowmelt/", data_ID, "_Resolution", resolution, "_Data_SnowFraction"))
           aoi_SnowCover <- read.csv(exported_stats)
           unlink(exported_stats)
           
@@ -769,7 +819,7 @@
           #Save dataframe with snowcover fraction
           write.csv(aoi_SnowCover, paste0("Output/S2/Shapefile_Snowmelt/", data_ID, "_Resolution", resolution, "_Data_SnowFraction.csv"), row.names = FALSE)
 
-      #(26): Fit statistical models through the extracted snowcover data
+      #(27): Fit statistical models through the extracted snowcover data
         
          #Generalized Additive Model (GAM)
   
@@ -781,18 +831,18 @@
            #Sort aoi_SnowCover by doy
            aoi_SnowCover <- aoi_SnowCover[order(aoi_SnowCover$doy),]
            
-          #Refit GAM through data
+           #Refit GAM through data
            index <- which(aoi_SnowCover$outliers==FALSE)
            mod_gam <- with(aoi_SnowCover[index,], mgcv::gam(SnowFraction ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
           
-          #Use gam to make predictions on a more detailed (1-day) day of year interval
+           #Use gam to make predictions on a more detailed (1-day) day of year interval
            aoi_SnowCover_predicted <- data.frame(doy=seq(min(aoi_SnowCover$doy), max(aoi_SnowCover$doy), 1))
            aoi_SnowCover_predicted$Snowcover_gam_predict <- stats::predict(mod_gam, newdata=aoi_SnowCover_predicted, type="response")
            aoi_SnowCover_predicted <- aoi_SnowCover_predicted[order(aoi_SnowCover_predicted$doy),]
            aoi_SnowCover_predicted$year <- year_ID
            write.csv(aoi_SnowCover_predicted, paste0("Output/S2/Shapefile_Snowmelt/", data_ID, "_Snowcover.csv"), row.names=FALSE)
            
-          #Plot snowcover and model predictions
+           #Plot snowcover and model predictions
            p_aoi_Snowcover <- ggplot()+ 
                geom_point(data=aoi_SnowCover[aoi_SnowCover$outliers==FALSE,], aes(x=doy, y=SnowFraction))+
                geom_point(data=aoi_SnowCover[aoi_SnowCover$outliers==TRUE,], aes(x=doy, y=SnowFraction), col="black", pch=16, alpha=0.2)+
@@ -805,7 +855,7 @@
                #This gives an excellent fit to the data throughout the season! However, filtering of outliers based
                #on the model residuals might improve this fit even more.
          
-      #(27): Calculate dates of Snowfraction_threshold% snowcover within shapefile area based on mod_gam2
+      #(28): Calculate dates of Snowfraction_threshold% snowcover within shapefile area based on mod_gam2
             
            #Detect cutoff points where curve goes from above NDSI threshold to below NDSI threshold
            aoi_SnowCover_predicted$cutoff <- ifelse(aoi_SnowCover_predicted$Snowcover_gam_predict >= Snowfraction_threshold, 1, 0)
