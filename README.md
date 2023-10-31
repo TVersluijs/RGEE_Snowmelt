@@ -200,9 +200,8 @@ water bodies are filtered within this bounding box. Third, if this bounding box 
 certain day, a composite image is created (picking the pixel with least cloud cover). Finally, snow melt is analysed within each 
 locations's buffer zone based on one of the following methods (specified by the user by setting the parameter 'method'): (1) 
 fitting a GAM through the average NDSI, NDVI and NDMI values over time, (2) Fitting a GAM through the fraction of snow-covered 
-pixels over time. Note that calculations of the date of snowmelt per pixel are not conducted in this script because these are
-too memory intensive for this high resolution sentinel-2 data and will result in a computation error. No shapefile is required 
-as input for this script, which allows for input locations to be spaced far apart.										
+pixels over time, or (3) Fitting a GAM through the NDSI values per pixel. No shapefile is required as input for this script, 
+which allows for input locations to be spaced far apart.										
 
 <p float="left">
   <img align="top" src="./_pictures/04A-Sentinel2_Zackenberg_Locations.png" width="49%" title="Five locations at Zackenberg, each with a buffer of 250" />
