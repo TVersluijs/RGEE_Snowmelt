@@ -200,8 +200,9 @@ water bodies are filtered within this bounding box. Third, if this bounding box 
 certain day, a composite image is created (picking the pixel with least cloud cover). Finally, snow melt is analysed within each 
 locations's buffer zone based on one of the following methods (specified by the user by setting the parameter 'method'): (1) 
 fitting a GAM through the average NDSI, NDVI and NDMI values over time, (2) Fitting a GAM through the fraction of snow-covered 
-pixels over time, or (3) Fitting a GAM through the NDSI values per pixel. No shapefile is required as input for this script, 
-which allows for input locations to be spaced far apart.										
+pixels over time, or (3) Fitting a GAM through the NDSI values per pixel and then fitting a GAM through the fraction of snow-
+covered pixels over time. No shapefile is required as input for this script, which allows for input locations to be spaced far 
+apart.										
 
 <p float="left">
   <img align="top" src="./_pictures/04A-Sentinel2_Zackenberg_Locations.png" width="49%" title="Five locations at Zackenberg, each with a buffer of 250" />
@@ -248,11 +249,14 @@ required to be located within a single shapefile and are then analysed simultane
 are filtered within the shapefile. Second, if the shapefile overlaps with multiple satellite tiles for a certain day, a composite
 image is created (picking the pixel with least cloudcover). Finally, snow melt is analysed for each location's buffer zone based 
 on one of the following methods (specified by the user by setting the parameter 'method'): (1) fitting a GAM through the average 
-NDSI, NDVI and NDMI values over time, (2) Fitting a GAM through the fraction of snow-covered pixels over time. Note that this 
-script is similar to script "*04-RGEE_TomVersluijs_S2_Points_Snowmelt.R". However, in the latter script all points are analysed 
-consecutively using a loop, which makes that script significantly slower to run. It does however not rely on a shapefile and 
-thus works for points spaced much further apart (e.g. tracking data of birds). The current script only works for small areas
-of c.a. 50 km2 (larger areas might result in computation errors).
+NDSI, NDVI and NDMI values over time, (2) Fitting a GAM through the fraction of snow-covered pixels over time. Fitting of GAMs
+through the NDSI data per pixel is not conducted in this script. If such a pixel-level analysis is required then use script '*08-
+RGEE_TomVersluijs_S2_Shapefile_Pixel_Snowmelt.R' to calculate the timing of snowmelt per pixel, and then extract the fraction of
+snowcover per location using the optional analysis at the end of that script. Note that the current script is similar to script 
+"*04-RGEE_TomVersluijs_S2_Points_Snowmelt.R". However, in the latter script all points are analysed consecutively using a loop, 
+which makes that script significantly slower to run. Another difference is that the pixel-level method is implemented in that 
+script. That script does not rely on a shapefile and thus works for points spaced much further apart (e.g. tracking data of birds). 
+The current script only works for small areas of c.a. 50 km2 (larger areas might result in computation errors).
 	
 <p float="left">
   <img align="top" src="./_pictures/07A-Sentinel2_Zackenberg_Shapefile_Points.png" width="49%" title="Five point locations with a buffer zone of 250m located within a shapefile area in Zackenberg" />
