@@ -145,7 +145,7 @@ f_detect_threshold_date_parallel <- function(subset, pixelIDs_split=pixelIDs_spl
                              geom_point(data=df_pixel_threshold, aes(x=x_threshold, y=y_threshold), col="blue", size=3)+
                              geom_hline(data=df_pixel_threshold, aes(yintercept=y_threshold), lty=2, col="grey")+
                              xlab(paste0("Day of year (starting at 01-01-", year_ID, ")")) +
-                             ylab(paste0(y, "-value at pixel")) +
+                             ylab(paste0(y, "-value")) +
                              theme_classic()+
                              ggtitle(pixel)
                            
@@ -160,7 +160,7 @@ f_detect_threshold_date_parallel <- function(subset, pixelIDs_split=pixelIDs_spl
                              geom_line(data=newdata, aes(x=x, y=gam_predict), col = "red") +
                              geom_hline(data=df_pixel_threshold, aes(yintercept=y_threshold), lty=2, col="grey")+
                              xlab(paste0("Day of year (starting at 01-01-", year_ID, ")")) +
-                             ylab(paste0(y, "-value at pixel")) +
+                             ylab(paste0(y, "-value")) +
                              theme_classic()+
                              ggtitle(pixel)
                            
