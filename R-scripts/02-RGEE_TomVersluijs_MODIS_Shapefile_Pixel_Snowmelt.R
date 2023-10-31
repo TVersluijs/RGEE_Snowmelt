@@ -86,7 +86,7 @@
 
    #(d) Snow detection
      
-     #NDSI threshold above which a pixel is perceived as snow
+     #NDSI threshold above which a pixel is perceived as snow (only a single threshold allowed)
      NDSI_threshold=0.42
 
    #(e): Cloud masking
