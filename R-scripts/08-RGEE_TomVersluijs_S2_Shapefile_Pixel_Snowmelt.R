@@ -187,7 +187,7 @@
        if(mask_water==TRUE & (mask_water_type=="water_mask_Manual" | mask_water_type=="both")){mask_clouds=TRUE}       
          
       #Create output folder
-       if(dir.exists(paste0(here(), "/Output/S2/Shapefile_Pixel_Snowmelt"))==FALSE){dir.create(paste0(here(), "/Output/S2/Shapefile_Pixel_Snowmelt"), recursive = TRUE)}
+       if(dir.exists(paste0(here(), "/Output/S2/08_Shapefile_Pixel_Snowmelt"))==FALSE){dir.create(paste0(here(), "/Output/S2/08_Shapefile_Pixel_Snowmelt"), recursive = TRUE)}
        
 ##################################################################################################################################
          
@@ -533,13 +533,13 @@
         #ee$data$getTaskList()
         #ee$data$cancelTask()
         
-        exported_stats <- ee_drive_to_local(task = task_vector1, dsn=paste0("Output/S2/Shapefile_Pixel_Snowmelt/", data_ID, "_Pixel_NDSI_Sentinel2"))
+        exported_stats <- ee_drive_to_local(task = task_vector1, dsn=paste0("Output/S2/08_Shapefile_Pixel_Snowmelt/", data_ID, "_Pixel_NDSI_Sentinel2"))
         df_pixel_ndsi <- read.csv(exported_stats)
         b=Sys.time()
         print(paste0("Computation finished in ",  round(as.numeric(difftime(b, a, units="mins")),2), " minutes"))
 
        # #Load dataframe (takes ca 2 minutes):
-       #  df_pixel_ndsi <- read.csv(paste0("Output/S2/Shapefile_Pixel_Snowmelt/", data_ID, "_Pixel_NDSI_Sentinel2.csv"))
+       #  df_pixel_ndsi <- read.csv(paste0("Output/S2/08_Shapefile_Pixel_Snowmelt/", data_ID, "_Pixel_NDSI_Sentinel2.csv"))
 
        #Add day of year
         df_pixel_ndsi$doy <- as.numeric(format(as.POSIXct(df_pixel_ndsi$Date, format = "%Y-%m-%d %H:%M:%S"), "%j"))
@@ -612,7 +612,7 @@
           df_pixel_snowmelt <- lapply(results, "[[", 1)
           df_pixel_snowmelt <- as.data.frame(do.call(rbind, do.call(c, df_pixel_snowmelt)))
           colnames(df_pixel_snowmelt)[colnames(df_pixel_snowmelt)=="x_threshold"] <- "doy_snowmelt"
-          write.csv(df_pixel_snowmelt, file=paste0("Output/S2/Shapefile_Pixel_Snowmelt/", data_ID, "_Pixel_Snowmelt_Sentinel2.csv"), quote = FALSE, row.names=FALSE)
+          write.csv(df_pixel_snowmelt, file=paste0("Output/S2/08_Shapefile_Pixel_Snowmelt/", data_ID, "_Pixel_Snowmelt_Sentinel2.csv"), quote = FALSE, row.names=FALSE)
           
           # #Store plots per pixel
           # plot_pixel_snowmelt <- lapply(results, "[[", 2)
@@ -628,7 +628,7 @@
        #to c.a. 5 hours!
 
        # #Read dataframe
-       #  df_pixel_snowmelt <- read.csv(file=paste0("Output/S2/Shapefile_Pixel_Snowmelt/", data_ID, "_Pixel_Snowmelt_Sentinel2.csv"), header=TRUE)
+       #  df_pixel_snowmelt <- read.csv(file=paste0("Output/S2/08_Shapefile_Pixel_Snowmelt/", data_ID, "_Pixel_Snowmelt_Sentinel2.csv"), header=TRUE)
        #  df_pixel_snowmelt now contains the date of snowmelt for each pixel within the area depicted by aoi_Shapefile.  
         
        #Clean up the cluster after finishing the parallel runs
@@ -844,7 +844,7 @@
             #Start and monitor export task:
              task_vector3$start()
              ee_monitoring(task_vector3, task_time=30, max_attempts = 1000000)
-             ee_drive_to_local(task = task_vector3, dsn=paste0("Output/S2/Shapefile_Pixel_Snowmelt/", data_ID, "_PixelSnowmeltDoy_Image_DoySnowmelt"))
+             ee_drive_to_local(task = task_vector3, dsn=paste0("Output/S2/08_Shapefile_Pixel_Snowmelt/", data_ID, "_PixelSnowmeltDoy_Image_DoySnowmelt"))
              
           #(E): Export RGB image to Google Drive (takes c.a. 2 minutes):
          
@@ -867,10 +867,10 @@
             #Start and monitor export task:
              task_vector4$start()
              ee_monitoring(task_vector4, task_time=30, max_attempts = 1000000)
-             ee_drive_to_local(task = task_vector4, dsn=paste0("Output/S2/Shapefile_Pixel_Snowmelt/", data_ID, "_PixelSnowmeltDoy_Image_RGB"))  
+             ee_drive_to_local(task = task_vector4, dsn=paste0("Output/S2/08_Shapefile_Pixel_Snowmelt/", data_ID, "_PixelSnowmeltDoy_Image_RGB"))  
              
     #(24): Save workspace 
-     save.image(paste0("Output/S2/Shapefile_Pixel_Snowmelt/", data_ID, "_Backup_Workspace_PixelDateOfSnowmelt.RData"))
+     save.image(paste0("Output/S2/08_Shapefile_Pixel_Snowmelt/", data_ID, "_Backup_Workspace_PixelDateOfSnowmelt.RData"))
 
 
 ###########################################################################################################################################################################
@@ -1028,7 +1028,7 @@
   #    #(11) Add Snowmelt_doy values per location to the corresponding date-location combination in ZAC_Paths
   #        ZAC_Paths$Date_doy <- as.numeric(strftime(ZAC_Paths$DateTime , format = "%j"))
   #        ZAC_Paths <- left_join(ZAC_Paths, Locations_BandValues, by=c("LocationID"))
-  #        write.csv(ZAC_Paths, paste0("Output/S2/Shapefile_Pixel_Snowmelt/", data_ID, "_ChickMovement_Snowmelt_doy_Buffer", Buffer_radius_m, ".csv"), row.names = FALSE)
+  #        write.csv(ZAC_Paths, paste0("Output/S2/08_Shapefile_Pixel_Snowmelt/", data_ID, "_ChickMovement_Snowmelt_doy_Buffer", Buffer_radius_m, ".csv"), row.names = FALSE)
   #        
   #       #Select only those individuals with more than 5 datapoints
   #        ZAC_Paths <- ZAC_Paths[which(ZAC_Paths$ChickID %in% names(which(table(ZAC_Paths$ChickID)>5))), ]
@@ -1045,7 +1045,7 @@
   #          ylab("Day of snowmelt") +
   #          theme_tom()
   #        
-  #          ggsave(plot=p1, paste0("Output/S2/Shapefile_Pixel_Snowmelt/", data_ID, "_MovementPaths_Snowmelt_doy_Grid_Buffer", Buffer_radius_m, ".pdf"), width=12, height = 10) 
+  #          ggsave(plot=p1, paste0("Output/S2/08_Shapefile_Pixel_Snowmelt/", data_ID, "_MovementPaths_Snowmelt_doy_Grid_Buffer", Buffer_radius_m, ".pdf"), width=12, height = 10) 
   #        
   #     #(13): There do not seem to be any clear trajectories in individuals moving up to areas with a later snowmelt (except maybe 8218556)
   #     #We therefore calculate the average encountered Snowmelt_doy values along each individual's foraging trajectory
@@ -1067,7 +1067,7 @@
   #          ylab("Upper asymptote bodymass (gram)") +
   #          theme_tom()
   #        
-  #          ggsave(plot=p2, paste0("Output/S2/Shapefile_Pixel_Snowmelt/", data_ID, "_GrowthParameter_Mean_Snowmelt_doy_Buffer", Buffer_radius_m, ".pdf"), width=10, height = 8) 
+  #          ggsave(plot=p2, paste0("Output/S2/08_Shapefile_Pixel_Snowmelt/", data_ID, "_GrowthParameter_Mean_Snowmelt_doy_Buffer", Buffer_radius_m, ".pdf"), width=10, height = 8) 
   #        
   #        #Construct linear mixed models:
   #        lmm0 <- lme(d ~ 1, random=~1|Brood, data=ZAC_Chicks_MeanBandvalue, method="ML")
@@ -1152,7 +1152,7 @@
 #          new_scale_color()
 #      }
 #     
-#      ggsave(plot=p3, paste0("Output/S2/Shapefile_Pixel_Snowmelt/", data_ID, "_Chick_Movement_Snowmelt.pdf"), width=13 , height=12 , units="in")
+#      ggsave(plot=p3, paste0("Output/S2/08_Shapefile_Pixel_Snowmelt/", data_ID, "_Chick_Movement_Snowmelt.pdf"), width=13 , height=12 , units="in")
           
          
 ##############################################################################################################################################################         

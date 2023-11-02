@@ -189,7 +189,7 @@
        if(mask_water==TRUE & (mask_water_type=="water_mask_Manual" | mask_water_type=="both")){mask_clouds=TRUE}              
 	   
      #Create output folder
-       if(dir.exists(paste0(here(), "/Output/S2/Shapefile_SubAreas_Pixel_Snowmelt"))==FALSE){dir.create(paste0(here(), "/Output/S2/Shapefile_SubAreas_Pixel_Snowmelt"), recursive = TRUE)}
+       if(dir.exists(paste0(here(), "/Output/S2/09_Shapefile_SubAreas_Pixel_Snowmelt"))==FALSE){dir.create(paste0(here(), "/Output/S2/09_Shapefile_SubAreas_Pixel_Snowmelt"), recursive = TRUE)}
        
        
 ##################################################################################################################################
@@ -537,13 +537,13 @@
             #ee$data$getTaskList()
             #ee$data$cancelTask()
             
-            exported_stats <- ee_drive_to_local(task = task_vector1, dsn=paste0("Output/S2/Shapefile_SubAreas_Pixel_Snowmelt/", data_ID, "_Pixel_NDSI_Sentinel2"))
+            exported_stats <- ee_drive_to_local(task = task_vector1, dsn=paste0("Output/S2/09_Shapefile_SubAreas_Pixel_Snowmelt/", data_ID, "_Pixel_NDSI_Sentinel2"))
             df_pixel_ndsi <- read.csv(exported_stats)
             b=Sys.time()
             print(paste0("Computation finished in ",  round(as.numeric(difftime(b, a, units="mins")),2), " minutes"))
 
            # #Load dataframe (takes ca 2 minutes):
-           #  df_pixel_ndsi <- read.csv(paste0("Output/S2/Shapefile_SubAreas_Pixel_Snowmelt/", data_ID, "_Pixel_NDSI_Sentinel2.csv"))
+           #  df_pixel_ndsi <- read.csv(paste0("Output/S2/09_Shapefile_SubAreas_Pixel_Snowmelt/", data_ID, "_Pixel_NDSI_Sentinel2.csv"))
 
            #Add day of year
             df_pixel_ndsi$doy <- as.numeric(format(as.POSIXct(df_pixel_ndsi$Date, format = "%Y-%m-%d %H:%M:%S"), "%j"))
@@ -616,7 +616,7 @@
               df_pixel_snowmelt <- lapply(results, "[[", 1)
               df_pixel_snowmelt <- as.data.frame(do.call(rbind, do.call(c, df_pixel_snowmelt)))
               colnames(df_pixel_snowmelt)[colnames(df_pixel_snowmelt)=="x_threshold"] <- "doy_snowmelt"
-              write.csv(df_pixel_snowmelt, file=paste0("Output/S2/Shapefile_SubAreas_Pixel_Snowmelt/", data_ID, "_Pixel_Snowmelt_Sentinel2.csv"), quote = FALSE, row.names=FALSE)
+              write.csv(df_pixel_snowmelt, file=paste0("Output/S2/09_Shapefile_SubAreas_Pixel_Snowmelt/", data_ID, "_Pixel_Snowmelt_Sentinel2.csv"), quote = FALSE, row.names=FALSE)
               
               # #Store plots per pixel
               # plot_pixel_snowmelt <- lapply(results, "[[", 2)
@@ -631,7 +631,7 @@
            #this took 40449 seconds (11 hours). Parallel processing thus decreased computation time dramatically
 
            # #Read dataframe
-           #  df_pixel_snowmelt <- read.csv(file=paste0("Output/S2/Shapefile_SubAreas_Pixel_Snowmelt/", data_ID, "_Pixel_Snowmelt_Sentinel2.csv"), header=TRUE)
+           #  df_pixel_snowmelt <- read.csv(file=paste0("Output/S2/09_Shapefile_SubAreas_Pixel_Snowmelt/", data_ID, "_Pixel_Snowmelt_Sentinel2.csv"), header=TRUE)
            #  df_pixel_snowmelt now contains the date of snowmelt for each pixel within the area depicted by aoi_Shapefile.
             
            #Clean up the cluster after finishing the parallel runs
@@ -986,7 +986,7 @@
                 #Start and monitor export task:
                  task_vector3$start()
                  ee_monitoring(task_vector3, task_time=30, max_attempts = 1000000)
-                 ee_drive_to_local(task = task_vector3, dsn=paste0("Output/S2/Shapefile_SubAreas_Pixel_Snowmelt/", data_ID, "_PixelSnowmeltDoy_Image_DoySnowmelt"))
+                 ee_drive_to_local(task = task_vector3, dsn=paste0("Output/S2/09_Shapefile_SubAreas_Pixel_Snowmelt/", data_ID, "_PixelSnowmeltDoy_Image_DoySnowmelt"))
                  
               #(E): Export RGB image to Google Drive (takes c.a. 2 minutes):
              
@@ -1009,10 +1009,10 @@
                 #Start and monitor export task:
                  task_vector4$start()
                  ee_monitoring(task_vector4, task_time=30, max_attempts = 1000000)
-                 ee_drive_to_local(task = task_vector4, dsn=paste0("Output/S2/Shapefile_SubAreas_Pixel_Snowmelt/", data_ID, "_PixelSnowmeltDoy_Image_RGB"))  
+                 ee_drive_to_local(task = task_vector4, dsn=paste0("Output/S2/09_Shapefile_SubAreas_Pixel_Snowmelt/", data_ID, "_PixelSnowmeltDoy_Image_RGB"))  
                  
         #(24): Save workspace 
-         save.image(paste0("Output/S2/Shapefile_SubAreas_Pixel_Snowmelt/", data_ID, "_Backup_Workspace_PixelDateOfSnowmelt.RData"))
+         save.image(paste0("Output/S2/09_Shapefile_SubAreas_Pixel_Snowmelt/", data_ID, "_Backup_Workspace_PixelDateOfSnowmelt.RData"))
          
     #The snowmelt image is now completed and can be downloaded as .tif file from the RGEE_backup folder on my Google Drive.
     #The optional code below uses the generated snowmelt image to extract the snowmelt day of year at specific points of interest.
@@ -1175,7 +1175,7 @@
   #   #(11) Add Snowmelt_doy values per location to the corresponding date-location combination in TAY_Locations
   #        TAY_Locations$Date_doy <- as.numeric(strftime(TAY_Locations$SnowMelt_Date , format = "%j"))
   #        TAY_Locations <- left_join(TAY_Locations, Locations_BandValues, by=c("LocationID"))
-  #        write.csv(TAY_Locations, paste0("Output/S2/Shapefile_SubAreas_Pixel_Snowmelt/", data_ID, "_Locations_Snowmelt_doy_Buffer", Buffer_radius_m, ".csv"), row.names = FALSE)
+  #        write.csv(TAY_Locations, paste0("Output/S2/09_Shapefile_SubAreas_Pixel_Snowmelt/", data_ID, "_Locations_Snowmelt_doy_Buffer", Buffer_radius_m, ".csv"), row.names = FALSE)
   # 
   #        
   #       #Plot relation between estimated date of snowmelt, and satellite extracted date of snowmelt 

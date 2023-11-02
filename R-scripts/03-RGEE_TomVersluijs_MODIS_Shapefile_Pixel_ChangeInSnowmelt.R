@@ -5,7 +5,7 @@
 #timing of snowmelt over the years for each pixel (i.e. slope of linear regression) and another image with the average timing
 #of snowmelt over the years for each pixel (i.e. intercept of linear regression).
 
-#Copyright Tom Versluijs 2023-07-28. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
+#Copyright Tom Versluijs 2023-11-01. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
 
 #Before running this script make sure to install RGEE according to the instructions in script "00-RGEE_TomVersluijs_Installation.R". 
 #Note that a GoogleDrive is required.
@@ -93,7 +93,7 @@
 #################################################################################################################
    
    #Create output folder
-    if(dir.exists(paste0(here(), "/Output/MODIS/Shapefile_Pixel_ChangeInSnowmelt"))==FALSE){dir.create(paste0(here(), "/Output/MODIS/Shapefile_Pixel_ChangeInSnowmelt"), recursive = TRUE)}
+    if(dir.exists(paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt"))==FALSE){dir.create(paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt"), recursive = TRUE)}
      
    #(5): Read study area shapefile and convert to a feature collection.
       root_fldr <- here()
@@ -297,7 +297,7 @@
        task_vector1$start()
        ee_monitoring(task_vector1, max_attempts = 1000000)
       
-       exported_stats <- ee_drive_to_local(task = task_vector1, dsn=paste0(here(), "/Output/MODIS/Shapefile_Pixel_ChangeInSnowmelt/", data_ID, "_Pixel_Snowmelt_aoi"))
+       exported_stats <- ee_drive_to_local(task = task_vector1, dsn=paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", data_ID, "_Pixel_Snowmelt_aoi"))
        MODIS_pixel_snowmelt <- read.csv(exported_stats)
        b=Sys.time()
        print(paste0("Computation finished in ",  round(as.numeric(difftime(b, a, units="mins")),2), " minutes"))
@@ -320,7 +320,7 @@
        task_vector2$start()
        ee_monitoring(task_vector2, max_attempts = 1000000)
        
-       exported_stats <- ee_drive_to_local(task = task_vector2, dsn=paste0(here(), "/Output/MODIS/Shapefile_Pixel_ChangeInSnowmelt/", data_ID, "_Pixel_Snowmelt_shapefile"))
+       exported_stats <- ee_drive_to_local(task = task_vector2, dsn=paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", data_ID, "_Pixel_Snowmelt_shapefile"))
        MODIS_pixel_snowmelt_clipped <- read.csv(exported_stats)
        b=Sys.time()
        print(paste0("Computation finished in ",  round(as.numeric(difftime(b, a, units="mins")),2), " minutes"))
@@ -450,9 +450,9 @@
           df_pixel_ChangeInSnowmelt <- as.data.frame(do.call(rbind, do.call(c, df_pixel_ChangeInSnowmelt)))
           colnames(df_pixel_ChangeInSnowmelt)[colnames(df_pixel_ChangeInSnowmelt)=="y_change"] <- "snowmelt_change"
           colnames(df_pixel_ChangeInSnowmelt)[colnames(df_pixel_ChangeInSnowmelt)=="y_intercept"] <- "snowmelt_intercept"
-          write.csv(df_pixel_ChangeInSnowmelt, file=paste0(here(), "/Output/MODIS/Shapefile_Pixel_ChangeInSnowmelt/", data_ID, "_Pixel_ChangeInSnowmelt_aoi.csv"), quote = FALSE, row.names=FALSE)
+          write.csv(df_pixel_ChangeInSnowmelt, file=paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", data_ID, "_Pixel_ChangeInSnowmelt_aoi.csv"), quote = FALSE, row.names=FALSE)
           ##Read dataframe
-          #df_pixel_ChangeInSnowmelt <- read.csv(file=paste0(here(), "/Output/MODIS/Shapefile_Pixel_ChangeInSnowmelt/", data_ID, "_Pixel_ChangeInSnowmelt.csv"), header=TRUE) 
+          #df_pixel_ChangeInSnowmelt <- read.csv(file=paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", data_ID, "_Pixel_ChangeInSnowmelt.csv"), header=TRUE) 
           
           #The dataframe df_pixel_ChangeInSnowmelt contains the change in the date of snowmelt for each individual pixel_ID within the
           #region 'aoi'. To be able to plot these data we need to transform this dataframe to a feature collection and then transform this 
@@ -464,7 +464,7 @@
           #in timing of snowmelt. In this case we're specifically interested in all pixels within aoi_Shapefile (and not all pixels within the
           #region 'aoi'). We thus first define which pixels of the current selection fall within aoi_Shapefile and store this as an index variable.
           index <- which(df_pixel_ChangeInSnowmelt$pixel_ID %in% unique(MODIS_pixel_snowmelt_clipped$pixel_ID))
-          write.csv(df_pixel_ChangeInSnowmelt[index,], file=paste0(here(), "/Output/MODIS/Shapefile_Pixel_ChangeInSnowmelt/", data_ID, "_Pixel_ChangeInSnowmelt_shapefile.csv"), quote = FALSE, row.names=FALSE)
+          write.csv(df_pixel_ChangeInSnowmelt[index,], file=paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", data_ID, "_Pixel_ChangeInSnowmelt_shapefile.csv"), quote = FALSE, row.names=FALSE)
           
           #Calculate the change in timing of snowmelt within aoi_Shapefile
           hist(na.omit(df_pixel_ChangeInSnowmelt$snowmelt_change[index]), nclass = 30)
@@ -480,7 +480,7 @@
           plots_per_page = 25
           plot_pixel_snowmelt <- lapply(plot_pixel_snowmelt, function(x){split(x, ceiling(seq_along(plot_pixel_snowmelt[[1]])/plots_per_page))})
           plot_pixel_snowmelt <- unname(unlist(plot_pixel_snowmelt, recursive = F))
-          pdf(paste0(here(), "/Output/MODIS/Shapefile_Pixel_ChangeInSnowmelt/", data_ID, "_Pixel_ChangeInSnowmelt_shapefile.pdf"), width=20, height=16, onefile = TRUE)
+          pdf(paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", data_ID, "_Pixel_ChangeInSnowmelt_shapefile.pdf"), width=20, height=16, onefile = TRUE)
           for (i in seq(length(plot_pixel_snowmelt))) { do.call("grid.arrange", plot_pixel_snowmelt[[i]]) }
           dev.off()
           
@@ -695,7 +695,7 @@
             task_vector4$start()
             print("Export original image to Google Drive:")
             ee_monitoring(task_vector4, max_attempts = 1000000)
-            ee_drive_to_local(task = task_vector4, dsn=paste0("Output/MODIS/Shapefile_Pixel_ChangeInSnowmelt/", data_ID, '_PixelChangeInSnowmeltDoy_Image_DoySnowmelt'))
+            ee_drive_to_local(task = task_vector4, dsn=paste0("Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", data_ID, '_PixelChangeInSnowmeltDoy_Image_DoySnowmelt'))
             
           #(E): Export RGB image to Google Drive (takes c.a. 2 minutes):
           
@@ -719,7 +719,7 @@
             print("Export RGB image to Google Drive:")
             task_vector5$start()
             ee_monitoring(task_vector5, max_attempts = 1000000)
-            ee_drive_to_local(task = task_vector5, dsn=paste0("Output/MODIS/Shapefile_Pixel_ChangeInSnowmelt/", data_ID, '_PixelChangeInSnowmeltDoy_Image_RGB'))
+            ee_drive_to_local(task = task_vector5, dsn=paste0("Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", data_ID, '_PixelChangeInSnowmeltDoy_Image_RGB'))
             
        #(9.2): Transform the Feature collection FC_pixels_ChangeInSnowmelt_optimized to an image (with snowmelt_intercept as an image band)
             
@@ -760,7 +760,7 @@
               task_vector6$start()
               print("Export original image to Google Drive:")
               ee_monitoring(task_vector6, max_attempts = 1000000)
-              ee_drive_to_local(task = task_vector6, dsn=paste0("Output/MODIS/Shapefile_Pixel_ChangeInSnowmelt/", data_ID, '_PixelInterceptSnowmeltDoy_Image_DoySnowmelt'))
+              ee_drive_to_local(task = task_vector6, dsn=paste0("Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", data_ID, '_PixelInterceptSnowmeltDoy_Image_DoySnowmelt'))
               
             #(E): Export RGB image to Google Drive (takes c.a. 2 minutes):
             
@@ -784,10 +784,10 @@
               print("Export RGB image to Google Drive:")
               task_vector7$start()
               ee_monitoring(task_vector7, max_attempts = 1000000)
-              ee_drive_to_local(task=task_vector7, dsn=paste0("Output/MODIS/Shapefile_Pixel_ChangeInSnowmelt/", data_ID, '_PixelInterceptSnowmeltDoy_Image_RGB'))
+              ee_drive_to_local(task=task_vector7, dsn=paste0("Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", data_ID, '_PixelInterceptSnowmeltDoy_Image_RGB'))
               
             #Save workspace
-            #save.image(paste0(here(), "/Output/MODIS/Shapefile_Pixel_ChangeInSnowmelt/", data_ID, "_Backup_Workspace_PixelChangeInSnowmeltDoy.RData"))        
+            #save.image(paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", data_ID, "_Backup_Workspace_PixelChangeInSnowmeltDoy.RData"))        
             
                
 ##################################################################################################################################################
