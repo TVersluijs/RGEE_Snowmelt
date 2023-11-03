@@ -145,8 +145,8 @@
     #Define which MODIS cloud masking algorithm has been used ("PGE11", "MOD35", or "Combined)
     MODIS_cloud_masking_algorithm = 'MOD35' #default is MOD35
     
-    #Maximum fraction of cloud cover allowed in each image (should be set to 1.0 for pixel-level analysis)
-    max_cloud_fraction=1.0
+    #Maximum fraction of cloud cover allowed in each image
+    max_cloud_fraction=0.75
     
     #Specify the resolution of the QABand   
     resolution_qaband=1000 #resolution of QA_band (MODIS=1000m)   
