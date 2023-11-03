@@ -1,9 +1,10 @@
 ##################################################################################################################################
 
 #Use Sentinel-2 data to extract time series of the average NDVI, NDMI, and NDSI and the fraction of snowcover for a single area of 
-#interest (i.e. a single shapefile).
+#interest (i.e. a single shapefile). The fraction of snowcover is estimated by calculating the fraction of pixels with an NDSI value
+#larger than the user specified NDSI-threshold. This corresponds to the method='snowfraction' in other scripts.
 
-#Copyright Tom Versluijs 2023-07-31. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
+#Copyright Tom Versluijs 2023-11-01. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
 
 #Before running this script make sure to install RGEE according to the instructions in script "00-RGEE_TomVersluijs_Installation.R". 
 #Note that a GoogleDrive is required.
@@ -14,28 +15,28 @@
 
 ##################################################################################################################################
 
-      #(1): Clear workspace and set python environment
-       rm(list=ls())
-       utils::install.packages("here")
-       library(here)
-       if(file.exists(paste0(here::here(), "/Input/rgee_environment_dir.rds"))){
-         rgee_environment_dir <- readRDS(paste0(here::here(), "/Input/rgee_environment_dir.rds"))
-         reticulate::use_python(rgee_environment_dir, required=T)
-         reticulate::py_config()
-         }
-        
-      #(2): Load packages
-       #renv::restore() #revert to last version of R-packages used to successfully run this script (optional).
-       utils::install.packages("pacman")
-       library(pacman)
-       p_load(sf, rgee, ggplot2, mgcv, googledrive, dplyr)
+  #(1): Clear workspace and set python environment
+   rm(list=ls())
+   utils::install.packages("here")
+   library(here)
+   if(file.exists(paste0(here::here(), "/Input/rgee_environment_dir.rds"))){
+     rgee_environment_dir <- readRDS(paste0(here::here(), "/Input/rgee_environment_dir.rds"))
+     reticulate::use_python(rgee_environment_dir, required=T)
+     reticulate::py_config()
+     }
+    
+  #(2): Load packages
+   #renv::restore() #revert to last version of R-packages used to successfully run this script (optional).
+   utils::install.packages("pacman")
+   library(pacman)
+   p_load(sf, rgee, ggplot2, mgcv, googledrive, dplyr, foreach, parallel, doSNOW)
 
-      #(3): Load auxiliary functions
-       source_files <- list.files(path=paste0(here(), "/Input"), full.names=TRUE, recursive = TRUE, pattern = "Sentinel2_AuxiliaryFunctions")
-       sapply(source_files, source, chdir = TRUE) ; rm(source_files)
+  #(3): Load auxiliary functions
+   source_files <- list.files(path=paste0(here(), "/Input"), full.names=TRUE, recursive = TRUE, pattern = "Sentinel2_AuxiliaryFunctions")
+   sapply(source_files, source, chdir = TRUE) ; rm(source_files)
 
-      #(4): Initialize earth engine
-       rgee::ee_Initialize(user = "tom.versluijs@gmail.com", drive = TRUE)
+  #(4): Initialize earth engine
+   rgee::ee_Initialize(user = "tom.versluijs@gmail.com", drive = TRUE)
 
 ##################################################################################################################################
        
@@ -81,10 +82,10 @@
    #(d) Snow detection
 
      #NDSI threshold for snow detection
-     NDSI_threshold=0.42
+     NDSI_threshold_vector = c(0.42, 0.3, 0.5)
 
      #Define the snowcover fraction within the aoi for which the date of its occurrence will be calculated
-     Snowfraction_threshold=0.5 
+     Snowfraction_threshold_vector = c(0.25, 0.5, 0.75) 
     
    #(e): Cloud masking
 
@@ -174,7 +175,7 @@
      if(mask_water==TRUE & (mask_water_type=="water_mask_Manual" | mask_water_type=="both")){mask_clouds=TRUE}      
      
     #Create output folder
-     if(dir.exists(paste0(here(), "/Output/S2/Shapefile_Snowmelt"))==FALSE){dir.create(paste0(here(), "/Output/S2/Shapefile_Snowmelt"), recursive = TRUE)}
+     if(dir.exists(paste0(here(), "/Output/S2/05_Shapefile_Snowmelt"))==FALSE){dir.create(paste0(here(), "/Output/S2/05_Shapefile_Snowmelt"), recursive = TRUE)}
      
      
 ##################################################################################################################################
@@ -387,71 +388,71 @@
 
 ##################################################################################################################################
 
-    #Mask permanent waterbodies if mask_water==TRUE
-     if(mask_water==TRUE){
+   #Mask permanent waterbodies if mask_water==TRUE
+    if(mask_water==TRUE){
+         
+      #(A): print message   
+      print("Water masking = TRUE")
+         
+      #(B): Method 1: Extract permanent waterbodies from the ESA WorldCover map
+      if(mask_water_type=="water_mask_ESA" | mask_water_type=="both"){
            
-        #(A): print message   
-        print("Water masking = TRUE")
+       #print message   
+       print("Water masking type = ESA")
            
-        #(B): Method 1: Extract permanent waterbodies from the ESA WorldCover map
-        if(mask_water_type=="water_mask_ESA" | mask_water_type=="both"){
-             
-         #print message   
-         print("Water masking type = ESA")
-             
-         #Load auxilliary function
-         compute_Water_ESA=compute_Water_ESA #sourced
+       #Load auxilliary function
+       compute_Water_ESA=compute_Water_ESA #sourced
+         
+       #Extract pixels corresponding to permanent waterbodies 
+       water_mask1 <- compute_Water_ESA(ESA_index=80)
+         
+       }
+         
+      #(C): Method 2: Manual detection of permanent waterbodies based on NDWI, NDSI and NIR bands
+      if(mask_water_type=="water_mask_Manual" | mask_water_type=="both"){
            
-         #Extract pixels corresponding to permanent waterbodies 
-         water_mask1 <- compute_Water_ESA(ESA_index=80)
+       #print message   
+       print("Water masking type = Manual")
            
-         }
+       #Load auxilliary function
+       compute_Water_Manual=compute_Water_Manual #sourced
            
-        #(C): Method 2: Manual detection of permanent waterbodies based on NDWI, NDSI and NIR bands
-        if(mask_water_type=="water_mask_Manual" | mask_water_type=="both"){
-             
-         #print message   
-         print("Water masking type = Manual")
-             
-         #Load auxilliary function
-         compute_Water_Manual=compute_Water_Manual #sourced
-             
-         #Extract pixels corresponding to permanent waterbodies
-         water_mask2 <- compute_Water_Manual(img_col=s2_col, start_date_NDWI=start_date_NDWI, end_date_NDWI=end_date_NDWI, NDWI_threshold=NDWI_threshold,
-                                             start_date_NDSI=start_date_NDSI, end_date_NDSI=end_date_NDSI, NDSI_threshold=NDSI_threshold, NIR_threshold=NIR_threshold)
-             
-             
-         }
+       #Extract pixels corresponding to permanent waterbodies
+       water_mask2 <- compute_Water_Manual(img_col=s2_col, start_date_NDWI=start_date_NDWI, end_date_NDWI=end_date_NDWI, NDWI_threshold=NDWI_threshold,
+                                           start_date_NDSI=start_date_NDSI, end_date_NDSI=end_date_NDSI, NDSI_threshold=NDSI_threshold_vector[1], NIR_threshold=NIR_threshold)
            
-        #(D): Apply the water masking function to each image in the collection:
            
-         #Define the final water_mask:
-         if(mask_water_type=="water_mask_ESA"){water_mask <- water_mask1}
-         if(mask_water_type=="water_mask_Manual"){water_mask <- water_mask2}
-         if(mask_water_type=="both"){water_mask <- water_mask1$Or(water_mask2)}     
-           
-         # #Plot permanent waterbodies(for debugging)
-         # Map$setCenter(coordinates_point$getInfo()$coordinates[1], coordinates_point$getInfo()$coordinates[2], 6)
-         # Map$addLayer(s2_col$filterDate(paste0(year_ID, "-08-04"), paste0(year_ID, "-09-18"))$first(), list(bands=c("B4", "B3", "B2"), min=100, max=8000, gamma=c(1.9, 1.7, 1.7)), 'TRUE COLOR')+
-         # Map$addLayer(water_mask,list(min=0, max = 1, palette = c('ffffff', '000000')), 'Water_mask')
-           
-         #Load auxilliary function to mask water-pixels
-         Add_WaterMask=Add_WaterMask #sourced
-           
-         #Apply the final watermask:
-         s2_clouds_filtered <- s2_clouds_filtered$map(Add_WaterMask)
-           
-         # #Create a timeseries GIF of RGB images of the water and cloud filtered image collection (for debugging)
-         # videoArgs <- list(dimensions=200, region=aoi,framesPerSecond=5, crs='EPSG:3857', bands=c("B4", "B3", "B2"), min=0, max=10000, gamma=c(1.9, 1.7, 1.7))
-         # tryCatch({browseURL(s2_clouds_filtered$getVideoThumbURL(videoArgs))}, error = function(cond){return("Too many pixels. Reduce dimensions.")})
-           
-        }
-     if(mask_water==FALSE){
-           
-        #print message   
-        print("Water masking = FALSE")
-           
+       }
+         
+      #(D): Apply the water masking function to each image in the collection:
+         
+       #Define the final water_mask:
+       if(mask_water_type=="water_mask_ESA"){water_mask <- water_mask1}
+       if(mask_water_type=="water_mask_Manual"){water_mask <- water_mask2}
+       if(mask_water_type=="both"){water_mask <- water_mask1$Or(water_mask2)}     
+         
+       # #Plot permanent waterbodies(for debugging)
+       # Map$setCenter(coordinates_point$getInfo()$coordinates[1], coordinates_point$getInfo()$coordinates[2], 6)
+       # Map$addLayer(s2_col$filterDate(paste0(year_ID, "-08-04"), paste0(year_ID, "-09-18"))$first(), list(bands=c("B4", "B3", "B2"), min=100, max=8000, gamma=c(1.9, 1.7, 1.7)), 'TRUE COLOR')+
+       # Map$addLayer(water_mask,list(min=0, max = 1, palette = c('ffffff', '000000')), 'Water_mask')
+         
+       #Load auxilliary function to mask water-pixels
+       Add_WaterMask=Add_WaterMask #sourced
+         
+       #Apply the final watermask:
+       s2_clouds_filtered <- s2_clouds_filtered$map(Add_WaterMask)
+         
+       # #Create a timeseries GIF of RGB images of the water and cloud filtered image collection (for debugging)
+       # videoArgs <- list(dimensions=200, region=aoi,framesPerSecond=5, crs='EPSG:3857', bands=c("B4", "B3", "B2"), min=0, max=10000, gamma=c(1.9, 1.7, 1.7))
+       # tryCatch({browseURL(s2_clouds_filtered$getVideoThumbURL(videoArgs))}, error = function(cond){return("Too many pixels. Reduce dimensions.")})
+         
       }
+    if(mask_water==FALSE){
+         
+      #print message   
+      print("Water masking = FALSE")
+         
+    }
 
 ##################################################################################################################################
     
@@ -520,7 +521,7 @@
     #   ndsi <- s2_composite$select('NDSI')
     #   
     #   #Create a binary layer using logical operations.
-    #   snow <- ndsi$gt(NDSI_threshold)$rename('SNOW')
+    #   snow <- ndsi$gt(NDSI_threshold_vector[1])$rename('SNOW')
     #   
     #   #Return the binary snow parameter
     #   s2_composite <- s2_composite$addBands(snow)
@@ -688,8 +689,8 @@
         
 ##################################################################################################################################       
         
-    #(24): Extract average NDVI, NDSI and NDWI for the area of interest
-    
+  #(24): Extract average NDVI, NDSI and NDWI for the area of interest
+  
       #Create an empty FeatureCollection list. This list is used as input for the first iteration of the iteration function below.
       FC_initial_BandValues <- ee$FeatureCollection(ee$List(list()))
       
@@ -714,10 +715,10 @@
       #Run and monitor task
       print(paste0("calculating Mean BandValues for ", data_ID))
       task_vector1$start() 
-      ee_monitoring(task_vector1, max_attempts=1000000)
+      ee_monitoring(task_vector1, task_time=60, max_attempts=1000000)
       
       #Import results
-      exported_stats <- ee_drive_to_local(task=task_vector1, dsn=paste0("Output/S2/Shapefile_Snowmelt/", data_ID, "_Resolution", resolution, "_Data_MeanBandValues"))
+      exported_stats <- ee_drive_to_local(task=task_vector1, dsn=paste0(here(), "/Output/S2/05_Shapefile_Snowmelt/", data_ID, "_Resolution", resolution, "_Data_MeanBandValues_polygon"))
       df_BandValues <- read.csv(exported_stats)
       unlink(exported_stats)
       
@@ -736,159 +737,234 @@
       df_BandValues <- df_BandValues[,c("Date", "doy", "NDVI", "NDSI", "NDMI")]
       
       #Save dataframe with Mean BandValues
-      write.csv(df_BandValues, paste0("Output/S2/Shapefile_Snowmelt/", data_ID, "_Resolution", resolution, "_Data_MeanBandValues.csv"), row.names = FALSE)
+      write.csv(df_BandValues, paste0(here(), "/Output/S2/05_Shapefile_Snowmelt/", data_ID, "_Resolution", resolution, "_Data_MeanBandValues_polygon.csv"), row.names = FALSE)
+    
+  #(25): Extract fraction of snowcover within aoi_Shapefile for each image in the image collection  
+  
+      #Create an empty dataframe for storing the Snowfraction results per NDSI-threshold
+      df_SnowCover <- data.frame(Date=character(),
+                                 doy=numeric(),
+                                 SnowFraction=numeric(),
+                                 NDSI_threshold=character())
       
-    #(25): Create a binary NDSI image and extract fraction of pixels above NDSI threshold over time
-
-       #Map Snow computation functions over the cloud-filtered image collection
-        s2_snow_filtered <- s2_col_composite$
-          #Determine which pixels are snow-covered (NDSI > NDSI threshold)
-          map(computeSnow)$
-          #add the fraction of snow covered pixels as an image property (excluding cloud masked pixels from the calculations)
-          map(AddSnowFraction)$
-          #Add a NULL value to images for which the snow fraction could not be calculated
-          map(AddNULLSNOW)
-      
-       # #Mask and display the binary layer (for debugging).
-       #  Map$setCenter(coordinates_point$getInfo()$coordinates[1], coordinates_point$getInfo()$coordinates[2], 6)
-       #  #Map$addLayer(s2_snow_filtered$first(),list(bands=c("B4", "B3", "B2"), min=0, max=10000, gamma=c(1.9, 1.7, 1.7)), 'TRUE COLOR')+
-       #  Map$addLayer(s2_snow_filtered$select('SNOW')$first())
-      
-       # #Check if SnowFraction property has been added to each image (for debugging)
-       #  s2_snow_filtered$first()$propertyNames()$getInfo()
+      #Run the analysis for each level of NDSI_threshold_vector
+      for(NDSI_threshold in NDSI_threshold_vector){  
         
-    #(26): Extract fraction of snowcover within aoi_Shapefile for each image in the image collection   
+        #Print message
+        print(paste0("  -Extracting Snowfraction timeseries data for NDSI_threshold = ", NDSI_threshold))
+        
+        #Store NDSI_threshold as a character (used for naming of outputs)
+        NDSI_threshold_char <- gsub("\\.", "_", as.character(NDSI_threshold))
+        
+        #Create a binary NDSI image and calculate the fraction of pixels above NDSI threshold over time
+        
+          #Map Snow computation functions over the mosaicked image collection
+          s2_snow_filtered <- s2_col_composite$
+            #Determine which pixels are snow-covered (NDSI > NDSI threshold)
+            map(computeSnow)$
+            #add the fraction of snow covered pixels as an image property (excluding cloud masked pixels from the calculations)
+            map(AddSnowFraction)$
+            #Add a NULL value to images for which the snow fraction could not be calculated
+            map(AddNULLSNOW)
           
+          # #Mask and display the binary layer (for debugging).
+          #  img_snow <- s2_snow_filtered$filterDate(paste0(year_ID, "-05-26"), end_date)$first()
+          #  Map$setCenter(coordinates_point$getInfo()$coordinates[1], coordinates_point$getInfo()$coordinates[2], 10)
+          #  Map$addLayer(img_snow,list(bands=c("B4", "B3", "B2"), min=0, max=10000, gamma=c(1.9, 1.7, 1.7)), 'TRUE COLOR')+
+          #  Map$addLayer(img_snow$select('SNOW'))+
+          #  Map$addLayer(img_snow$select('NDSI'), list(min=-1, max = 1, palette = c('lightblue', 'darkblue')))
+            
+        #Extract fraction of snowcover within aoi_Shapefile for each image in the image collection   
+        
           #Create an empty feature collection:
           FC_initial <- ee$FeatureCollection(ee$Feature(NULL))
           
-          #Define an Iteration function to extract the fraction of snowcover within the buffer zone of Location for each image
+          #Define an Iteration function to extract the fraction of snowcover within the area of interest for each image
           extract_snowcover <- function(img, FC_initial){
             
             #Extract snowfraction and doy from current image
             SnowFraction <- img$get('SnowFraction')
             date <- img$date()$format("YYYY-MM-dd hh:mm:ss")
             
-            #Store snowFraction, date as properties in a featurecollection with one feature
+            #Store snowFraction, doy and date as properties in a featurecollection with one feature
             Feature_tmp <- ee$FeatureCollection(ee$Feature(NULL, c(SnowFraction=SnowFraction, Date=date)))
             
             #Merge the feature collection of the current image (Feature_tmp) onto the feature collection FC_initial.
             return (ee$FeatureCollection(FC_initial)$merge(Feature_tmp))
             #FC_initial is thus updated at each iteration. This corresponds to base R code: FC_intitial <- merge(FC_initial, FC_image)
-            
-          }
+            }
           
           #iterate this function over all images in the collection (output a feature collection)
           FC_merged <- ee$FeatureCollection(s2_snow_filtered$iterate(extract_snowcover, FC_initial))
-          
+  
           #Export the feature collection as a .csv table 
           #We export the data instead of using aggregate_array() as the latter might fail due to computation timeouts.
           
           #Setup task
           task_vector2 <- ee_table_to_drive(
             collection= FC_merged,
-            description = paste0(data_ID, "_Resolution", resolution, "_Data_SnowFraction"),
+            description = paste0(data_ID, "_Resolution", resolution, "_NDSI", NDSI_threshold, "_Data_SnowFraction"),
             folder="RGEE_tmp",
             fileFormat="CSV",
             selectors=c('SnowFraction', 'Date')
             )
           
           #Run and monitor task
-          print(paste0("calculating the fraction of snowcover for ", data_ID))
           task_vector2$start() 
-          ee_monitoring(task_vector2, max_attempts=1000000) #250s at 100m. 2 hours for Alaska shapefile!
+          ee_monitoring(task_vector2, task_time=60, max_attempts=1000000) #250s at 100m
           
           #Import results
-          exported_stats <- ee_drive_to_local(task=task_vector2, dsn=paste0("Output/S2/Shapefile_Snowmelt/", data_ID, "_Resolution", resolution, "_Data_SnowFraction"))
-          aoi_SnowCover <- read.csv(exported_stats)
+          exported_stats <- ee_drive_to_local(task=task_vector2, dsn=paste0(here(), "/Output/S2/05_Shapefile_Snowmelt/", data_ID, "_Resolution", resolution, "_NDSI", NDSI_threshold, "_Data_SnowFraction_polygon"))
+          df_SnowCover_new <- read.csv(exported_stats)
           unlink(exported_stats)
           
           #Add day of year
-          aoi_SnowCover$Date <- as.POSIXct(aoi_SnowCover$Date, format="%Y-%m-%d %H:%M:%S")
-          aoi_SnowCover$doy <- as.numeric(strftime(aoi_SnowCover$Date, format = "%j"))
+          df_SnowCover_new$Date <- as.POSIXct(df_SnowCover_new$Date, format="%Y-%m-%d %H:%M:%S")
+          df_SnowCover_new$doy <- as.numeric(strftime(df_SnowCover_new$Date, format = "%j"))
           
           #Remove NAs in the SnowFraction variable  
-          aoi_SnowCover$SnowFraction[aoi_SnowCover$SnowFraction < -9000] <- NA #replace -9999 by NA
-          aoi_SnowCover <- aoi_SnowCover[!is.na(aoi_SnowCover$SnowFraction), ]
-    
-          #Sort dataframe by doy
-          index <- with(aoi_SnowCover, order(doy))
-          aoi_SnowCover <- aoi_SnowCover[index,]
-          aoi_SnowCover <- aoi_SnowCover[,c("Date", "doy", "SnowFraction")]
-          
-          #Save dataframe with snowcover fraction
-          write.csv(aoi_SnowCover, paste0("Output/S2/Shapefile_Snowmelt/", data_ID, "_Resolution", resolution, "_Data_SnowFraction.csv"), row.names = FALSE)
-
-      #(27): Fit statistical models through the extracted snowcover data
+          df_SnowCover_new$SnowFraction[df_SnowCover_new$SnowFraction < -9000] <- NA #replace -9999 by NA
+          df_SnowCover_new <- df_SnowCover_new[!is.na(df_SnowCover_new$SnowFraction), ]
         
-         #Generalized Additive Model (GAM)
-  
-           #Fit GAM with sequential outlier removal through aoi_SnowCover data:
-           aoi_SnowCover <- f_gam_SeqRemOutliers(data=aoi_SnowCover, y="SnowFraction", x="doy", outlier_removal=outlier_removal, 
-                                                 outlier_thresh_1=outlier_thresh_1, outlier_thresh_2=outlier_thresh_2,
-                                                 default_k=gam_k_outlier)
+          #Sort dataframe by doy
+          index <- with(df_SnowCover_new, order(doy))
+          df_SnowCover_new <- df_SnowCover_new[index,]
+          df_SnowCover_new <- df_SnowCover_new[,c("Date", "doy", "SnowFraction")]
           
-           #Sort aoi_SnowCover by doy
-           aoi_SnowCover <- aoi_SnowCover[order(aoi_SnowCover$doy),]
-           
-           #Refit GAM through data
-           index <- which(aoi_SnowCover$outliers==FALSE)
-           mod_gam <- with(aoi_SnowCover[index,], mgcv::gam(SnowFraction ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
+          #Add NDSI_threshold as a new column
+          df_SnowCover_new$NDSI_threshold <- as.factor(NDSI_threshold) 
           
-           #Use gam to make predictions on a more detailed (1-day) day of year interval
-           aoi_SnowCover_predicted <- data.frame(doy=seq(min(aoi_SnowCover$doy), max(aoi_SnowCover$doy), 1))
-           aoi_SnowCover_predicted$Snowcover_gam_predict <- stats::predict(mod_gam, newdata=aoi_SnowCover_predicted, type="response")
-           aoi_SnowCover_predicted <- aoi_SnowCover_predicted[order(aoi_SnowCover_predicted$doy),]
-           aoi_SnowCover_predicted$year <- year_ID
-           write.csv(aoi_SnowCover_predicted, paste0("Output/S2/Shapefile_Snowmelt/", data_ID, "_Snowcover.csv"), row.names=FALSE)
-           
-           #Plot snowcover and model predictions
-           p_aoi_Snowcover <- ggplot()+ 
-               geom_point(data=aoi_SnowCover[aoi_SnowCover$outliers==FALSE,], aes(x=doy, y=SnowFraction))+
-               geom_point(data=aoi_SnowCover[aoi_SnowCover$outliers==TRUE,], aes(x=doy, y=SnowFraction), col="black", pch=16, alpha=0.2)+
-               geom_line(data=aoi_SnowCover_predicted, aes(x=doy, y=Snowcover_gam_predict), col = "red") + 
-               xlab(paste0("Day of year (starting at 01-01-", year_ID, ")")) + 
-               ylab(paste0("Snowcover fraction within study area in ", year_ID)) +
-               theme_classic()
-           
-           ggsave(plot=p_aoi_Snowcover, paste0("Output/S2/Shapefile_Snowmelt/", data_ID, "_Snowcover.pdf"), width=8, height=8)
-               #This gives an excellent fit to the data throughout the season! However, filtering of outliers based
-               #on the model residuals might improve this fit even more.
-         
-      #(28): Calculate dates of Snowfraction_threshold% snowcover within shapefile area based on mod_gam2
-            
-           #Detect cutoff points where curve goes from above NDSI threshold to below NDSI threshold
-           aoi_SnowCover_predicted$cutoff <- ifelse(aoi_SnowCover_predicted$Snowcover_gam_predict >= Snowfraction_threshold, 1, 0)
-           aoi_SnowCover_predicted$dif <- c(0, diff(aoi_SnowCover_predicted$cutoff))
-           #the column 'cutoff' indicates whether the gam prediction is above (1) or below (0) the ndsi threshold
-           #the column 'dif' indicates when there is a change from 1 to 0 (-1) or 0 to 1 (1) in the column cutoff
-           #Thus, those rows where the column 'dif' is equal to -1 indicate moments where the NDSI value changes from above
-           #the threshold to below the threshold. It might be possible that this happens multiple times within a season due to
-           #measurement errors or cloud effects. We therefore need to determine which 'cutoff' most likely corresponds to the 
-           #actual moment of snowmelt 
-     
-             #Select all moments (cutoffs) where dif==-1
-             cutoffs <- data.frame(index=which(aoi_SnowCover_predicted$dif<0))
-             
-             #For the period 30 days after each cutoff point, sum the number of days that have a NDSI value larger than NDSI_threshold. If a 
-             #cutoff represents actual snowmelt, then we do not expect any days after this moment with NDSI > NDSI_threshold. Thus, the closer
-             #this sum is to 0, the more likely this cutoff corresponds to the actual moment of snowmelt.
-             cutoffs$min <- cutoffs$index -30
-             cutoffs$min[cutoffs$min<1] <- 1
-             cutoffs$max <- cutoffs$index + 29
-             cutoffs$max[cutoffs$max>nrow(aoi_SnowCover_predicted)] <- nrow(aoi_SnowCover_predicted)
-             cutoffs$sum_cutoff_plus_30 <- apply(cutoffs, 1, function(x){sum(aoi_SnowCover_predicted$cutoff[x['index']:(x['max'])])})
-             cutoff_best <- cutoffs[cutoffs$sum_cutoff_plus_30==min(cutoffs$sum_cutoff_plus_30),'index'][1]
-             
-             #Approximate day of snowmelt in period from (cutoff_best-1 : cutoff_best) 
-             newdata_subset <- aoi_SnowCover_predicted[max(0, cutoff_best-2) : min(cutoff_best+1, nrow(aoi_SnowCover_predicted)),]
-             doy_snowmelt_approx <- stats::approx(x = newdata_subset$Snowcover_gam_predict, y = newdata_subset$doy, xout = Snowfraction_threshold)$y[1]
-             print(paste0("The date of ", Snowfraction_threshold*100, "% snow cover at ", area_name, " in ", year_ID, " occurred at day of year: ",  doy_snowmelt_approx))
-             
-             #Plot approximated points at which snowcover equalled doy_snowmelt_approx%:
-             p_aoi_Snowcover+
-               geom_point(aes(x=doy_snowmelt_approx, y=Snowfraction_threshold), col="blue", size=2)
-  
+          #Add dataframe for current NDSI_threshold to dataframe from previous iterations:
+          df_SnowCover <- rbind(df_SnowCover, df_SnowCover_new)
+          
+          # #For debugging
+          #  ggplot() + geom_point(data=df_SnowCover, aes(x=doy, y=SnowFraction, col=NDSI_threshold)) + theme_classic()  
+          
+          # #Save dataframe for current NDSI_threshold
+          #  write.csv(df_SnowCover_new, paste0(here(), "/Output/S2/05_Shapefile_Snowmelt/", data_ID, "_Resolution", resolution, "_Data_SnowFraction_polygon.csv"), row.names = FALSE)
+        
+          }
+      
+      #Save dataframe with snowfraction data for all NDSI thresholds
+      write.csv(df_SnowCover, paste0(here(), "/Output/S2/05_Shapefile_Snowmelt/", data_ID, "_Resolution", resolution, "_Data_SnowFraction_polygon.csv"), row.names = FALSE)
+      
+  #(26): Fit statistical models (GAMS) through the extracted snowcover data
+    
+      #Empty dataframe for storing RAW SnowFraction data including detected outliers
+      df_SnowFraction_GAM <- data.frame(NDSI_threshold=character(),
+                                        SnowFraction=numeric(),
+                                        Date=factor(),
+                                        doy=numeric(),
+                                        outliers=logical())
+      
+      #Empty dataframe for storing GAM predictions for SnowFraction data:
+      df_SnowFraction_GAM_predictions <- data.frame(NDSI_threshold=character(),
+                                                    doy=numeric(), 
+                                                    SnowFraction_gam_predict=numeric(), 
+                                                    stringsAsFactors=FALSE)
+      
+      #Loop through all NDSI_thresholds and fit GAMS through the snowfraction data
+      for(j in unique(df_SnowCover$NDSI_threshold)){
+        
+        #For debugging
+        #j=unique(df_SnowCover$NDSI_threshold)[1]
+        
+        #Select NDSI-threshold-specific subset of data:
+        df_SnowFraction_GAM_new <- df_SnowCover[df_SnowCover$NDSI_threshold==j & !is.na(df_SnowCover$SnowFraction),
+                                                c("NDSI_threshold", "SnowFraction", "Date", "doy")]
+        
+        #Fit a gam through the NDSI-threshold-specific SnowFraction ~ doy data and employ sequential outlier removal
+        df_SnowFraction_GAM_new <- f_gam_SeqRemOutliers(data=df_SnowFraction_GAM_new, y="SnowFraction", x="doy", outlier_removal=outlier_removal, 
+                                                        outlier_thresh_1=outlier_thresh_1, outlier_thresh_2=outlier_thresh_2,
+                                                        default_k=gam_k_outlier)
+        
+        #Sort df_SnowFraction_GAM_new by doy:
+        df_SnowFraction_GAM_new <- df_SnowFraction_GAM_new[order(df_SnowFraction_GAM_new$doy),]
+        
+        #Bind the NDSI-threshold-specific dataframe detected outliers to the dataframe containing all dataframes from previous iterations
+        df_SnowFraction_GAM <- rbind(df_SnowFraction_GAM, df_SnowFraction_GAM_new)
+        
+        #Create more detailed predictions (not only at the doy present in the datframe) at a 1-day interval to plot smoother curves
+        
+          #Refit GAM through data without outliers
+          index <- which(df_SnowFraction_GAM_new$outliers==FALSE)
+          mod_gam <- with(df_SnowFraction_GAM_new[index,], mgcv::gam(SnowFraction ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
+          
+          #Use gam to make predictions on a more detailed (1-day) day of year interval
+          aoi_SnowFraction_predicted_new <- data.frame(NDSI_threshold=j, doy=seq(min(df_SnowFraction_GAM_new$doy), max(df_SnowFraction_GAM_new$doy), 1))
+          aoi_SnowFraction_predicted_new$SnowFraction_gam_predict <- stats::predict(mod_gam, newdata=aoi_SnowFraction_predicted_new, type="response")
+          aoi_SnowFraction_predicted_new <- aoi_SnowFraction_predicted_new[order(aoi_SnowFraction_predicted_new$doy),]
+          aoi_SnowFraction_predicted_new$year <- year_ID
+          
+          #Add predictions to df_SnowFraction_GAM_predictions dataframe:  
+          df_SnowFraction_GAM_predictions <- rbind(df_SnowFraction_GAM_predictions, aoi_SnowFraction_predicted_new)
+        
+          }
+      
+      #Save the SnowFraction data and GAM predictions per NDSI-threshold as a .csv file
+      write.csv(df_SnowFraction_GAM, paste0(here(), "/Output/S2/05_Shapefile_Snowmelt/", data_ID, "_Resolution", resolution, "_Data_SnowFraction_GAM_polygon.csv"), row.names = FALSE)
+      write.csv(df_SnowFraction_GAM_predictions, paste0(here(), "/Output/S2/05_Shapefile_Snowmelt/", data_ID, "_Resolution", resolution, "_Data_SnowFraction_Predictions_GAM_polygon.csv"), row.names = FALSE)
+      
+      #Plot the raw SnowFraction datapoints and gam predictions for each NDSI-threshold:
+      
+        #Plot SnowFraction and model predictions for all NDSI-thresholds in a single plot
+        p_SnowFraction = ggplot()+
+         geom_point(data=df_SnowFraction_GAM, aes(x=doy, y=SnowFraction, fill=NDSI_threshold, col=NDSI_threshold))+
+         geom_line(data=df_SnowFraction_GAM_predictions, aes(x=doy, y=SnowFraction_gam_predict, col=NDSI_threshold)) +
+         xlab(paste0("Day of year (starting at 01-01-", year_ID,")")) +
+         ylab(paste0("Snowcover fraction within study area in ", year_ID)) +
+         theme_classic()
+          
+        #Plot SnowFraction and model predictions in a separate plot per NDSI-threshold
+        p_SnowFraction_grid = ggplot()+ 
+          geom_point(data=df_SnowFraction_GAM[df_SnowFraction_GAM$outliers==FALSE,], aes(x=doy, y=SnowFraction))+
+          geom_point(data=df_SnowFraction_GAM[df_SnowFraction_GAM$outliers==TRUE,], aes(x=doy, y=SnowFraction), col="black", pch=16, alpha=0.2)+
+          geom_line(data=df_SnowFraction_GAM_predictions, aes(x=doy, y=SnowFraction_gam_predict), col="#1620de", lwd=1)+
+          geom_vline(xintercept = 150, colour="grey", lty=2)+
+          geom_hline(yintercept = Snowfraction_threshold_vector, colour="grey", lty=2)+
+          facet_wrap(~NDSI_threshold, ncol=ceiling(length(unique(df_SnowFraction_GAM$NDSI_threshold))^0.5))+
+          xlab(paste0("Day of year (starting at 01-01-", year_ID,")")) +
+          ylab(paste0("Snowcover fraction within study area in ", year_ID)) +
+          theme_classic()
+       
+   #27: Calculate at which day of year the predicted snowfraction is equal to the levels of Snowfraction_threshold_vector
+        
+        #Setup parallel processing
+        numCores <- detectCores()
+        cl <- makePSOCKcluster(numCores)
+        registerDoSNOW(cl)
+        
+        #Use the function f_detect_threshold_date_parallel to extract the moments the GAM predictions cross the thresholds in Snowfraction_threshold_vector
+        results <- f_detect_threshold_date_parallel(subset=1, #data subset (not relevant here, set to 1)
+                                                    pixelIDs_split = list(NDSI_threshold_vector), #levels of NDSI_threshold (input needs to be a list)
+                                                    df_pixel_y = df_SnowFraction_GAM_predictions, #dataframe containing GAM predictions
+                                                    pixel_ID_column="NDSI_threshold", #Grouping column
+                                                    y="SnowFraction_gam_predict", #response variable in GAM
+                                                    x="doy", #predictor variable in GAM
+                                                    pixel_gam_plots = FALSE, #Should GAM plots be created
+                                                    y_threshold = Snowfraction_threshold_vector) #Which threshold values for 'y' should be calculated 
+        
+        #Turn parallel processing off and run sequentially again after this point
+        stopCluster(cl)
+        registerDoSEQ()
+          
+        #Extract dates of snowmelt per NDSI-threshold and per SnowFraction-threshold
+        df_SnowFraction <- results[[1]]
+        df_SnowFraction <- as.data.frame(do.call(rbind, df_SnowFraction))
+        colnames(df_SnowFraction)[colnames(df_SnowFraction)=="pixel_ID"] <- "NDSI_threshold"
+        colnames(df_SnowFraction)[colnames(df_SnowFraction)=="x_threshold"] <- "doy"
+        colnames(df_SnowFraction)[colnames(df_SnowFraction)=="y_threshold"] <- "Snowfraction_threshold"
+        
+        #Save dates of snowmelt per NDSI-threshold per SnowFraction-threshold as a .csv file
+        write.csv(df_SnowFraction, paste0(here(), "/Output/S2/05_Shapefile_Snowmelt/", data_ID, "_Resolution", resolution, "_Snowmelt_Snowfraction_polygon.csv"), row.names = FALSE)
+        
+        #Add dates of snowmelt to the plot 'p_SnowFraction_grid'   
+        p_SnowFraction_Snowmelt_grid <- p_SnowFraction_grid +
+          geom_point(data=df_SnowFraction[!is.na(df_SnowFraction$doy),], aes(x=doy, y=Snowfraction_threshold), col="red", size=3)
+        
+        ggsave(plot=p_SnowFraction_Snowmelt_grid, paste0(here(), "/Output/S2/05_Shapefile_Snowmelt/", data_ID, "_Resolution", resolution, "_Plot_Snowmelt_Snowfraction_grid_polygon.pdf"), width=12, height = 10)
+        
+
 ##################################################################################################################################       
 ##################################################################################################################################       
 ##################################################################################################################################       
