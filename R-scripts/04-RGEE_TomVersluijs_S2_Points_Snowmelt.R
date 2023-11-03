@@ -116,7 +116,7 @@
      #DateTime should be in format 'dd/mm/yyyy hh:mm:ss'
 
      #Buffer radius around each point location (in meters)
-     Buffer_radius_m=100
+     Buffer_radius_m=250
 
    #(c) Dates
 
@@ -177,7 +177,7 @@
 
      #Should permanent waterbodies be masked from the analysis (default=TRUE).
      mask_water=TRUE
-     mask_water_type="water_mask_ESA" #either "water_mask_ESA", "water_mask_Manual", or "both"
+     mask_water_type="both" #either "water_mask_ESA", "water_mask_Manual", or "both"
      #"water_mask_ESA" uses the world wide ESA dataset with a 10m resolution which works well with large areas (default)
      #"water_mask_Manual" uses a manual approach based on NDWI, NDSI and NIR bands and generally works well for small details.
      #"both" employs both methods and sets pixels to water if one or both of these methods indicates so.
