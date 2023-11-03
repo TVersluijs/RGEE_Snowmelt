@@ -289,7 +289,7 @@
        a=Sys.time()
        task_vector1 <- ee_table_to_drive(
          collection = MODIS_FeatureCollection,
-         description = paste0(data_ID, "_Pixel_Snowmelt_MODIS_aoi"),
+         description = paste0(data_ID, "_Pixel_Snowmelt_MODIS_bbox"),
          fileFormat = "CSV",
          selectors = c('doy_snowmelt', 'Year', 'lat', 'lon', 'pixel_ID')
          )
@@ -297,7 +297,7 @@
        task_vector1$start()
        ee_monitoring(task_vector1, max_attempts = 1000000)
       
-       exported_stats <- ee_drive_to_local(task = task_vector1, dsn=paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", data_ID, "_Pixel_Snowmelt_aoi"))
+       exported_stats <- ee_drive_to_local(task = task_vector1, dsn=paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", data_ID, "_Pixel_Snowmelt_bbox"))
        MODIS_pixel_snowmelt <- read.csv(exported_stats)
        b=Sys.time()
        print(paste0("Computation finished in ",  round(as.numeric(difftime(b, a, units="mins")),2), " minutes"))
@@ -450,7 +450,7 @@
           df_pixel_ChangeInSnowmelt <- as.data.frame(do.call(rbind, do.call(c, df_pixel_ChangeInSnowmelt)))
           colnames(df_pixel_ChangeInSnowmelt)[colnames(df_pixel_ChangeInSnowmelt)=="y_change"] <- "snowmelt_change"
           colnames(df_pixel_ChangeInSnowmelt)[colnames(df_pixel_ChangeInSnowmelt)=="y_intercept"] <- "snowmelt_intercept"
-          write.csv(df_pixel_ChangeInSnowmelt, file=paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", data_ID, "_Pixel_ChangeInSnowmelt_aoi.csv"), quote = FALSE, row.names=FALSE)
+          write.csv(df_pixel_ChangeInSnowmelt, file=paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", data_ID, "_Pixel_ChangeInSnowmelt_bbox.csv"), quote = FALSE, row.names=FALSE)
           ##Read dataframe
           #df_pixel_ChangeInSnowmelt <- read.csv(file=paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", data_ID, "_Pixel_ChangeInSnowmelt.csv"), header=TRUE) 
           

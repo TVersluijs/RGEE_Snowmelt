@@ -191,7 +191,7 @@
          start_date_doy <- as.numeric(strftime(start_date, format = "%j"))
          end_date_doy <- as.numeric(strftime(end_date, format = "%j"))
        
-        #Extract Sentinel-2 Surface Reflectance satellite data
+        #Extract MODIS satellite data
          MODIS_col <- ee$ImageCollection('MODIS/006/MOD09GA')
          MODIS_col <- MODIS_col$
            filterBounds(aoi)$
@@ -581,16 +581,16 @@
             df_pixel_snowmelt <- lapply(results, "[[", 1)
             df_pixel_snowmelt <- as.data.frame(do.call(rbind, do.call(c, df_pixel_snowmelt)))
             colnames(df_pixel_snowmelt)[colnames(df_pixel_snowmelt)=="x_threshold"] <- "doy_snowmelt"
-            write.csv(df_pixel_snowmelt, file=paste0(here(), "/Output/MODIS/02_Shapefile_Pixel_Snowmelt/", data_ID, "_Pixel_Snowmelt_aoi.csv"), quote = FALSE, row.names=FALSE)
+            write.csv(df_pixel_snowmelt, file=paste0(here(), "/Output/MODIS/02_Shapefile_Pixel_Snowmelt/", data_ID, "_Pixel_Snowmelt_bbox.csv"), quote = FALSE, row.names=FALSE)
             ##Read dataframe
-            #df_pixel_snowmelt <- read.csv(file=paste0(here(), "/Output/MODIS/02_Shapefile_Pixel_Snowmelt/", data_ID, "_Pixel_Snowmelt_aoi.csv"), header=TRUE)  
+            #df_pixel_snowmelt <- read.csv(file=paste0(here(), "/Output/MODIS/02_Shapefile_Pixel_Snowmelt/", data_ID, "_Pixel_Snowmelt_bbox.csv"), header=TRUE)  
             
            #Store plots
             plot_pixel_snowmelt <- lapply(results, "[[", 2)
             plots_per_page = 25
             plot_pixel_snowmelt <- lapply(plot_pixel_snowmelt, function(x){split(x, ceiling(seq_along(plot_pixel_snowmelt[[1]])/plots_per_page))})
             plot_pixel_snowmelt <- unname(unlist(plot_pixel_snowmelt, recursive = F))
-            pdf(paste0("Output/MODIS/02_Shapefile_Pixel_Snowmelt/", data_ID, "_Pixel_NDSI_Snowmelt_aoi.pdf"), width=20, height=16, onefile = TRUE)
+            pdf(paste0("Output/MODIS/02_Shapefile_Pixel_Snowmelt/", data_ID, "_Pixel_NDSI_Snowmelt_bbox.pdf"), width=20, height=16, onefile = TRUE)
             for (i in seq(length(plot_pixel_snowmelt))) { do.call("grid.arrange", plot_pixel_snowmelt[[i]]) }
             dev.off()
         
@@ -1050,7 +1050,7 @@
   #      Map$addLayer(image_snowmelt,list(bands="doy_snowmelt", min=start_date_doy, max=end_date_doy, palette=c('green', 'yellow', 'red')), 'Snowmelt_doy')+
   #      Map$addLayer(Locations, list(color="red"), paste0("MovementPositions_", year_ID))
   # 
-  #   #(11): Extract Sentinel-2 snowmelt_doy values for points of interest from image_snowmelt (output a feature collection)
+  #   #(11): Extract MODIS snowmelt_doy values for points of interest from image_snowmelt (output a feature collection)
   # 
   #     #Extract snowmelt_doy values within the current image at each point in the Locations feature collection. We add this doy
   #     #as a property to each feature (i.e. movement position). The resulting output is a feature collection for the current img

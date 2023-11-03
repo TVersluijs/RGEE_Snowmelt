@@ -200,7 +200,7 @@
 
 ##################################################################################################################################
 
-  #Read a dataframe with points for which Sentinel-2 data needs to be extracted
+  #Read a dataframe with points for which MODIS data needs to be extracted
    df_locations <- read.csv(paste0("Input/", input_locations), header=T)[,c("LON_x", "LAT_y")]
    colnames(df_locations) <- c("LON_x", "LAT_y")
 
@@ -530,7 +530,7 @@
      #the overlaping pixel with e.g. the least cloudcover. In contrast, MODIS data by default already is composite image for 
      #each day, thus there is no need to conduct this step.
 
- #(G): Extract Sentinel-2 mean band values (NDSI, NDVI, NDMI) within the buffer zone of 'Location' for all images in the image collection
+ #(G): Extract MODIS mean band values (NDSI, NDVI, NDMI) within the buffer zone of 'Location' for all images in the image collection
 
      if("avg_NDSI" %in% method){
 
@@ -630,7 +630,7 @@
             df_Locations_BandValues <- rbind(df_Locations_BandValues, df_Locations_Bandvalues_new)
 
            # #Save dataframe for current location
-           #  write.csv(df_Locations_Bandvalues_new, paste0(here(), "/Output/MODIS/01_Points_Snowmelt/DataLocations/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_", Location_ID, "_Data_MeanBandvalues.csv"), row.names = FALSE)
+           #  write.csv(df_Locations_Bandvalues_new, paste0(here(), "/Output/MODIS/01_Points_Snowmelt/DataLocations/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_", Location_ID, "_Data_MeanBandvalues_polygon.csv"), row.names = FALSE)
 
        }
      
@@ -746,7 +746,7 @@
              #  ggplot() + geom_point(data=df_Locations_SnowFraction, aes(x=doy, y=SnowFraction, col=NDSI_threshold)) + theme_classic()
                
              # #Save dataframe for current location
-             #  write.csv(df_Locations_SnowFraction_new, paste0(here(), "/Output/MODIS/01_Points_Snowmelt/DataLocations/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_", Location_ID, "_Data_SnowFraction.csv"), row.names = FALSE)
+             #  write.csv(df_Locations_SnowFraction_new, paste0(here(), "/Output/MODIS/01_Points_Snowmelt/DataLocations/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_", Location_ID, "_Data_SnowFraction_polygon.csv"), row.names = FALSE)
            }
        
        }
