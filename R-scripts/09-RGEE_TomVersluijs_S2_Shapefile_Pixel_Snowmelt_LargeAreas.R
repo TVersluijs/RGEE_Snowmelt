@@ -527,7 +527,7 @@
             a=Sys.time()
             task_vector1 <- ee_table_to_drive(
               collection = FC_merged,
-              description = paste0(data_ID, "_Pixel_NDSI_Sentinel2"),
+              description = paste0(data_ID, "_Pixel_NDSI_Shapefile"),
               fileFormat = "CSV",
               selectors = c('NDSI', 'Date', 'lat', 'lon')
               )
@@ -537,13 +537,13 @@
             #ee$data$getTaskList()
             #ee$data$cancelTask()
             
-            exported_stats <- ee_drive_to_local(task = task_vector1, dsn=paste0("Output/S2/09_Shapefile_SubAreas_Pixel_Snowmelt/", data_ID, "_Pixel_NDSI_Sentinel2"))
+            exported_stats <- ee_drive_to_local(task = task_vector1, dsn=paste0("Output/S2/09_Shapefile_SubAreas_Pixel_Snowmelt/", data_ID, "_Pixel_NDSI_Shapefile"))
             df_pixel_ndsi <- read.csv(exported_stats)
             b=Sys.time()
             print(paste0("Computation finished in ",  round(as.numeric(difftime(b, a, units="mins")),2), " minutes"))
 
            # #Load dataframe (takes ca 2 minutes):
-           #  df_pixel_ndsi <- read.csv(paste0("Output/S2/09_Shapefile_SubAreas_Pixel_Snowmelt/", data_ID, "_Pixel_NDSI_Sentinel2.csv"))
+           #  df_pixel_ndsi <- read.csv(paste0("Output/S2/09_Shapefile_SubAreas_Pixel_Snowmelt/", data_ID, "_Pixel_NDSI_Shapefile.csv"))
 
            #Add day of year
             df_pixel_ndsi$doy <- as.numeric(format(as.POSIXct(df_pixel_ndsi$Date, format = "%Y-%m-%d %H:%M:%S"), "%j"))
@@ -616,14 +616,14 @@
               df_pixel_snowmelt <- lapply(results, "[[", 1)
               df_pixel_snowmelt <- as.data.frame(do.call(rbind, do.call(c, df_pixel_snowmelt)))
               colnames(df_pixel_snowmelt)[colnames(df_pixel_snowmelt)=="x_threshold"] <- "doy_snowmelt"
-              write.csv(df_pixel_snowmelt, file=paste0("Output/S2/09_Shapefile_SubAreas_Pixel_Snowmelt/", data_ID, "_Pixel_Snowmelt_Sentinel2.csv"), quote = FALSE, row.names=FALSE)
+              write.csv(df_pixel_snowmelt, file=paste0("Output/S2/09_Shapefile_SubAreas_Pixel_Snowmelt/", data_ID, "_Pixel_Snowmelt_Shapefile.csv"), quote = FALSE, row.names=FALSE)
               
               # #Store plots per pixel
               # plot_pixel_snowmelt <- lapply(results, "[[", 2)
               # plots_per_page = 25
               # plot_pixel_snowmelt <- lapply(plot_pixel_snowmelt, function(x){split(x, ceiling(seq_along(plot_pixel_snowmelt[[1]])/plots_per_page))})
               # plot_pixel_snowmelt <- unname(unlist(plot_pixel_snowmelt, recursive = F))
-              # pdf(paste0("Output/S2/Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Location_", Location_i, "_Plot_Pixel_NDSI_Snowmelt_bbox.pdf"), width=20, height=16, onefile = TRUE)
+              # pdf(paste0("Output/S2/Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Location_", Location_i, "_Plot_Pixel_NDSI_Snowmelt_Shapefile.pdf"), width=20, height=16, onefile = TRUE)
               # for (i in seq(length(plot_pixel_snowmelt))) { do.call("grid.arrange", plot_pixel_snowmelt[[i]]) }
               # dev.off()
               })
@@ -631,7 +631,7 @@
            #this took 40449 seconds (11 hours). Parallel processing thus decreased computation time dramatically
 
            # #Read dataframe
-           #  df_pixel_snowmelt <- read.csv(file=paste0("Output/S2/09_Shapefile_SubAreas_Pixel_Snowmelt/", data_ID, "_Pixel_Snowmelt_Sentinel2.csv"), header=TRUE)
+           #  df_pixel_snowmelt <- read.csv(file=paste0("Output/S2/09_Shapefile_SubAreas_Pixel_Snowmelt/", data_ID, "_Pixel_Snowmelt_Shapefile.csv"), header=TRUE)
            #  df_pixel_snowmelt now contains the date of snowmelt for each pixel within the area depicted by aoi_Shapefile.
             
            #Clean up the cluster after finishing the parallel runs
