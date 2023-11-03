@@ -1,27 +1,32 @@
-##################################################################################################################################
+#######################################################################################################################################
 
-#In this script the timing of snow melt is calculated based on Sentinel-2 data for all locations specified in an input file. The
-#user can specify a bufferzone (radius) to depict the area in which snow melt will be analysed per location. All locations are
-#required to be located within a single shapefile and are then analysed simultaneously. First, clouds and permanent water bodies 
-#are filtered within the shapefile. Second, if the shapefile overlaps with multiple satellite tiles for a certain day, a composite
-#image is created (picking the pixel with least cloudcover). Finally, snow melt is analysed for each location's buffer zone based 
-#on one of the following methods (specified by the user by setting the parameter 'method'):
+#In this script the timing of snow melt is calculated based on Sentinel-2 data for all locations specified in an input file. The user
+#can specify a bufferzone (radius) to depict the area in which snow melt will be analysed per location. All locations (including 
+#buffer zone) are required to be located within a single shapefile and are then analysed simultaneously. First, clouds and permanent 
+#water bodies are filtered within the shapefile. Second, if the shapefile overlaps with multiple satellite tiles for a certain day,   
+#a composite image is created (picking the pixel with least cloudcover). Finally, snow melt is analysed for each location's buffer 
+#zone based on one of the following methods (specified by the user by setting the parameter 'method'):
 
-# (I): 'snowfraction': Calculates the fraction of pixels within each buffer zone over time where NDSI > 'NDSI_threshold', fits a
-#       GAM through these data and extract the moment when this model passes a user-specified 'Snowfraction_threshold'.
-# (II): 'avg_NDSI': calculates the average NDSI value over time within each point's buffer zone, fits a GAM through these data 
-#       and calculates when this model passes the specified NDSI threshold defining the moment of snow melt. In addition, time 
-#       series of the average NDVI and NDMI are extracted within each point's buffer zone.
+# (I):  'avg_NDSI':     Calculate the average NDSI value over time within each point's buffer zone, fits a GAM through these 
+#                       data and calculates when this model passes the specified NDSI threshold defining the moment of snow melt.
+#                       In addition, time series of the average NDVI and NDMI are extracted within each point's buffer zone.
+# (II): 'snowfraction': Calculate the fraction of pixels within each buffer zone over time where NDSI > 'NDSI_threshold', fits a
+#                       GAM through these data and extract the moment when this model passes a user-specified 'Snowfraction_threshold'.
 
 #The 'snowfraction' method is preferred, because it intuitively makes sense to look a the fraction of snow-covered pixels
 #over time. It is harder to justify the avg_NDSI method, because it is rather unclear what this average NDSI value entails.
+#The best approach is to calculate the date of snowmelt on a pixel level using GAMS fitted through pixel-level NDSI data
+#(i.e. method = 'pixel_gam'). This approach is conducted in script "07-RGEE_TomVersluijs_S2_Shapefile_Points_Snowmelt.R" 
+#for all pixels in a user-specified shapefile. The result is a pixel level map of the timing of snowmelt. Script 10 can
+#then be used to extract timeseries of the fraction of snowcover for points of interest from this map.
 
 #This script is similar to the script '04-RGEE_TomVersluijs_S2_Points_Snowmelt.R'. However, in the latter script all points  
 #are analysed consecutively using a loop, which makes that script significantly slower to run. It does however not rely on a 
 #shapefile and thus works for points spaced much further apart (i.e. tracking data of birds migratory birds). The current
-#script only works for small areas of c.a. 50-100 km2 (larger areas might result in computation errors).
+#script only works for small areas of c.a. 50-100 km2 (larger areas might result in computation errors). Moreover, the
+#'pixel_gam' method is implemented in script 04, but not in the current script.
 
-#Copyright Tom Versluijs 2023-07-31. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
+#Copyright Tom Versluijs 2023-11-01. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
 
 #Before running this script make sure to install RGEE according to the instructions in script "00-RGEE_TomVersluijs_Installation.R". 
 #Note that a GoogleDrive is required.
@@ -46,7 +51,7 @@
        #renv::restore() #revert to last version of R-packages used to successfully run this script (optional).
        utils::install.packages("pacman")
        library(pacman)
-       p_load(sf, rgee, ggplot2, mgcv, googledrive, dplyr)
+       p_load(sf, rgee, ggplot2, mgcv, googledrive, dplyr, foreach, parallel, doSNOW, gridExtra)
 
       #(2): Define ggplot2 plotting theme
         theme_tom <- function(){
@@ -117,18 +122,19 @@
 
   #(d) Snow detection
 
-    #NDSI threshold for snow detection
-    NDSI_threshold=0.42
+    #NDSI threshold for snow detection (specify multiple using c())
+    NDSI_threshold_vector = c(0.42, 0.3, 0.5)
 
-    #Define the snowcover fraction within the aoi for which the date of its occurrence will be calculated
-    Snowfraction_threshold=0.5
+    #Define the snowcover fraction for which the date of its occurrence will be calculated (specify multiple using c())
+    Snowfraction_threshold_vector = c(0.25, 0.5, 0.75)
     
     #Define the preferred method for the analysis of snowmelt
-    method=c("snowfraction", "avg_NDSI") #either "snowfraction", "avg_NDSI", or both using c()
-    #snowfraction: Counts the fraction of pixels within the aoi with NDSI > 'NDSI_threshold' over time and extracts the moment when this
-    #              fraction is equal to 'Snowfraction_threshold'.
-    #avg_NDSI:     Calculates the average NDSI, NDVI and NDMI values within the aoi over time and extracts the moment when the NDSI value is equal to 'NDSI_threshold'.
-    
+    method=c("avg_NDSI", "snowfraction") #either "avg_NDSI", "snowfraction" or both using c()
+    #(1) "avg_NDSI":     Calculate the average NDSI, NDVI and NDMI values within each point's buffer zone over time and extracts 
+    #                    the moment when the NDSI value is equal to 'NDSI_threshold'.
+    #(2) "snowfraction": Count the fraction of pixels within each point's buffer zone over time where NDSI > 'NDSI_threshold' 
+    #                    and extract the moment when this fraction is equal to 'Snowfraction_threshold'.
+        
   #(e): Cloud masking
 
     #Should clouds be masked from the analysis (default=TRUE).
@@ -184,7 +190,7 @@
       
     #Specify whether a composite image will be generated for all images (i.e. tiles) per unique doy (default=TRUE). Note that setting this
     #to TRUE might result in an increase in computation time.
-    create_composite=TRUE    
+    create_composite=TRUE
     
   #(h): GAM sequential outlier filtering
 
@@ -217,7 +223,7 @@
     if(mask_water==TRUE & (mask_water_type=="water_mask_Manual" | mask_water_type=="both")){mask_clouds=TRUE}      
     
     #Create output folder
-    if(dir.exists(paste0(here(), "/Output/S2/Shapefile_Points_Snowmelt"))==FALSE){dir.create(paste0(here(), "/Output/S2/Shapefile_Points_Snowmelt"), recursive = TRUE)}
+    if(dir.exists(paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt"))==FALSE){dir.create(paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt"), recursive = TRUE)}
     
     
 ##################################################################################################################################
@@ -509,7 +515,7 @@
              
          #Extract pixels corresponding to permanent waterbodies
          water_mask2 <- compute_Water_Manual(img_col=s2_col, start_date_NDWI=start_date_NDWI, end_date_NDWI=end_date_NDWI, NDWI_threshold=NDWI_threshold,
-                                             start_date_NDSI=start_date_NDSI, end_date_NDSI=end_date_NDSI, NDSI_threshold=NDSI_threshold, NIR_threshold=NIR_threshold)
+                                             start_date_NDSI=start_date_NDSI, end_date_NDSI=end_date_NDSI, NDSI_threshold=NDSI_threshold_vector[1], NIR_threshold=NIR_threshold)
              
              
          }
@@ -611,7 +617,7 @@
     #   ndsi <- s2_composite$select('NDSI')
     # 
     #   #Create a binary layer using logical operations.
-    #   snow <- ndsi$gt(NDSI_threshold)$rename('SNOW')
+    #   snow <- ndsi$gt(NDSI_threshold_vector[1])$rename('SNOW')
     # 
     #   #Return the binary snow parameter
     #   s2_composite <- s2_composite$addBands(snow)
@@ -715,118 +721,8 @@
    }
       
 ##################################################################################################################################
-
-#VI: Extract the fraction of snowcovered pixels within each point's buffer zone for all images in the image collection        
-
-##################################################################################################################################
-
- #Method 'SnowFraction'
-  if("snowfraction" %in% method){
-
-   #Add a binary snow cover band to each image and calculate the fraction of snow covered pixels within each point's buffer zone
-
-    #Map Snow computation functions over the mosaicked image collection
-    s2_col_composite <- s2_col_composite$
-      #Determine which pixels are snow-covered (NDSI > NDSI threshold)
-      map(computeSnow)
-   
-   #Create an iteration function that we will use to iterate through all images of the image collection. For each image, the 
-   #average value of the "SNOW" band is extracted at each feature (i.e. location) within the feature collection Locations.
-   #The resulting fractino of snowcover and the datetime of the image are added as a property to each feature (i.e. location).
-   #This results in an updated feature collection specific for the current image. This feature collection is then appended to a list
-   #of feature collections from previous image iterations. After iterating through n-images, the result is thus a feature
-   #collection list of length n * the number of features within the feature collection.
-   
-   #Thus, at each iteration we extract the average value of the "SNOW" band (i.e. the fraction of snowcover as it comprises of
-   #zeros and ones only) for all locations for the current image, store this as a  feature collection and add this to an expanding 
-   #list of feature collections from previous iterations.
-   
-   #Create an empty FeatureCollection list. This list is used as input for the first iteration of the iteration function below.
-   FC_initial_snowfraction <- ee$FeatureCollection(ee$List(list()))
-    
-   #Specify the iteration function. This function takes two arguments. The first argument is the current element of the image collection
-   #(in this case the current iteration image) and the second element takes the output value from the iteration that preceded it. The latter
-   #is not possible for the first iteration, that's why an initial object (empty feature collection) to start the iteration with 
-   #has been defined.
-   Extract_SnowFractionAtPoints = function(img, FC_initial_snowfraction) {
-     
-           #(A): Extract Snowfraction within the current image at each point in the Locations feature collection. We add this
-           #fraction as a property to each feature (i.e. location). The resulting output is a feature collection for the current
-           #img where the snowfraction is added as property for each location.
-           FC_image <- img$reduceRegions(collection = Locations, 
-                                         reducer = ee$Reducer$mean()$setOutputs(list("SnowFraction")),
-                                         scale = resolution, #implicitly specified in crs below
-                                         crs=crs, #or, crs=S2Projection
-                                         crsTransform=NULL)
-           
-           #(B): reduceRegions does not return any SnowFraction value when the point is masked by clouds or does not fall within
-           #the boundaries of the image. Therefore we manually have to add an empty SnowFraction property to those features. We
-           #therefore set the SnowFraction value to a no data value of -9999 for all features where the SnowFraction value is NULL.
-           FC_image <- FC_image$map(function(feature){
-             snowfraction <- ee$List(list(feature$get('SnowFraction'), -9999))$reduce(ee$Reducer$firstNonNull())
-             return(feature$set("SnowFraction", snowfraction))
-             })
-
-           #(C): Add date and day of year of current image as a property to each feature within the feature collection FC_image
-           date <- img$date()$format("YYYY-MM-dd hh:mm:ss")
-           doy <- ee$Date(img$get('system:time_start'))$getRelative('day', 'year')
-           FC_image <- FC_image$map(function(feature){return(feature$set("Date", date)$set("doy", doy))})
-           
-           #(D): Merge the feature collection of the current image (FC_image) onto the feature collection FC_initial_snowfraction
-           return (ee$FeatureCollection(FC_initial_snowfraction)$merge(FC_image))
-           #FC_initial_snowfraction is thus updated at each iteration. This corresponds to base R code: 
-           #FC_initial_snowfraction <- merge(FC_initial_snowfraction, FC_image)
-         } 
-  
-   #Iterate over the ImageCollection and select appropriate band values
-   FC_merged_SnowFraction <- ee$FeatureCollection(s2_col_composite$select("SNOW")$iterate(Extract_SnowFractionAtPoints, FC_initial_snowfraction))
-
-   #Export the feature collection as a .csv table
-   #We export the data instead of using aggregate_array() as the latter might fail due to computation timeouts.
-
-     #Setup task
-      task_vector <- ee_table_to_drive(
-        collection= FC_merged_SnowFraction,
-        description = paste0(data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Data_SnowFraction"),
-        folder="RGEE_tmp",
-        fileFormat="CSV",
-        selectors=c('SnowFraction', 'Date', 'LocationID')
-        )
-
-     #Run and monitor task
-      print(paste0("Uploading the snowfraction data to Google Drive"))
-      task_vector$start()
-      ee_monitoring(task_vector, max_attempts=1000000) #250s at 100m
-
-     #Import results
-      exported_stats <- ee_drive_to_local(task=task_vector, dsn=paste0("Output/S2/Shapefile_Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Data_SnowFraction"))
-      Locations_Data_SnowFraction <- read.csv(exported_stats)
-      unlink(exported_stats)
-
-     #Add day of year
-      Locations_Data_SnowFraction$Date <- as.POSIXct(Locations_Data_SnowFraction$Date, format="%Y-%m-%d %H:%M:%S")
-      Locations_Data_SnowFraction$Date_doy <- as.numeric(strftime(Locations_Data_SnowFraction$Date, format = "%j"))
-
-     #Remove NAs in the SnowFraction variable
-      Locations_Data_SnowFraction$SnowFraction[Locations_Data_SnowFraction$SnowFraction < -9000] <- NA #replace -9999 by NA
-      #Locations_Data_SnowFraction <- Locations_Data_SnowFraction[!is.na(Locations_Data_SnowFraction$SnowFraction), ]
-
-     #Sort dataframe by LocationID and Date_doy
-      index <- with(Locations_Data_SnowFraction, order(LocationID, Date_doy))
-      Locations_Data_SnowFraction <- Locations_Data_SnowFraction[index,]
-      Locations_Data_SnowFraction <- Locations_Data_SnowFraction[,c("LocationID", "Date", "Date_doy", "SnowFraction")]
-
-     #Add coordinates to each location
-      Locations_Data_SnowFraction <- left_join(Locations_Data_SnowFraction, Locations_sf[,c("LON_x", "LAT_y", "LocationID")], by=c("LocationID"))
-
-     #Save dataframe
-      write.csv(Locations_Data_SnowFraction, paste0("Output/S2/Shapefile_Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Data_SnowFraction.csv"), row.names = FALSE)
-
-    }
-   
-##################################################################################################################################
       
-#VII: Extract Sentinel-2 band values for points of interest (with buffer) for all images in the image collection (output a feature collection)  
+#VII: Iterate through all locations of interest and extract (I) mean bandvalues, (II) the fraction of snowcover within each point's bufferzone over time 
       
 ##################################################################################################################################       
      
@@ -876,43 +772,534 @@
         )
         
         #Run and monitor task
-        print(paste0("Uploading mean BandValue data to Google Drive"))
         task_vector_2$start()
-        ee_monitoring(task_vector_2, max_attempts=1000000) #250s at 100m
+        ee_monitoring(task_vector_2, task_time=60, max_attempts=1000000) #250s at 100m
         
         #Import results
-        exported_stats <- ee_drive_to_local(task=task_vector_2, dsn=paste0("Output/S2/Shapefile_Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Data_MeanBandvalues"))
+        exported_stats <- ee_drive_to_local(task=task_vector_2, dsn=paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Data_MeanBandvalues_polygon"))
         Locations_Data_BandValues <- read.csv(exported_stats)
         unlink(exported_stats)
         
         #Add day of year
         Locations_Data_BandValues$Date <- as.POSIXct(Locations_Data_BandValues$Date, format="%Y-%m-%d %H:%M:%S")
-        Locations_Data_BandValues$Date_doy <- as.numeric(strftime(Locations_Data_BandValues$Date, format = "%j"))
+        Locations_Data_BandValues$doy <- as.numeric(strftime(Locations_Data_BandValues$Date, format = "%j"))
         
         #Remove NAs in the NDSI, NDVI and NDMI variables
         Locations_Data_BandValues$NDSI[Locations_Data_BandValues$NDSI < -9000] <- NA
         Locations_Data_BandValues$NDVI[Locations_Data_BandValues$NDVI < -9000] <- NA
         Locations_Data_BandValues$NDMI[Locations_Data_BandValues$NDMI < -9000] <- NA
         
-        #Sort dataframe by LocationID and Date_doy
-        index <- with(Locations_Data_BandValues, order(LocationID, Date_doy))
+        #Sort dataframe by LocationID and doy
+        index <- with(Locations_Data_BandValues, order(LocationID, doy))
         Locations_Data_BandValues <- Locations_Data_BandValues[index,]
-        Locations_Data_BandValues <- Locations_Data_BandValues[,c("LocationID", "Date", "Date_doy", "NDSI", "NDVI", "NDMI")]
+        Locations_Data_BandValues <- Locations_Data_BandValues[,c("LocationID", "Date", "doy", "NDSI", "NDVI", "NDMI")]
         
         #Add coordinates to each location
         Locations_Data_BandValues <- left_join(Locations_Data_BandValues, Locations_sf[,c("LON_x", "LAT_y", "LocationID")], by=c("LocationID"))
         
         #Save dataframe
-        write.csv(Locations_Data_BandValues, paste0("Output/S2/Shapefile_Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Data_MeanBandvalues.csv"), row.names = FALSE)
+        write.csv(Locations_Data_BandValues, paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Data_MeanBandvalues_polygon.csv"), row.names = FALSE)
         
     }
       
+ #Method 'snowfraction'
+  if("snowfraction" %in% method){
+
+    #Create an empty dataframe for storing the Snowfraction results per location (method="SnowFraction")
+    df_Locations_SnowFraction <- data.frame(LocationID=character(),
+                                            Date=character(),
+                                            doy=numeric(),
+                                            SnowFraction=numeric(),
+                                            NDSI_threshold=character(),
+                                            LON_x=numeric(),
+                                            LAT_y=numeric())
+
+    #Run the analysis for each level of NDSI_threshold_vector
+    for(NDSI_threshold in NDSI_threshold_vector){
+
+      #for debugging
+      #NDSI_threshold <- NDSI_threshold_vector[1]
+
+      #Print message
+      print(paste0("  -Start analysis for NDSI_threshold = ", NDSI_threshold))
+
+      #Store NDSI_threshold as a character (used for naming of outputs)
+      NDSI_threshold_char <- gsub("\\.", "_", as.character(NDSI_threshold))
+
+     #Add a binary snow cover band to each image and calculate the fraction of snow covered pixels within each point's buffer zone
+
+      #Map Snow computation functions over the mosaicked image collection
+      s2_col_composite_snow <- s2_col_composite$
+        #Determine which pixels are snow-covered (NDSI > NDSI threshold)
+        map(computeSnow)
+
+     #Create an iteration function that we will use to iterate through all images of the image collection. For each image, the
+     #average value of the "SNOW" band is extracted at each feature (i.e. location) within the feature collection Locations.
+     #The resulting fractino of snowcover and the datetime of the image are added as a property to each feature (i.e. location).
+     #This results in an updated feature collection specific for the current image. This feature collection is then appended to a list
+     #of feature collections from previous image iterations. After iterating through n-images, the result is thus a feature
+     #collection list of length n * the number of features within the feature collection.
+
+     #Thus, at each iteration we extract the average value of the "SNOW" band (i.e. the fraction of snowcover as it comprises of
+     #zeros and ones only) for all locations for the current image, store this as a  feature collection and add this to an expanding
+     #list of feature collections from previous iterations.
+
+     #Create an empty FeatureCollection list. This list is used as input for the first iteration of the iteration function below.
+     FC_initial_snowfraction <- ee$FeatureCollection(ee$List(list()))
+
+     #Specify the iteration function. This function takes two arguments. The first argument is the current element of the image collection
+     #(in this case the current iteration image) and the second element takes the output value from the iteration that preceded it. The latter
+     #is not possible for the first iteration, that's why an initial object (empty feature collection) to start the iteration with
+     #has been defined.
+     Extract_SnowFractionAtPoints = function(img, FC_initial_snowfraction) {
+
+             #(A): Extract Snowfraction within the current image at each point in the Locations feature collection. We add this
+             #fraction as a property to each feature (i.e. location). The resulting output is a feature collection for the current
+             #img where the snowfraction is added as property for each location.
+             FC_image <- img$reduceRegions(collection = Locations,
+                                           reducer = ee$Reducer$mean()$setOutputs(list("SnowFraction")),
+                                           scale = resolution, #implicitly specified in crs below
+                                           crs=crs, #or, crs=S2Projection
+                                           crsTransform=NULL)
+
+             #(B): reduceRegions does not return any SnowFraction value when the point is masked by clouds or does not fall within
+             #the boundaries of the image. Therefore we manually have to add an empty SnowFraction property to those features. We
+             #therefore set the SnowFraction value to a no data value of -9999 for all features where the SnowFraction value is NULL.
+             FC_image <- FC_image$map(function(feature){
+               snowfraction <- ee$List(list(feature$get('SnowFraction'), -9999))$reduce(ee$Reducer$firstNonNull())
+               return(feature$set("SnowFraction", snowfraction))
+               })
+
+             #(C): Add date and day of year of current image as a property to each feature within the feature collection FC_image
+             date <- img$date()$format("YYYY-MM-dd hh:mm:ss")
+             doy <- ee$Date(img$get('system:time_start'))$getRelative('day', 'year')
+             FC_image <- FC_image$map(function(feature){return(feature$set("Date", date)$set("doy", doy))})
+
+             #(D): Merge the feature collection of the current image (FC_image) onto the feature collection FC_initial_snowfraction
+             return (ee$FeatureCollection(FC_initial_snowfraction)$merge(FC_image))
+             #FC_initial_snowfraction is thus updated at each iteration. This corresponds to base R code:
+             #FC_initial_snowfraction <- merge(FC_initial_snowfraction, FC_image)
+           }
+
+     #Iterate over the ImageCollection and select appropriate band values
+     FC_merged_SnowFraction <- ee$FeatureCollection(s2_col_composite_snow$select("SNOW")$iterate(Extract_SnowFractionAtPoints, FC_initial_snowfraction))
+
+     #Export the feature collection as a .csv table
+     #We export the data instead of using aggregate_array() as the latter might fail due to computation timeouts.
+
+       #Setup task
+        task_vector <- ee_table_to_drive(
+          collection= FC_merged_SnowFraction,
+          description = paste0(data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_NDSI", NDSI_threshold_char, "_Locations_Data_SnowFraction"),
+          folder="RGEE_tmp",
+          fileFormat="CSV",
+          selectors=c('SnowFraction', 'Date', 'LocationID')
+          )
+
+       #Run and monitor task
+        task_vector$start()
+        ee_monitoring(task_vector, task_time=60, max_attempts=1000000) #250s at 100m
+
+       #Import results
+        exported_stats <- ee_drive_to_local(task=task_vector, dsn=paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_NDSI", NDSI_threshold_char, "_Locations_Data_SnowFraction_polygon"))
+        df_Locations_SnowFraction_new <- read.csv(exported_stats)
+        unlink(exported_stats)
+
+       #Add day of year
+        df_Locations_SnowFraction_new$Date <- as.POSIXct(df_Locations_SnowFraction_new$Date, format="%Y-%m-%d %H:%M:%S")
+        df_Locations_SnowFraction_new$doy <- as.numeric(strftime(df_Locations_SnowFraction_new$Date, format = "%j"))
+
+       #Remove NAs in the SnowFraction variable
+        df_Locations_SnowFraction_new$SnowFraction[df_Locations_SnowFraction_new$SnowFraction < -9000] <- NA #replace -9999 by NA
+        #df_Locations_SnowFraction_new <- df_Locations_SnowFraction_new[!is.na(df_Locations_SnowFraction_new$SnowFraction), ]
+
+       #Sort dataframe by LocationID and doy
+        index <- with(df_Locations_SnowFraction_new, order(LocationID, doy))
+        df_Locations_SnowFraction_new <- df_Locations_SnowFraction_new[index,]
+        df_Locations_SnowFraction_new <- df_Locations_SnowFraction_new[,c("LocationID", "Date", "doy", "SnowFraction")]
+
+       #Add NDSI_threshold as a new column
+        df_Locations_SnowFraction_new$NDSI_threshold <- as.factor(NDSI_threshold)
+
+       #Add coordinates to each location
+        df_Locations_SnowFraction_new <- left_join(df_Locations_SnowFraction_new, Locations_sf[,c("LON_x", "LAT_y", "LocationID")], by=c("LocationID"))
+
+       #Add dataframe for current location to dataframe from previous iterations:
+        df_Locations_SnowFraction <- rbind(df_Locations_SnowFraction, df_Locations_SnowFraction_new)
+
+        # #For debugging
+        #  ggplot() + geom_point(data=df_Locations_SnowFraction, aes(x=doy, y=SnowFraction, col=NDSI_threshold)) + facet_wrap(~LocationID) + theme_classic()
+
+       }
+
+    #Save dataframe
+    write.csv(df_Locations_SnowFraction, paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Data_SnowFraction_polygon.csv"), row.names = FALSE)
+    #df_Locations_SnowFraction <- read.csv(file=paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Data_SnowFraction_polygon.csv"), header=T)
+
+    }
+      
 ##################################################################################################################################
-           
-#VIII: Fit a Generalized Additive Model (GAM) through the Sentinel-2 band value data for each location
-           
-##################################################################################################################################       
- 
+
+#VIII: Fit a Generalized Additive Model (GAM) through the Mean Bandvalue and Snowfraction data for each location
+
+##################################################################################################################################
+
+ #Method "avg_NDSI"
+  if("avg_NDSI" %in% method){
+
+      #SNOW - Fit a Generalized Additive Model (GAM) through the NDSI data for each Location
+         {
+         #We fit a Generalized Additive Model (GAM) through the data for each point location. We do this using a sequential
+         #outlier-filtering process. We first fit a GAM through the data, calculating model predictions and residuals. We then
+         #exclude all rows from the dataframe where the residual >= (0.25 * the range of the data). We then re-fit a GAM to
+         #this reduced dataset, make predictions and calculate residuals. We then exclude all rows from the reduced dataframe
+         #where the residual >= (0.1 * the range of the data). This gives us a final dataframe through which we fit a third
+         #GAM and store its model predictions, given the dataset in which outliers were thus removed through two subsequent
+         #steps. This whole process is executed using the function f_gam_SeqRemOutliers. Note that a sequential step is
+         #required because initially some datapoints might falsely be assigned a large residual because of one extreme
+         #outlier. After removal of this extreme outlier and refitting of the GAM, it can be better assessed which data
+         #points truly have a large residual and can thus be assigned as 'true' outliers.
+            f_gam_SeqRemOutliers <- f_gam_SeqRemOutliers #sourced
+
+            #Specify sequential outlier thresholds:
+             outlier_thresh_1=outlier_thresh_1
+             outlier_thresh_2=outlier_thresh_2
+             outlier_removal=outlier_removal
+
+         #(a) Specify at which NDSI value, the point is considered snow-free
+             NDSI_threshold_vector = NDSI_threshold_vector
+
+         #(b) Create an empty dataframe
+             df_Locations_NDSI <- data.frame(NDSI=numeric(),
+                                             Date=factor(),
+                                             doy=numeric(),
+                                             LocationID=factor(),
+                                             outliers=logical())
+
+             df_Locations_NDSI_predictions <- data.frame(LocationID=character(),
+                                                         doy=numeric(),
+                                                         NDSI_gam_predict=numeric(),
+                                                         stringsAsFactors=FALSE)
+
+         #(c) Loop through all Locations and fit a separate gam with sequential outlier removal to the location specific mean NDSI data
+             for(i in unique(Locations_Data_BandValues$LocationID)){
+
+               #For debugging
+                #i=unique(Locations_Data_BandValues$LocationID)[1]
+
+               #Select Location-specific subset of data:
+                df_Location_NDSI_new <- Locations_Data_BandValues[Locations_Data_BandValues$LocationID==i & !is.na(Locations_Data_BandValues$NDSI),
+                                                    c("NDSI", "Date", "doy", "LocationID")]
+
+               #Fit a gam through the Location-specific mean_NDSI ~ doy data and employ sequential outlier removal
+                df_Location_NDSI_new <- f_gam_SeqRemOutliers(data=df_Location_NDSI_new, y="NDSI", x="doy", outlier_removal=outlier_removal,
+                                                    outlier_thresh_1=outlier_thresh_1, outlier_thresh_2=outlier_thresh_2,
+                                                    default_k=gam_k_outlier)
+
+               #Sort df_Location_NDSI_new by doy:
+                df_Location_NDSI_new <- df_Location_NDSI_new[order(df_Location_NDSI_new$doy),]
+
+               #Bind the Location-specific dataframe with GAM estimates to the dataframe containing all dataframes from previous iterations
+                df_Locations_NDSI <- rbind(df_Locations_NDSI, df_Location_NDSI_new)
+
+               #Create more detailed predictions (not only at the doy present in the datframe) at a 1-day interval to plot more smooth curves
+
+                #Refit GAM through data
+                 index <- which(df_Location_NDSI_new$outliers==FALSE)
+                 mod_gam <- with(df_Location_NDSI_new[index,], mgcv::gam(NDSI ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
+
+                #Use gam to make predictions on a more detailed (1-day) day of year interval
+                 df_Locations_NDSI_predictions_new <- data.frame(LocationID=i, doy=seq(min(df_Location_NDSI_new$doy), max(df_Location_NDSI_new$doy), 1))
+                 df_Locations_NDSI_predictions_new$NDSI_gam_predict <- stats::predict(mod_gam, newdata=df_Locations_NDSI_predictions_new, type="response")
+                 df_Locations_NDSI_predictions_new <- df_Locations_NDSI_predictions_new[order(df_Locations_NDSI_predictions_new$doy),]
+
+                #Add predictions to df_Locations_NDSI_predictions dataframe:
+                 df_Locations_NDSI_predictions <- rbind(df_Locations_NDSI_predictions, df_Locations_NDSI_predictions_new)
+
+               }
+
+             #Change column LocationID to a factor:
+              df_Locations_NDSI$LocationID <- as.factor(as.character(df_Locations_NDSI$LocationID))
+              df_Locations_NDSI_predictions$LocationID <- as.factor(as.character(df_Locations_NDSI_predictions$LocationID))
+
+             #Save dataframe with GAM fits for NDSI
+              write.csv(df_Locations_NDSI, paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Data_NDSI_GAM_polygon.csv"), row.names = FALSE)
+              write.csv(df_Locations_NDSI_predictions, paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Data_NDSI_Predictions_GAM_polygon.csv"), row.names = FALSE)
+              
+         #(d) Plot the raw NDSI datapoints and gam predictions for each Location:
+
+             #Plot NDSI and model predictions for all locations in a single plot
+              p_Locations_NDSI = ggplot()+
+                geom_point(data=df_Locations_NDSI, aes(x=doy, y=NDSI, fill=LocationID, col=LocationID))+
+                geom_line(data=df_Locations_NDSI_predictions, aes(x=doy, y=NDSI_gam_predict, col=LocationID)) +
+                xlab(paste0("Day of year (starting at 01-01-", year_ID,")")) +
+                ylab("NDSI") +
+                theme_tom()
+              
+             #Plot NDSI and model predictions in a separate plot per location
+              p_Locations_NDSI_grid = ggplot()+
+                geom_point(data=df_Locations_NDSI[df_Locations_NDSI$outliers==FALSE,], aes(x=doy, y=NDSI))+
+                geom_point(data=df_Locations_NDSI[df_Locations_NDSI$outliers==TRUE,], aes(x=doy, y=NDSI), col="black", pch=16, alpha=0.2)+
+                geom_line(data=df_Locations_NDSI_predictions, aes(x=doy, y=NDSI_gam_predict), col="#1620de", lwd=1.25)+
+                geom_vline(xintercept = 150, colour="grey", lty=2)+
+                geom_hline(yintercept = NDSI_threshold_vector, colour="grey", lty=2)+
+                facet_wrap(~LocationID, ncol=ceiling(length(unique(df_Locations_NDSI$LocationID))^0.5))+
+                xlab(paste0("Day of year (starting at 01-01-", year_ID,")")) +
+                ylab("NDSI") +
+                theme_tom()
+
+                #ggsave(plot=p_Locations_NDSI_grid, paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Plot_NDSI_grid_polygon.pdf"), width=12, height = 10)
+
+         #(e) Calculate at which day of year the average NDSI is equal to NDSI_threshold_vector for each location using predictions from mod_gam
+
+             #Create an empty dataframe
+              df_Snowmelt_NDSI_Locations <- data.frame(LocationID=character(),
+                                                       NDSI_threshold=character(),
+                                                       doy=numeric(),
+                                                       stringsAsFactors=FALSE)
+
+              #Setup parallel processing
+              numCores <- detectCores()
+              cl <- makePSOCKcluster(numCores)
+              registerDoSNOW(cl)
+              
+              #Extract the day of snowmelt for each location for all levels of NDSI_threshold_vector
+              for(LocationID in unique(df_Locations_NDSI_predictions$LocationID)){
+                
+                #For debugging
+                #LocationID=unique(df_Locations_NDSI_predictions$LocationID)[1] #for debugging
+                
+                #Use the function f_detect_threshold_date_parallel to extract the moments the GAM predictions cross the thresholds in NDSI_threshold_vector
+                results <- f_detect_threshold_date_parallel(subset=1, #data subset (not relevant here, set to 1)
+                                                            pixelIDs_split=LocationID, #Current location (input during loop)
+                                                            df_pixel_y=df_Locations_NDSI_predictions, #dataframe containing GAM predictions
+                                                            pixel_ID_column="LocationID", #Grouping column
+                                                            y="NDSI_gam_predict", #response variable in GAM
+                                                            x="doy", #predictor variable in GAM
+                                                            pixel_gam_plots=F, #Should GAM plots be created
+                                                            y_threshold=NDSI_threshold_vector) #Which threshold values for 'y' should be calculated
+                
+                #Store dates of snowmelt per Location
+                df_Snowmelt_NDSI_Locations_new <- lapply(results, "[[", 1)
+                df_Snowmelt_NDSI_Locations_new <- as.data.frame(do.call(rbind, df_Snowmelt_NDSI_Locations_new))
+                colnames(df_Snowmelt_NDSI_Locations_new)[colnames(df_Snowmelt_NDSI_Locations_new)=="pixel_ID"] <- "LocationID"
+                colnames(df_Snowmelt_NDSI_Locations_new)[colnames(df_Snowmelt_NDSI_Locations_new)=="x_threshold"] <- "doy"
+                colnames(df_Snowmelt_NDSI_Locations_new)[colnames(df_Snowmelt_NDSI_Locations_new)=="y_threshold"] <- "NDSI_threshold"
+                
+                #Add snowmelt data for LocationID to general dataframe
+                df_Snowmelt_NDSI_Locations <- rbind(df_Snowmelt_NDSI_Locations, df_Snowmelt_NDSI_Locations_new)
+                
+              }
+              
+              #Turn parallel processing off and run sequentially again after this point
+              stopCluster(cl)
+              registerDoSEQ()
+              
+              #Add coordinates to each location
+              df_Snowmelt_NDSI_Locations <- left_join(df_Snowmelt_NDSI_Locations, Locations_sf, by=c("LocationID"))  
+              
+              #Save dates of snowmelt per Location as a .csv file
+              write.csv(df_Snowmelt_NDSI_Locations, paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Snowmelt_NDSI_polygon.csv"), row.names = FALSE)
+              
+              #Add dates of snowmelt to the plot 'p_Locations_NDSI_grid'
+              p_Locations_NDSI_Snowmelt_grid <- p_Locations_NDSI_grid +
+                geom_point(data=df_Snowmelt_NDSI_Locations[!is.na(df_Snowmelt_NDSI_Locations$doy),], aes(x=doy, y=NDSI_threshold), col="red", size=3)
+              
+              ggsave(plot=p_Locations_NDSI_Snowmelt_grid, paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Plot_Snowmelt_NDSI_grid_polygon.pdf"), width=12, height = 10)
+              }
+              
+      #VEGETATION - Fit a Generalized Additive Model (GAM) through the NDVI data for each location
+         {
+    
+         #(a) Create an empty dataframe
+             df_Locations_NDVI <- data.frame(NDVI=numeric(),
+                                             Date=factor(),
+                                             doy=numeric(),
+                                             LocationID=factor(),
+                                             outliers=logical())
+
+             df_Locations_NDVI_predictions <- data.frame(LocationID=character(),
+                                                         doy=numeric(),
+                                                         NDVI_gam_predict=numeric(),
+                                                         stringsAsFactors=FALSE)
+
+         #(b) Loop through all Locations and fit a separate gam with sequential outlier removal to the Location specific NDVI data
+             for(i in unique(Locations_Data_BandValues$LocationID)){
+
+               #For debugging
+               #i=unique(Locations_Data_BandValues$LocationID)[1]
+
+               #Select Location-specific subset of data:
+               df_Location_NDVI_new <- Locations_Data_BandValues[Locations_Data_BandValues$LocationID==i & !is.na(Locations_Data_BandValues$NDVI),
+                                                   c("NDVI", "Date", "doy", "LocationID")]
+
+               #Fit a gam through the location-specific NDVI ~ doy data and emply sequential outlier removal
+               df_Location_NDVI_new <- f_gam_SeqRemOutliers(data=df_Location_NDVI_new, y="NDVI", x="doy", outlier_removal=outlier_removal,
+                                               outlier_thresh_1=outlier_thresh_1, outlier_thresh_2=outlier_thresh_2,
+                                               default_k=gam_k_outlier)
+
+               #Sort df_Location_NDVI_new by doy
+               df_Location_NDVI_new <- df_Location_NDVI_new[order(df_Location_NDVI_new$doy), ]
+
+               #Bind the location-specific dataframe with GAM estimates to the dataframe containing all dataframes from previous iterations
+               df_Locations_NDVI <- rbind(df_Locations_NDVI, df_Location_NDVI_new)
+
+               #Create more detailed predictions (not only at the doy present in the datframe) at a 1-day interval to plot more smooth curves
+
+                 #Refit GAM through data
+                 index <- which(df_Location_NDVI_new$outliers==FALSE)
+                 mod_gam <- with(df_Location_NDVI_new[index,], mgcv::gam(NDVI ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
+  
+                 #Use gam to make predictions on a more detailed (1-day) day of year interval
+                 df_Locations_NDVI_predictions_new <- data.frame(LocationID=i, doy=seq(min(df_Location_NDVI_new$doy), max(df_Location_NDVI_new$doy), 1))
+                 df_Locations_NDVI_predictions_new$NDVI_gam_predict <- stats::predict(mod_gam, newdata=df_Locations_NDVI_predictions_new, type="response")
+                 df_Locations_NDVI_predictions_new <- df_Locations_NDVI_predictions_new[order(df_Locations_NDVI_predictions_new$doy), ]
+  
+                 #Add predictions to df_Locations_NDVI_predictions dataframe:
+                 df_Locations_NDVI_predictions <- rbind(df_Locations_NDVI_predictions, df_Locations_NDVI_predictions_new)
+
+                 }
+
+             #Change column LocationID to a factor:
+             df_Locations_NDVI$LocationID <- as.factor(as.character(df_Locations_NDVI$LocationID))
+             df_Locations_NDVI_predictions$LocationID <- as.factor(as.character(df_Locations_NDVI_predictions$LocationID))
+
+             #Save dataframe with GAM fits for NDVI
+             write.csv(df_Locations_NDVI, paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Data_NDVI_GAM_polygon.csv"), row.names = FALSE)
+             write.csv(df_Locations_NDVI_predictions, paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Data_NDVI_Predictions_GAM_polygon.csv"), row.names = FALSE)
+             
+         #(c) Plot the raw NDVI datapoints and gam predictions for each location:
+
+             #Plot NDVI and model predictions for all locations in a single plot
+             p_Locations_NDVI = ggplot()+
+                geom_point(data=df_Locations_NDVI, aes(x=doy, y=NDVI, fill=LocationID, col=LocationID))+
+                geom_line(data=df_Locations_NDVI_predictions, aes(x=doy, y=NDVI_gam_predict, col=LocationID)) +
+                xlab("Day of year") +
+                ylab("NDVI") +
+                theme_tom()
+               
+             #Plot NDVI and model predictions in a separate plot per location
+             p_Locations_NDVI_grid = ggplot()+
+                geom_point(data=df_Locations_NDVI[df_Locations_NDVI$outliers==FALSE,], aes(x=doy, y=NDVI), col="black")+
+                geom_point(data=df_Locations_NDVI[df_Locations_NDVI$outliers==TRUE,], aes(x=doy, y=NDVI), col="black", pch=16, alpha=0.2)+
+                geom_line(data=df_Locations_NDVI_predictions, aes(x=doy, y=NDVI_gam_predict), col="#08a31a", lwd=1.25) +
+                geom_vline(xintercept = 150, colour="grey", lty=2)+
+                facet_wrap(~LocationID, ncol=ceiling(length(unique(df_Locations_NDVI$LocationID))^0.5))+
+                xlab("Day of year") +
+                ylab("NDVI") +
+                theme_tom()
+
+                ggsave(plot=p_Locations_NDVI_grid, paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Plot_NDVI_grid_polygon.pdf"), width=12, height = 10)
+              }
+         
+      #MOISTURE - Fit a Generalized Additive Model (GAM) through the NDMI data for each location
+         {
+         #(a) Create an empty dataframe
+             df_Locations_NDMI <- data.frame(NDMI=numeric(),
+                                             Date=factor(),
+                                             doy=numeric(),
+                                             LocationID=factor(),
+                                             outliers=logical())
+
+             df_Locations_NDMI_predictions <- data.frame(LocationID=character(),
+                                                         doy=numeric(),
+                                                         NDMI_gam_predict=numeric(),
+                                                         stringsAsFactors=FALSE)
+
+         #(b) Loop through all locations and fit a separate gam with sequential outlier removal to the location specific NDMI data
+             for(i in unique(Locations_Data_BandValues$LocationID)){
+
+               #For debugging
+               #i=unique(Locations_Data_BandValues$LocationID)[1]
+
+               #Select location-specific subset of data:
+               df_Location_NDMI_new <- Locations_Data_BandValues[Locations_Data_BandValues$LocationID==i & !is.na(Locations_Data_BandValues$NDMI),
+                                                   c("NDMI", "Date", "doy", "LocationID")]
+
+               #Fit a gam through the locations-specific NDMI ~ doy data and emply sequential outlier removal
+               df_Location_NDMI_new <- f_gam_SeqRemOutliers(data=df_Location_NDMI_new, y="NDMI", x="doy", outlier_removal=outlier_removal,
+                                                   outlier_thresh_1=outlier_thresh_1, outlier_thresh_2=outlier_thresh_2,
+                                                   default_k=gam_k_outlier)
+
+               #Sort df_Location_NDMI_new by doy
+               df_Location_NDMI_new <- df_Location_NDMI_new[order(df_Location_NDMI_new$doy), ]
+
+               #Bind the locations-specific dataframe with GAM estimates to the dataframe containing all dataframes from previous iterations
+               df_Locations_NDMI <- rbind(df_Locations_NDMI, df_Location_NDMI_new)
+
+               #Create more detailed predictions (not only at the doy present in the datframe) at a 1-day interval to plot more smooth curves
+
+               #Refit GAM through data
+               index <- which(df_Location_NDMI_new$outliers==FALSE)
+               mod_gam <- with(df_Location_NDMI_new[index,], mgcv::gam(NDMI ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
+
+               #Use gam to make predictions on a more detailed (1-day) day of year interval
+               df_Locations_NDMI_predictions_new <- data.frame(LocationID=i, doy=seq(min(df_Location_NDMI_new$doy), max(df_Location_NDMI_new$doy), 1))
+               df_Locations_NDMI_predictions_new$NDMI_gam_predict <- stats::predict(mod_gam, newdata=df_Locations_NDMI_predictions_new, type="response")
+               df_Locations_NDMI_predictions_new <- df_Locations_NDMI_predictions_new[order(df_Locations_NDMI_predictions_new$doy), ]
+
+               #Add predictions to df_Locations_NDMI_predictions dataframe:
+               df_Locations_NDMI_predictions <- rbind(df_Locations_NDMI_predictions, df_Locations_NDMI_predictions_new)
+
+               }
+
+              #Change column LocationID to a factor:
+               df_Locations_NDMI$LocationID <- as.factor(as.character(df_Locations_NDMI$LocationID))
+               df_Locations_NDMI_predictions$LocationID <- as.factor(as.character(df_Locations_NDMI_predictions$LocationID))
+
+              #Save dataframe with GAM fits for NDMI
+               write.csv(df_Locations_NDMI, paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Data_NDMI_GAM_polygon.csv"), row.names = FALSE)
+               write.csv(df_Locations_NDMI_predictions, paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Data_NDMI_Predictions_GAM_polygon.csv"), row.names = FALSE)
+               
+         #(c) Plot the raw NDMI datapoints and gam predictions for each location:
+
+             #Plot NDMI and model predictions for all locations in a single plot
+              p_Locations_NDMI = ggplot()+
+                geom_point(data=df_Locations_NDMI, aes(x=doy, y=NDMI, fill=LocationID, col=LocationID))+
+                geom_line(data=df_Locations_NDMI_predictions, aes(x=doy, y=NDMI_gam_predict, col=LocationID)) +
+                xlab("Day of year") +
+                ylab("NDMI") +
+                theme_tom()
+               
+             #Plot NDMI and model predictions in a separate plot per location
+              p_Locations_NDMI_grid = ggplot()+
+                geom_point(data=df_Locations_NDMI[df_Locations_NDMI$outliers==FALSE,], aes(x=doy, y=NDMI), col="black")+
+                geom_point(data=df_Locations_NDMI[df_Locations_NDMI$outliers==TRUE,], aes(x=doy, y=NDMI), col="black", pch=16, alpha=0.2)+
+                geom_line(data=df_Locations_NDMI_predictions, aes(x=doy, y=NDMI_gam_predict), col="#16acde", lwd=1.25)+
+                geom_vline(xintercept = 150, colour="grey", lty=2)+
+                facet_wrap(~LocationID, ncol=ceiling(length(unique(df_Locations_NDMI$LocationID))^0.5))+
+                xlab("Day of year") +
+                ylab("NDMI") +
+                theme_tom()
+
+                ggsave(plot=p_Locations_NDMI_grid, paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Plot_NDMI_grid_polygon.pdf"), width=12, height = 10)
+              }
+                
+      #Plot NDSI, NDVI and NDMI together in a plot per location
+         {
+          #Create plot      
+          p_Locations_BANDS_grid = ggplot()+
+            geom_point(data=df_Locations_NDSI[df_Locations_NDSI$outliers==FALSE,], aes(x=doy, y=NDSI))+
+            geom_point(data=df_Locations_NDSI[df_Locations_NDSI$outliers==TRUE,], aes(x=doy, y=NDSI), col="black", pch=16, alpha=0.2)+
+            geom_point(data=df_Locations_NDVI[df_Locations_NDVI$outliers==FALSE,], aes(x=doy, y=NDVI), col="black")+
+            geom_point(data=df_Locations_NDVI[df_Locations_NDVI$outliers==TRUE,], aes(x=doy, y=NDVI), col="black", pch=16, alpha=0.2)+
+            geom_point(data=df_Locations_NDMI[df_Locations_NDMI$outliers==FALSE,], aes(x=doy, y=NDMI), col="black")+
+            geom_point(data=df_Locations_NDMI[df_Locations_NDMI$outliers==TRUE,], aes(x=doy, y=NDMI), col="black", pch=16, alpha=0.2)+
+            geom_line(data=df_Locations_NDSI_predictions, aes(x=doy, y=NDSI_gam_predict), col="#1620de", lwd=1.25)+
+            geom_line(data=df_Locations_NDVI_predictions, aes(x=doy, y=NDVI_gam_predict), col="#08a31a", lwd=1.25)+
+            geom_line(data=df_Locations_NDMI_predictions, aes(x=doy, y=NDMI_gam_predict), col="#16acde", lwd=1.25)+
+            geom_vline(xintercept = 150, colour="grey", lty=2)+
+            facet_wrap(~LocationID, ncol=ceiling(length(unique(df_Locations_NDMI$LocationID))^0.5))+
+            xlab("Day of year") +
+            ylab("Normalized Difference Band Index") +
+            theme_tom()
+  
+            ggsave(plot=p_Locations_BANDS_grid, paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Plot_AllBands_grid_polygon.pdf"), width=14, height =12)
+  
+          }
+      
+    }
+
  #Method "SnowFraction"        
   if("snowfraction" %in% method){
    
@@ -936,705 +1323,167 @@
             outlier_removal=outlier_removal
 
         #(a) Specify for which SnowFraction value the date of occurence will be calculated
-            Snowfraction_threshold = Snowfraction_threshold
+            Snowfraction_threshold_vector = Snowfraction_threshold_vector
 
         #(b) Create an empty dataframe
-            Locations_SnowFraction <- data.frame(SnowFraction=numeric(),
-                                                 Date=factor(),
-                                                 Date_doy=numeric(),
-                                                 LocationID=factor(),
-                                                 outliers=logical())
+            df_Locations_SnowFraction_GAM <- data.frame(NDSI_threshold=character(),
+                                                        SnowFraction=numeric(),
+                                                        Date=factor(),
+                                                        doy=numeric(),
+                                                        LocationID=factor(),
+                                                        outliers=logical())
 
-            Locations_SnowFraction_predictions <- data.frame(LocationID=character(),
-                                                             Date_doy=numeric(),
-                                                             SnowFraction_gam_predict=numeric(),
-                                                             stringsAsFactors=FALSE)
+            df_Locations_SnowFraction_GAM_predictions <- data.frame(LocationID=character(),
+                                                                    NDSI_threshold=character(),
+                                                                    doy=numeric(),
+                                                                    SnowFraction_gam_predict=numeric(),
+                                                                    stringsAsFactors=FALSE)
 
-        #(c) Loop through all Locations and fit a separate gam with sequential outlier removal to the location specific SnowFraction data
-            for(i in unique(Locations_Data_SnowFraction$LocationID)){
+        #(c) Loop through all Locations and fit a separate GAM with sequential outlier removal to the location specific SnowFraction data
+            for(i in unique(df_Locations_SnowFraction$LocationID)){
 
               #For debugging
-               #i=unique(Locations_Data_SnowFraction$LocationID)[1]
+              #i=unique(df_Locations_SnowFraction$LocationID)[1]
 
-              #Select Location-specific subset of data:
-               df_Location <- Locations_Data_SnowFraction[Locations_Data_SnowFraction$LocationID==i & !is.na(Locations_Data_SnowFraction$SnowFraction),
-                                                   c("SnowFraction", "Date", "Date_doy", "LocationID")]
+              #Loop through all NDSI_thresholds
+              for(j in unique(df_Locations_SnowFraction$NDSI_threshold)){
+                
+                #For debugging
+                #j=unique(df_Locations_SnowFraction$NDSI_threshold)[1]
+              
+                #Select Location-specific subset of data:
+                df_Location_SnowFraction_GAM_new <- df_Locations_SnowFraction[df_Locations_SnowFraction$LocationID==i & 
+                                                                              df_Locations_SnowFraction$NDSI_threshold==j &
+                                                                              !is.na(df_Locations_SnowFraction$SnowFraction),
+                                                                              c("NDSI_threshold", "SnowFraction", "Date", "doy", "LocationID")]
+                
+                #Fit a gam through the Location-specific SnowFraction ~ doy data and employ sequential outlier removal
+                df_Location_SnowFraction_GAM_new <- f_gam_SeqRemOutliers(data=df_Location_SnowFraction_GAM_new, y="SnowFraction", x="doy", outlier_removal=outlier_removal,
+                                                                         outlier_thresh_1=outlier_thresh_1, outlier_thresh_2=outlier_thresh_2,
+                                                                         default_k=gam_k_outlier)
+                
+                #Sort df_Location_SnowFraction_GAM_new by doy:
+                df_Location_SnowFraction_GAM_new <- df_Location_SnowFraction_GAM_new[order(df_Location_SnowFraction_GAM_new$doy),]
 
-              #Fit a gam through the Location-specific SnowFraction ~ Date_doy data and employ sequential outlier removal
-               df_Location <- f_gam_SeqRemOutliers(data=df_Location, y="SnowFraction", x="Date_doy", outlier_removal=outlier_removal,
-                                                   outlier_thresh_1=outlier_thresh_1, outlier_thresh_2=outlier_thresh_2,
-                                                   default_k=gam_k_outlier)
+                #Bind the Location-specific dataframe with GAM estimates to the dataframe containing all dataframes from previous iterations
+                df_Locations_SnowFraction_GAM <- rbind(df_Locations_SnowFraction_GAM, df_Location_SnowFraction_GAM_new)
 
-              #Sort df_Location by Date_doy:
-               df_Location <- df_Location[order(df_Location$Date_doy),]
+                #Create more detailed predictions (not only at the doy present in the datframe) at a 1-day interval to plot more smooth curves
+  
+                 #Refit GAM through data
+                  index <- which(df_Location_SnowFraction_GAM_new$outliers==FALSE)
+                  mod_gam <- with(df_Location_SnowFraction_GAM_new[index,], mgcv::gam(SnowFraction ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
+  
+                 #Use gam to make predictions on a more detailed (1-day) day of year interval
+                  df_Locations_SnowFraction_GAM_predictions_new <- data.frame(LocationID=i, NDSI_threshold=j, doy=seq(min(df_Location_SnowFraction_GAM_new$doy), max(df_Location_SnowFraction_GAM_new$doy), 1))
+                  df_Locations_SnowFraction_GAM_predictions_new$SnowFraction_gam_predict <- stats::predict(mod_gam, newdata=df_Locations_SnowFraction_GAM_predictions_new, type="response")
+                  df_Locations_SnowFraction_GAM_predictions_new <- df_Locations_SnowFraction_GAM_predictions_new[order(df_Locations_SnowFraction_GAM_predictions_new$doy),]
+   
+                 #Add predictions to df_Locations_SnowFraction_GAM_predictions dataframe:
+                  df_Locations_SnowFraction_GAM_predictions <- rbind(df_Locations_SnowFraction_GAM_predictions, df_Locations_SnowFraction_GAM_predictions_new)
 
-              #Bind the Location-specific dataframe with GAM estimates to the dataframe containing all dataframes from previous iterations
-               Locations_SnowFraction <- rbind(Locations_SnowFraction, df_Location)
-
-              #Create more detailed predictions (not only at the Date_doy present in the datframe) at a 1-day interval to plot more smooth curves
-
-               #Refit GAM through data
-                index <- which(df_Location$outliers==FALSE)
-                mod_gam <- with(df_Location[index,], mgcv::gam(SnowFraction ~ s(Date_doy, k=min(gam_k, length(index)-1)), method="REML"))
-
-               #Use gam to make predictions on a more detailed (1-day) day of year interval
-                aoi_SnowFraction_predicted <- data.frame(LocationID=i, Date_doy=seq(min(df_Location$Date_doy), max(df_Location$Date_doy), 1))
-                aoi_SnowFraction_predicted$SnowFraction_gam_predict <- stats::predict(mod_gam, newdata=aoi_SnowFraction_predicted, type="response")
-                aoi_SnowFraction_predicted <- aoi_SnowFraction_predicted[order(aoi_SnowFraction_predicted$Date_doy),]
-
-               #Add predictions to Locations_SnowFraction_predictions dataframe:
-                Locations_SnowFraction_predictions <- rbind(Locations_SnowFraction_predictions, aoi_SnowFraction_predicted)
+                }
 
               }
-
+              
             #Change column LocationID to a factor:
-             Locations_SnowFraction$LocationID <- as.factor(as.character(Locations_SnowFraction$LocationID))
-             Locations_SnowFraction_predictions$LocationID <- as.factor(as.character(Locations_SnowFraction_predictions$LocationID))
+             df_Locations_SnowFraction_GAM$LocationID <- as.factor(as.character(df_Locations_SnowFraction_GAM$LocationID))
+             df_Locations_SnowFraction_GAM_predictions$LocationID <- as.factor(as.character(df_Locations_SnowFraction_GAM_predictions$LocationID))
 
+             #Save dataframe with GAM fits for the SnowFraction data
+             write.csv(df_Locations_SnowFraction_GAM, paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Data_SnowFraction_GAM_polygon.csv"), row.names = FALSE)
+             write.csv(df_Locations_SnowFraction_GAM_predictions, paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Data_SnowFraction_Predictions_GAM_polygon.csv"), row.names = FALSE)
+             
         #(d) Plot the raw SnowFraction datapoints and gam predictions for each Location:
 
             #Plot SnowFraction and model predictions for all locations in a single plot
              p_Locations_SnowFraction = ggplot()+
-               geom_point(data=Locations_SnowFraction, aes(x=Date_doy, y=SnowFraction, fill=LocationID, col=LocationID))+
-               geom_line(data=Locations_SnowFraction_predictions, aes(x=Date_doy, y=SnowFraction_gam_predict, col=LocationID)) +
+               geom_point(data=df_Locations_SnowFraction_GAM, aes(x=doy, y=SnowFraction, fill=LocationID, col=LocationID))+
+               geom_line(data=df_Locations_SnowFraction_GAM_predictions, aes(x=doy, y=SnowFraction_gam_predict, col=LocationID)) +
                xlab(paste0("Day of year (starting at 01-01-", year_ID,")")) +
                ylab("SnowFraction") +
+               facet_wrap(~NDSI_threshold, ncol=3)+
                theme_tom()
-
-               #ggsave(plot=p_Locations_SnowFraction, paste0("Output/S2/Shapefile_Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Plot_SnowFraction.pdf"), width=10, height = 8)
-
+              
             #Plot SnowFraction and model predictions in a separate plot per location
              p_Locations_SnowFraction_grid = ggplot()+
-               geom_point(data=Locations_SnowFraction[Locations_SnowFraction$outliers==FALSE,], aes(x=Date_doy, y=SnowFraction))+
-               geom_point(data=Locations_SnowFraction[Locations_SnowFraction$outliers==TRUE,], aes(x=Date_doy, y=SnowFraction), col="black", pch=16, alpha=0.2)+
-               geom_line(data=Locations_SnowFraction_predictions, aes(x=Date_doy, y=SnowFraction_gam_predict), col="#1620de", linewidth=1.25)+
+               geom_point(data=df_Locations_SnowFraction_GAM[df_Locations_SnowFraction_GAM$outliers==FALSE,], aes(x=doy, y=SnowFraction))+
+               geom_point(data=df_Locations_SnowFraction_GAM[df_Locations_SnowFraction_GAM$outliers==TRUE,], aes(x=doy, y=SnowFraction), col="black", pch=16, alpha=0.2)+
+               geom_line(data=df_Locations_SnowFraction_GAM_predictions, aes(x=doy, y=SnowFraction_gam_predict), col="#1620de", linewidth=1.25)+
                geom_vline(xintercept = 150, colour="grey", lty=2)+
-               geom_hline(yintercept = Snowfraction_threshold, colour="grey", lty=2)+
-               facet_wrap(~LocationID, ncol=ceiling(length(unique(Locations_SnowFraction$LocationID))^0.5))+
+               geom_hline(yintercept = Snowfraction_threshold_vector, colour="grey", lty=2)+
+               facet_wrap(~LocationID + NDSI_threshold, ncol=ceiling(length(unique(df_Locations_SnowFraction_GAM$LocationID))^0.5))+
                xlab(paste0("Day of year (starting at 01-01-", year_ID,")")) +
-               ylab("SnowFraction") +
+               ylab("Snowcover fraction per location") +
                theme_tom()
 
-               ggsave(plot=p_Locations_SnowFraction_grid, paste0("Output/S2/Shapefile_Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Plot_SnowFraction_grid.pdf"), width=12, height = 10)
+               #ggsave(plot=p_Locations_SnowFraction_grid, paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Plot_SnowFraction_grid_polygon.pdf"), width=12, height = 10)
 
-        #(e) Calculate at which day of year the SnowFraction is equal to Snowfraction_threshold for each location using predictions from mod_gam
-
-            #Create an empty dataframe
-             df_Snowmelt_SnowFraction_Locations <- data.frame(LocationID=character(),
-                                                              Date_doy=numeric(),
-                                                              stringsAsFactors=FALSE)
-
-            #Loop through all locations in the Locations_SnowFraction_predictions dataframe and extract doy of snowmelt for each location:
-             for(i in unique(Locations_SnowFraction_predictions$LocationID)){
-
-               #For debugging
-                #i=unique(Locations_SnowFraction_predictions$LocationID)[1] #for debugging
-
-               #Select location-specific subset of data:
-                df_Location_gam <- Locations_SnowFraction_predictions[Locations_SnowFraction_predictions$LocationID==i & !is.na(Locations_SnowFraction_predictions$SnowFraction),]
-                df_Location_tmp <- Locations_SnowFraction[Locations_SnowFraction$LocationID==i & !is.na(Locations_SnowFraction$SnowFraction),]
-
-                #Detect cutoff points where curve goes from above SnowFraction threshold to below SnowFraction threshold
-                df_Location_gam$cutoff <- ifelse(df_Location_gam$SnowFraction_gam_predict >= Snowfraction_threshold, 1, 0)
-                df_Location_gam$dif <- c(0, diff(df_Location_gam$cutoff))
-                #the column 'cutoff' indicates whether the gam prediction is above (1) or below (0) the SnowFraction threshold
-                #the column 'dif' indicates when there is a change from 1 to 0 (-1) or 0 to 1 (1) in the column cutoff
-                #Thus, those rows where the column 'dif' is equal to -1 indicate moments where the SnowFraction value changes from above
-                #the threshold to below the threshold. It might be possible that this happens multiple times within a season due to
-                #measurement errors or cloud effects. We therefore need to determine which 'cutoff' most likely corresponds to the
-                #actual moment of snowmelt
-
-                #If SnowFraction-threshold was at least crossed once:
-                if(any(df_Location_gam$dif<0)){
-
-                  #Select all moments (cutoffs) where dif==-1
-                  cutoffs <- data.frame(index=which(df_Location_gam$dif<0))
-
-                  #For the period 30 days after each cutoff point, sum the number of days that have a SnowFraction value larger than Snowfraction_threshold. If a
-                  #cutoff represents actual snowmelt, then we do not expect any days after this moment with SnowFraction > Snowfraction_threshold. Thus, the closer
-                  #this sum is to 0, the more likely this cutoff corresponds to the actual moment of snowmelt.
-                  cutoffs$min <- cutoffs$index -30
-                  cutoffs$min[cutoffs$min<1] <- 1
-                  cutoffs$max <- cutoffs$index + 29
-                  cutoffs$max[cutoffs$max>nrow(df_Location_gam)] <- nrow(df_Location_gam)
-                  cutoffs$sum_cutoff_plus_30 <- apply(cutoffs, 1, function(x){sum(df_Location_gam$cutoff[x['index']:(x['max'])])})
-                  cutoff_best <- cutoffs[cutoffs$sum_cutoff_plus_30==min(cutoffs$sum_cutoff_plus_30),'index'][1]
-
-                  #Approximate day of snowmelt in period from (cutoff_best-1 : cutoff_best)
-                  newdata_subset <- df_Location_gam[max(0, cutoff_best-2) : min(cutoff_best+1, nrow(df_Location_gam)),]
-                  doy_snowmelt <- stats::approx(x = newdata_subset$SnowFraction_gam_predict, y = newdata_subset$Date_doy, xout = Snowfraction_threshold)$y[1]
-
-                  # For debugging:
-                  # p_tmp <- ggplot()+
-                  #   geom_point(data=df_Location_tmp[df_Location_tmp$outliers==FALSE,], aes(x=Date_doy, y=SnowFraction))+
-                  #   geom_point(data=df_Location_tmp[df_Location_tmp$outliers==TRUE,], aes(x=Date_doy, y=SnowFraction), col="black", pch=16, alpha=0.2)+
-                  #   geom_line(data=df_Location_gam, aes(x=Date_doy, y=SnowFraction_gam_predict), col = "red") +
-                  #   geom_point(aes(x=doy_snowmelt, y=Snowfraction_threshold), col="blue", size=3)+
-                  #   geom_hline(yintercept=Snowfraction_threshold, lty=2, col="grey")+
-                  #   xlab(paste0("Day of year (starting at 01-01-", year_ID, ")")) +
-                  #   ylab("SnowFraction-value at pixel") +
-                  #   theme_classic()+
-                  #   ggtitle(i)
-
-                }
-
-                #If threshold was not crossed:
-                if(!any(df_Location_gam$dif<0)){
-
-                  #No date of snowmelt could be defined
-                  doy_snowmelt <- NA
-
-                  #For debugging:
-                  # p_tmp <- ggplot()+
-                  #   geom_point(data=df_Location_tmp[df_Location_tmp$outliers==FALSE,], aes(x=Date_doy, y=SnowFraction))+
-                  #   geom_point(data=df_Location_tmp[df_Location_tmp$outliers==TRUE,], aes(x=Date_doy, y=SnowFraction), col="black", pch=16, alpha=0.2)+
-                  #   geom_line(data=df_Location_gam, aes(x=Date_doy, y=SnowFraction_gam_predict), col = "red") +
-                  #   geom_hline(yintercept=Snowfraction_threshold, lty=2, col="grey")+
-                  #   xlab(paste0("Day of year (starting at 01-01-", year_ID, ")")) +
-                  #   ylab("SnowFraction-value at pixel") +
-                  #   theme_classic()+
-                  #   ggtitle(i)
-
-                }
-
-               #Add day of snowmelt and LocationID to dataframe df_Snowmelt_SnowFraction_Locations
-                df_Snowmelt_SnowFraction_Locations[which(unique(Locations_SnowFraction_predictions$LocationID)==i),'LocationID'] <- as.character(i)
-                df_Snowmelt_SnowFraction_Locations[which(unique(Locations_SnowFraction_predictions$LocationID)==i),'Date_doy'] <- doy_snowmelt
-               }
-
-            #Plot SnowFraction, model predictions and date of snowmelt in a separate plot per location
-             p_Locations_SnowFraction_Snowmelt_grid <- p_Locations_SnowFraction_grid +
-               geom_point(data=df_Snowmelt_SnowFraction_Locations[!is.na(df_Snowmelt_SnowFraction_Locations$Date_doy),], aes(x=Date_doy, y=Snowfraction_threshold), col="red", size=3)
-
-               ggsave(plot=p_Locations_SnowFraction_Snowmelt_grid, paste0("Output/S2/Shapefile_Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Plot_SnowFraction_Snowmelt_grid.pdf"), width=12, height = 10)
-
-            #Add coordinates to each location
-             df_Snowmelt_SnowFraction_Locations <- left_join(df_Snowmelt_SnowFraction_Locations, Locations_sf, by=c("LocationID"))
-
-            #Save date of snowmelt per location as a csv file
-             write.csv(df_Snowmelt_SnowFraction_Locations, paste0("Output/S2/Shapefile_Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Snowmelt_SnowFraction_", Snowfraction_threshold, ".csv"), row.names = FALSE)
-
-    } 
-
-##################################################################################################################################
-        
-#IV: Fit a Generalized Additive Model (GAM) through the Sentinel-2 band value data for each location
-        
-##################################################################################################################################       
- 
- #Method "avg_NDSI"            
- if("avg_NDSI" %in% method){       
-               
-     #(22): SNOW - Fit a Generalized Additive Model (GAM) through the NDSI data for each Location
-
-         #We fit a Generalized Additive Model (GAM) through the data for each point location. We do this using a sequential
-         #outlier-filtering process. We first fit a GAM through the data, calculating model predictions and residuals. We then
-         #exclude all rows from the dataframe where the residual >= (0.25 * the range of the data). We then re-fit a GAM to
-         #this reduced dataset, make predictions and calculate residuals. We then exclude all rows from the reduced dataframe
-         #where the residual >= (0.1 * the range of the data). This gives us a final dataframe through which we fit a third
-         #GAM and store its model predictions, given the dataset in which outliers were thus removed through two subsequent
-         #steps. This whole process is executed using the function f_gam_SeqRemOutliers. Note that a sequential step is
-         #required because initially some datapoints might falsely be assigned a large residual because of one extreme
-         #outlier. After removal of this extreme outlier and refitting of the GAM, it can be better assessed which data
-         #points truly have a large residual and can thus be assigned as 'true' outliers.
-            f_gam_SeqRemOutliers <- f_gam_SeqRemOutliers #sourced
-
-            #Specify sequential outlier thresholds:
-             outlier_thresh_1=outlier_thresh_1
-             outlier_thresh_2=outlier_thresh_2
-             outlier_removal=outlier_removal
-
-         #(a) Specify at which NDSI value, the point is considered snow-free
-             NDSI_threshold = NDSI_threshold
-
-         #(b) Create an empty dataframe
-             Locations_NDSI <- data.frame(NDSI=numeric(),
-                                          Date=factor(),
-                                          Date_doy=numeric(),
-                                          LocationID=factor(),
-                                          outliers=logical())
-
-             Locations_NDSI_predictions <- data.frame(LocationID=character(),
-                                                      Date_doy=numeric(),
-                                                      NDSI_gam_predict=numeric(),
-                                                      stringsAsFactors=FALSE)
-
-         #(c) Loop through all Locations and fit a separate gam with sequential outlier removal to the location specific mean NDSI data
-             for(i in unique(Locations_Data_BandValues$LocationID)){
-
-               #For debugging
-                #i=unique(Locations_Data_BandValues$LocationID)[1]
-
-               #Select Location-specific subset of data:
-                df_Location <- Locations_Data_BandValues[Locations_Data_BandValues$LocationID==i & !is.na(Locations_Data_BandValues$NDSI),
-                                                    c("NDSI", "Date", "Date_doy", "LocationID")]
-
-               #Fit a gam through the Location-specific mean_NDSI ~ Date_doy data and employ sequential outlier removal
-                df_Location <- f_gam_SeqRemOutliers(data=df_Location, y="NDSI", x="Date_doy", outlier_removal=outlier_removal,
-                                                    outlier_thresh_1=outlier_thresh_1, outlier_thresh_2=outlier_thresh_2,
-                                                    default_k=gam_k_outlier)
-
-               #Sort df_Location by Date_doy:
-                df_Location <- df_Location[order(df_Location$Date_doy),]
-
-               #Bind the Location-specific dataframe with GAM estimates to the dataframe containing all dataframes from previous iterations
-                Locations_NDSI <- rbind(Locations_NDSI, df_Location)
-
-               #Create more detailed predictions (not only at the Date_doy present in the datframe) at a 1-day interval to plot more smooth curves
-
-                #Refit GAM through data
-                 index <- which(df_Location$outliers==FALSE)
-                 mod_gam <- with(df_Location[index,], mgcv::gam(NDSI ~ s(Date_doy, k=min(gam_k, length(index)-1)), method="REML"))
-
-                #Use gam to make predictions on a more detailed (1-day) day of year interval
-                 aoi_NDSI_predicted <- data.frame(LocationID=i, Date_doy=seq(min(df_Location$Date_doy), max(df_Location$Date_doy), 1))
-                 aoi_NDSI_predicted$NDSI_gam_predict <- stats::predict(mod_gam, newdata=aoi_NDSI_predicted, type="response")
-                 aoi_NDSI_predicted <- aoi_NDSI_predicted[order(aoi_NDSI_predicted$Date_doy),]
-
-                #Add predictions to Locations_NDSI_predictions dataframe:
-                 Locations_NDSI_predictions <- rbind(Locations_NDSI_predictions, aoi_NDSI_predicted)
-
-               }
-
-             #Change column LocationID to a factor:
-              Locations_NDSI$LocationID <- as.factor(as.character(Locations_NDSI$LocationID))
-              Locations_NDSI_predictions$LocationID <- as.factor(as.character(Locations_NDSI_predictions$LocationID))
-
-         #(d) Plot the raw NDSI datapoints and gam predictions for each Location:
-
-             #Plot NDSI and model predictions for all locations in a single plot
-              p_Locations_NDSI = ggplot()+
-                geom_point(data=Locations_NDSI, aes(x=Date_doy, y=NDSI, fill=LocationID, col=LocationID))+
-                geom_line(data=Locations_NDSI_predictions, aes(x=Date_doy, y=NDSI_gam_predict, col=LocationID)) +
-                xlab(paste0("Day of year (starting at 01-01-", year_ID,")")) +
-                ylab("NDSI") +
-                theme_tom()
-
-                #ggsave(plot=p_Locations_NDSI, paste0("Output/S2/Shapefile_Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Plot_NDSI.pdf"), width=10, height = 8)
-
-             #Plot NDSI and model predictions in a separate plot per location
-              p_Locations_NDSI_grid = ggplot()+
-                geom_point(data=Locations_NDSI[Locations_NDSI$outliers==FALSE,], aes(x=Date_doy, y=NDSI))+
-                geom_point(data=Locations_NDSI[Locations_NDSI$outliers==TRUE,], aes(x=Date_doy, y=NDSI), col="black", pch=16, alpha=0.2)+
-                geom_line(data=Locations_NDSI_predictions, aes(x=Date_doy, y=NDSI_gam_predict), col="#1620de", lwd=1.25)+
-                geom_vline(xintercept = 150, colour="grey", lty=2)+
-                geom_hline(yintercept = NDSI_threshold, colour="grey", lty=2)+
-                facet_wrap(~LocationID, ncol=ceiling(length(unique(Locations_NDSI$LocationID))^0.5))+
-                xlab(paste0("Day of year (starting at 01-01-", year_ID,")")) +
-                ylab("NDSI") +
-                theme_tom()
-
-                ggsave(plot=p_Locations_NDSI_grid, paste0("Output/S2/Shapefile_Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Plot_NDSI_grid.pdf"), width=12, height = 10)
-
-         #(e) Calculate at which day of year the average NDSI is equal to NDSI_threshold for each location using predictions from mod_gam
+        #(e) Calculate at which day of year the SnowFraction is equal to Snowfraction_threshold_vector for each location using predictions from mod_gam
 
              #Create an empty dataframe
-              df_Snowmelt_NDSI_Locations <- data.frame(LocationID=character(),
-                                              Date_doy=numeric(),
-                                              stringsAsFactors=FALSE)
+             df_Snowmelt_SnowFraction_Locations <- data.frame(NDSI_threshold=character(),
+                                                     Snowfraction_threshold=character(),
+                                                     doy=numeric(),
+                                                     LocationID=character(),
+                                                     stringsAsFactors=FALSE)
 
-             #Loop through all locations in the Locations_NDSI_predictions dataframe and extract doy of snowmelt for each location:
-              for(i in unique(Locations_NDSI_predictions$LocationID)){
+             #Setup parallel processing
+             numCores <- detectCores()
+             cl <- makePSOCKcluster(numCores)
+             registerDoSNOW(cl)
 
-                #For debugging
-                 #i=unique(Locations_NDSI_predictions$LocationID)[1] #for debugging
+            #Loop through all locations in the df_Locations_SnowFraction_GAM_predictions dataframe and extract doy for all Snowfraction levels:
+            for(i in unique(df_Locations_SnowFraction_GAM_predictions$LocationID)){
 
-                #Select location-specific subset of data:
-                 df_Location_gam <- Locations_NDSI_predictions[Locations_NDSI_predictions$LocationID==i & !is.na(Locations_NDSI_predictions$NDSI),]
-                 df_Location_tmp <- Locations_NDSI[Locations_NDSI$LocationID==i & !is.na(Locations_NDSI$NDSI),]
-
-                 #Detect cutoff points where curve goes from above NDSI threshold to below NDSI threshold
-                 df_Location_gam$cutoff <- ifelse(df_Location_gam$NDSI_gam_predict >= NDSI_threshold, 1, 0)
-                 df_Location_gam$dif <- c(0, diff(df_Location_gam$cutoff))
-                 #the column 'cutoff' indicates whether the gam prediction is above (1) or below (0) the ndsi threshold
-                 #the column 'dif' indicates when there is a change from 1 to 0 (-1) or 0 to 1 (1) in the column cutoff
-                 #Thus, those rows where the column 'dif' is equal to -1 indicate moments where the NDSI value changes from above
-                 #the threshold to below the threshold. It might be possible that this happens multiple times within a season due to
-                 #measurement errors or cloud effects. We therefore need to determine which 'cutoff' most likely corresponds to the
-                 #actual moment of snowmelt
-
-                 #If NDSI-threshold was at least crossed once:
-                 if(any(df_Location_gam$dif<0)){
-
-                   #Select all moments (cutoffs) where dif==-1
-                   cutoffs <- data.frame(index=which(df_Location_gam$dif<0))
-
-                   #For the period 30 days after each cutoff point, sum the number of days that have a NDSI value larger than NDSI_threshold. If a
-                   #cutoff represents actual snowmelt, then we do not expect any days after this moment with NDSI > NDSI_threshold. Thus, the closer
-                   #this sum is to 0, the more likely this cutoff corresponds to the actual moment of snowmelt.
-                   cutoffs$min <- cutoffs$index -30
-                   cutoffs$min[cutoffs$min<1] <- 1
-                   cutoffs$max <- cutoffs$index + 29
-                   cutoffs$max[cutoffs$max>nrow(df_Location_gam)] <- nrow(df_Location_gam)
-                   cutoffs$sum_cutoff_plus_30 <- apply(cutoffs, 1, function(x){sum(df_Location_gam$cutoff[x['index']:(x['max'])])})
-                   cutoff_best <- cutoffs[cutoffs$sum_cutoff_plus_30==min(cutoffs$sum_cutoff_plus_30),'index'][1]
-
-                   #Approximate day of snowmelt in period from (cutoff_best-1 : cutoff_best)
-                   newdata_subset <- df_Location_gam[max(0, cutoff_best-2) : min(cutoff_best+1, nrow(df_Location_gam)),]
-                   doy_snowmelt <- stats::approx(x = newdata_subset$NDSI_gam_predict, y = newdata_subset$Date_doy, xout = NDSI_threshold)$y[1]
-
-                   #For debugging:
-                   # p_tmp <- ggplot()+
-                   #   geom_point(data=df_Location_tmp[df_Location_tmp$outliers==FALSE,], aes(x=Date_doy, y=NDSI))+
-                   #   geom_point(data=df_Location_tmp[df_Location_tmp$outliers==TRUE,], aes(x=Date_doy, y=NDSI), col="black", pch=16, alpha=0.2)+
-                   #   geom_line(data=df_Location_gam, aes(x=Date_doy, y=NDSI_gam_predict), col = "red") +
-                   #   geom_point(aes(x=doy_snowmelt, y=NDSI_threshold), col="blue", size=3)+
-                   #   geom_hline(yintercept=NDSI_threshold, lty=2, col="grey")+
-                   #   xlab(paste0("Day of year (starting at 01-01-", year_ID, ")")) +
-                   #   ylab("NDSI-value at pixel") +
-                   #   theme_classic()+
-                   #   ggtitle(i)
-
-                 }
-
-                 #If threshold was not crossed:
-                 if(!any(df_Location_gam$dif<0)){
-
-                   #No date of snowmelt could be defined
-                   doy_snowmelt <- NA
-
-                   #For debugging:
-                   # p_tmp <- ggplot()+
-                   #   geom_point(data=df_Location_tmp[df_Location_tmp$outliers==FALSE,], aes(x=Date_doy, y=NDSI))+
-                   #   geom_point(data=df_Location_tmp[df_Location_tmp$outliers==TRUE,], aes(x=Date_doy, y=NDSI), col="black", pch=16, alpha=0.2)+
-                   #   geom_line(data=df_Location_gam, aes(x=Date_doy, y=NDSI_gam_predict), col = "red") +
-                   #   geom_hline(yintercept=NDSI_threshold, lty=2, col="grey")+
-                   #   xlab(paste0("Day of year (starting at 01-01-", year_ID, ")")) +
-                   #   ylab("NDSI-value at pixel") +
-                   #   theme_classic()+
-                   #   ggtitle(i)
-
-                 }
-
-                #Add day of snowmelt and LocationID to dataframe df_Snowmelt_NDSI_Locations
-                 df_Snowmelt_NDSI_Locations[which(unique(Locations_NDSI_predictions$LocationID)==i),'LocationID'] <- as.character(i)
-                 df_Snowmelt_NDSI_Locations[which(unique(Locations_NDSI_predictions$LocationID)==i),'Date_doy'] <- doy_snowmelt
-                }
-
-             #Plot NDSI, model predictions and date of snowmelt in a separate plot per location
-              p_Locations_NDSI_Snowmelt_grid <- p_Locations_NDSI_grid +
-                geom_point(data=df_Snowmelt_NDSI_Locations[!is.na(df_Snowmelt_NDSI_Locations$Date_doy),], aes(x=Date_doy, y=NDSI_threshold), col="red", size=3)
-
-                ggsave(plot=p_Locations_NDSI_Snowmelt_grid, paste0("Output/S2/Shapefile_Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Plot_NDSI_Snowmelt_grid.pdf"), width=12, height = 10)
-
-             #Add coordinates to each location
-              df_Snowmelt_NDSI_Locations <- left_join(df_Snowmelt_NDSI_Locations, Locations_sf, by=c("LocationID"))
-
-             #Save date of snowmelt per location as a csv file
-              write.csv(df_Snowmelt_NDSI_Locations, paste0("Output/S2/Shapefile_Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Snowmelt_NDSI_", NDSI_threshold, ".csv"), row.names = FALSE)
-
-              
-      #(23): VEGETATION - Fit a Generalized Additive Model (GAM) through the NDVI data for each location
-              
-         #(a) Create an empty dataframe
-             Locations_NDVI <- data.frame(NDVI=numeric(),
-                                          Date=factor(),
-                                          Date_doy=numeric(),
-                                          LocationID=factor(),
-                                          outliers=logical())
-             
-             Locations_NDVI_predictions <- data.frame(LocationID=character(), 
-                                                      Date_doy=numeric(), 
-                                                      NDVI_gam_predict=numeric(), 
-                                                      stringsAsFactors=FALSE)   
-             
-         #(b) Loop through all Locations and fit a separate gam with sequential outlier removal to the Location specific NDVI data
-             for(i in unique(Locations_Data_BandValues$LocationID)){
-               
-               #For debugging  
-               #i=unique(Locations_Data_BandValues$LocationID)[1]
-               
-               #Select Location-specific subset of data:
-               df_Location <- Locations_Data_BandValues[Locations_Data_BandValues$LocationID==i & !is.na(Locations_Data_BandValues$NDVI), 
-                                                   c("NDVI", "Date", "Date_doy", "LocationID")]
-               
-               #Fit a gam through the location-specific NDVI ~ Date_doy data and emply sequential outlier removal
-               df_Location <- f_gam_SeqRemOutliers(data=df_Location, y="NDVI", x="Date_doy", outlier_removal=outlier_removal, 
-                                               outlier_thresh_1=outlier_thresh_1, outlier_thresh_2=outlier_thresh_2,
-                                               default_k=gam_k_outlier)
-               
-               #Sort df_Location by Date_doy
-               df_Location <- df_Location[order(df_Location$Date_doy), ]
-               
-               #Bind the location-specific dataframe with GAM estimates to the dataframe containing all dataframes from previous iterations
-               Locations_NDVI <- rbind(Locations_NDVI, df_Location)
-               
-               #Create more detailed predictions (not only at the Date_doy present in the datframe) at a 1-day interval to plot more smooth curves
-               
-               #Refit GAM through data
-               index <- which(df_Location$outliers==FALSE)
-               mod_gam <- with(df_Location[index,], mgcv::gam(NDVI ~ s(Date_doy, k=min(gam_k, length(index)-1)), method="REML"))
-               
-               #Use gam to make predictions on a more detailed (1-day) day of year interval
-               aoi_NDVI_predicted <- data.frame(LocationID=i, Date_doy=seq(min(df_Location$Date_doy), max(df_Location$Date_doy), 1))
-               aoi_NDVI_predicted$NDVI_gam_predict <- stats::predict(mod_gam, newdata=aoi_NDVI_predicted, type="response")
-               aoi_NDVI_predicted <- aoi_NDVI_predicted[order(aoi_NDVI_predicted$Date_doy), ]
-               
-               #Add predictions to Locations_NDVI_predictions dataframe:  
-               Locations_NDVI_predictions <- rbind(Locations_NDVI_predictions, aoi_NDVI_predicted)
-               
-             }
-             
-             #Change column LocationID to a factor:
-             Locations_NDVI$LocationID <- as.factor(as.character(Locations_NDVI$LocationID))
-             Locations_NDVI_predictions$LocationID <- as.factor(as.character(Locations_NDVI_predictions$LocationID))
-             
-         #(c) Plot the raw NDVI datapoints and gam predictions for each location:
-              
-             #Plot NDVI and model predictions for all locations in a single plot
-             p_Locations_NDVI = ggplot()+ 
-                geom_point(data=Locations_NDVI, aes(x=Date_doy, y=NDVI, fill=LocationID, col=LocationID))+
-                geom_line(data=Locations_NDVI_predictions, aes(x=Date_doy, y=NDVI_gam_predict, col=LocationID)) + 
-                xlab("Day of year") + 
-                ylab("NDVI") +
-                theme_tom()
-             
-                #ggsave(plot=p_Locations_NDVI, paste0("Output/S2/Shapefile_Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Plot_NDVI.pdf"), width=10, height = 8)
-              
-             #Plot NDVI and model predictions in a separate plot per location
-             p_Locations_NDVI_grid = ggplot()+ 
-                geom_point(data=Locations_NDVI[Locations_NDVI$outliers==FALSE,], aes(x=Date_doy, y=NDVI), col="black")+
-                geom_point(data=Locations_NDVI[Locations_NDVI$outliers==TRUE,], aes(x=Date_doy, y=NDVI), col="black", pch=16, alpha=0.2)+
-                geom_line(data=Locations_NDVI_predictions, aes(x=Date_doy, y=NDVI_gam_predict), col="#08a31a", lwd=1.25) + 
-                geom_vline(xintercept = 150, colour="grey", lty=2)+
-                facet_wrap(~LocationID, ncol=ceiling(length(unique(Locations_NDVI$LocationID))^0.5))+
-                xlab("Day of year") + 
-                ylab("NDVI") +
-                theme_tom()
-             
-                ggsave(plot=p_Locations_NDVI_grid, paste0("Output/S2/Shapefile_Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Plot_NDVI_grid.pdf"), width=12, height = 10)
-             
-      #(24): MOISTURE - Fit a Generalized Additive Model (GAM) through the NDMI data for each location
-              
-         #(a) Create an empty dataframe
-             Locations_NDMI <- data.frame(NDMI=numeric(),
-                                          Date=factor(),
-                                          Date_doy=numeric(),
-                                          LocationID=factor(),
-                                          outliers=logical())
-             
-             Locations_NDMI_predictions <- data.frame(LocationID=character(), 
-                                                      Date_doy=numeric(), 
-                                                      NDMI_gam_predict=numeric(), 
-                                                      stringsAsFactors=FALSE)   
-             
-         #(b) Loop through all locations and fit a separate gam with sequential outlier removal to the location specific NDMI data
-             for(i in unique(Locations_Data_BandValues$LocationID)){
-               
-               #For debugging  
-               #i=unique(Locations_Data_BandValues$LocationID)[1]
-               
-               #Select location-specific subset of data:
-               df_Location <- Locations_Data_BandValues[Locations_Data_BandValues$LocationID==i & !is.na(Locations_Data_BandValues$NDMI), 
-                                                   c("NDMI", "Date", "Date_doy", "LocationID")]
-               
-               #Fit a gam through the locations-specific NDMI ~ Date_doy data and emply sequential outlier removal
-               df_Location <- f_gam_SeqRemOutliers(data=df_Location, y="NDMI", x="Date_doy", outlier_removal=outlier_removal, 
-                                                   outlier_thresh_1=outlier_thresh_1, outlier_thresh_2=outlier_thresh_2,
-                                                   default_k=gam_k_outlier)
-               
-               #Sort df_Location by Date_doy
-               df_Location <- df_Location[order(df_Location$Date_doy), ]
-               
-               #Bind the locations-specific dataframe with GAM estimates to the dataframe containing all dataframes from previous iterations
-               Locations_NDMI <- rbind(Locations_NDMI, df_Location)
-               
-               #Create more detailed predictions (not only at the Date_doy present in the datframe) at a 1-day interval to plot more smooth curves
-               
-               #Refit GAM through data
-               index <- which(df_Location$outliers==FALSE)
-               mod_gam <- with(df_Location[index,], mgcv::gam(NDMI ~ s(Date_doy, k=min(gam_k, length(index)-1)), method="REML"))
-               
-               #Use gam to make predictions on a more detailed (1-day) day of year interval
-               aoi_NDMI_predicted <- data.frame(LocationID=i, Date_doy=seq(min(df_Location$Date_doy), max(df_Location$Date_doy), 1))
-               aoi_NDMI_predicted$NDMI_gam_predict <- stats::predict(mod_gam, newdata=aoi_NDMI_predicted, type="response")
-               aoi_NDMI_predicted <- aoi_NDMI_predicted[order(aoi_NDMI_predicted$Date_doy), ]
-               
-               #Add predictions to Locations_NDMI_predictions dataframe:  
-               Locations_NDMI_predictions <- rbind(Locations_NDMI_predictions, aoi_NDMI_predicted)
-               
-             }
-             
-              #Change column LocationID to a factor:
-               Locations_NDMI$LocationID <- as.factor(as.character(Locations_NDMI$LocationID))
-               Locations_NDMI_predictions$LocationID <- as.factor(as.character(Locations_NDMI_predictions$LocationID)) 
-             
-         #(c) Plot the raw NDMI datapoints and gam predictions for each location:
-              
-             #Plot NDMI and model predictions for all locations in a single plot
-              p_Locations_NDMI = ggplot()+ 
-                geom_point(data=Locations_NDMI, aes(x=Date_doy, y=NDMI, fill=LocationID, col=LocationID))+
-                geom_line(data=Locations_NDMI_predictions, aes(x=Date_doy, y=NDMI_gam_predict, col=LocationID)) + 
-                xlab("Day of year") + 
-                ylab("NDMI") +
-                theme_tom()
-              
-                #ggsave(plot=p_Locations_NDMI, paste0("Output/S2/Shapefile_Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Plot_NDMI.pdf"), width=12, height = 10)
-              
-             #Plot NDMI and model predictions in a separate plot per location
-              p_Locations_NDMI_grid = ggplot()+ 
-                geom_point(data=Locations_NDMI[Locations_NDMI$outliers==FALSE,], aes(x=Date_doy, y=NDMI), col="black")+
-                geom_point(data=Locations_NDMI[Locations_NDMI$outliers==TRUE,], aes(x=Date_doy, y=NDMI), col="black", pch=16, alpha=0.2)+
-                geom_line(data=Locations_NDMI_predictions, aes(x=Date_doy, y=NDMI_gam_predict), col="#16acde", lwd=1.25)+
-                geom_vline(xintercept = 150, colour="grey", lty=2)+
-                facet_wrap(~LocationID, ncol=ceiling(length(unique(Locations_NDMI$LocationID))^0.5))+
-                xlab("Day of year") + 
-                ylab("NDMI") +
-                theme_tom()
-              
-                ggsave(plot=p_Locations_NDMI_grid, paste0("Output/S2/Shapefile_Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Plot_NDMI_grid.pdf"), width=12, height = 10)
-              
-      #(25): Plot NDSI, NDVI and NDMI together in a plot per location
-              p_Locations_BANDS_grid = ggplot()+ 
-                geom_point(data=Locations_NDSI[Locations_NDSI$outliers==FALSE,], aes(x=Date_doy, y=NDSI))+
-                geom_point(data=Locations_NDSI[Locations_NDSI$outliers==TRUE,], aes(x=Date_doy, y=NDSI), col="black", pch=16, alpha=0.2)+
-                geom_point(data=Locations_NDVI[Locations_NDVI$outliers==FALSE,], aes(x=Date_doy, y=NDVI), col="black")+
-                geom_point(data=Locations_NDVI[Locations_NDVI$outliers==TRUE,], aes(x=Date_doy, y=NDVI), col="black", pch=16, alpha=0.2)+
-                geom_point(data=Locations_NDMI[Locations_NDMI$outliers==FALSE,], aes(x=Date_doy, y=NDMI), col="black")+
-                geom_point(data=Locations_NDMI[Locations_NDMI$outliers==TRUE,], aes(x=Date_doy, y=NDMI), col="black", pch=16, alpha=0.2)+
-                geom_line(data=Locations_NDSI_predictions, aes(x=Date_doy, y=NDSI_gam_predict), col="#1620de", lwd=1.25)+
-                geom_line(data=Locations_NDVI_predictions, aes(x=Date_doy, y=NDVI_gam_predict), col="#08a31a", lwd=1.25)+ 
-                geom_line(data=Locations_NDMI_predictions, aes(x=Date_doy, y=NDMI_gam_predict), col="#16acde", lwd=1.25)+
-                geom_vline(xintercept = 150, colour="grey", lty=2)+
-                facet_wrap(~LocationID, ncol=ceiling(length(unique(Locations_NDMI$LocationID))^0.5))+
-                xlab("Day of year") + 
-                ylab("Normalized Difference Band Index") +
-                theme_tom()
-              
-                ggsave(plot=p_Locations_BANDS_grid, paste0("Output/S2/Shapefile_Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Plot_AllBands_grid.pdf"), width=14, height =12)
- }  
-      
-####################################################################################################################################################
-              
-#X: OPTIONAL: Assess how the extracted day of snowmelt, NDVI and NDMI values change along the foraging trajectories (Locations) of chicks in ZAC            
-              
-####################################################################################################################################################              
-              
-  # #Add Date of snowmelt, NDSI, NDMI and NDVI measures per location to the corresponding date-location combination in ZAC_Paths
-  #   ZAC_Paths <- read.csv(paste0("Input/", input_locations), header=T)[,c("ChickID", "LON_x", "LAT_y", "DateTime")]
-  #   colnames(ZAC_Paths) <- c("ChickID", "LON_x", "LAT_y", "DateTime")
-  #   #Add a unique LocationID to every unique lat/lon combination
-  #   Locations <- unique(ZAC_Paths[,c("LON_x", "LAT_y")])
-  #   Locations$LocationID <- paste0("Location_", 1:nrow(Locations))
-  #   ZAC_Paths <- left_join(ZAC_Paths, Locations, by=c("LON_x", "LAT_y"))
-  #   ZAC_Paths$Date_doy <- as.numeric(strftime(ZAC_Paths$DateTime , format = "%j"))
-  #   ZAC_Paths <- left_join(ZAC_Paths, Locations_NDSI_predictions, by=c("LocationID", "Date_doy"))
-  #   ZAC_Paths <- left_join(ZAC_Paths, Locations_NDVI_predictions, by=c("LocationID", "Date_doy"))
-  #   ZAC_Paths <- left_join(ZAC_Paths, Locations_NDMI_predictions, by=c("LocationID", "Date_doy"))
-  #   ZAC_Paths <- left_join(ZAC_Paths, df_Snowmelt_NDSI_Locations[,c("LocationID", "Date_doy")], by=c("LocationID"))
-  #   colnames(ZAC_Paths) <- c("ChickID", "LON_x", "LAT_y", "DateTime", "LocationID", "Date_doy", "NDSI_gam_predict", "NDVI_gam_predict",
-  #                            "NDMI_gam_predict", "Snowmelt_doy")
-  #   write.csv(ZAC_Paths, paste0("Output/S2/Shapefile_Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_ChickMovement_Data_NDSI_NDVI_NDMI.csv"), row.names = FALSE)
-  # 
-  # #Plot each individuals path through a landscape of Snowmelt doy values
-  #   p1 <- ggplot()+
-  #     geom_line(data=ZAC_Paths, aes(x=Date_doy, y=Snowmelt_doy ), col="#1620de", lwd=1.25)+
-  #     geom_abline()+
-  #     facet_wrap(~ChickID, ncol=ceiling(length(unique(ZAC_Paths$ChickID))^0.5))+
-  #     geom_smooth(data=ZAC_Paths, aes(x=Date_doy, y=Snowmelt_doy), method="lm", formula=y~x, col="red", size=1.25, se=T)+
-  #     geom_point(data=ZAC_Paths, aes(x=Date_doy, y=Snowmelt_doy ), col="black")+
-  #     xlab("Day of year") +
-  #     ylab("Day of snowmelt") +
-  #     theme_tom()
-  # 
-  #     ggsave(plot=p1, paste0("Output/S2/Shapefile_Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_MovementPaths_Plot_Snowmelt_doy_grid.pdf"), width=10, height = 8)
-  # 
-  # #Plot each individuals path through a landscape of NDVI values
-  #   p2 <- ggplot()+
-  #     geom_point(data=ZAC_Paths, aes(x=Date_doy, y=NDVI_gam_predict ), col="black")+
-  #     geom_line(data=ZAC_Paths, aes(x=Date_doy, y=NDVI_gam_predict ), col="#08a31a", lwd=1.25)+
-  #     facet_wrap(~ChickID, ncol=ceiling(length(unique(ZAC_Paths$ChickID))^0.5))+
-  #     geom_smooth(data=ZAC_Paths, aes(x=Date_doy, y=NDVI_gam_predict), method="lm", formula=y~x, col="red", size=1.25, se=T)+
-  #     xlab("Day of year") +
-  #     ylab("NDVI") +
-  #     theme_tom()
-  # 
-  #     ggsave(plot=p2, paste0("Output/S2/Shapefile_Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_MovementPaths_Plot_NDVI_grid.pdf"), width=10, height = 8)
-  # 
-  # #Plot each individuals path through a landscape of NDMI values
-  #   p3 <- ggplot()+
-  #     geom_point(data=ZAC_Paths, aes(x=Date_doy, y=NDMI_gam_predict ), col="black")+
-  #     geom_line(data=ZAC_Paths, aes(x=Date_doy, y=NDMI_gam_predict ), col="#16acde", lwd=1.25)+
-  #     facet_wrap(~ChickID, ncol=ceiling(length(unique(ZAC_Paths$ChickID))^0.5))+
-  #     geom_smooth(data=ZAC_Paths, aes(x=Date_doy, y=NDMI_gam_predict), method="lm", formula=y~x, col="red", size=1.25, se=T)+
-  #     xlab("Day of year") +
-  #     ylab("NDMI") +
-  #     theme_tom()
-  # 
-  #     ggsave(plot=p3, paste0("Output/S2/Shapefile_Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_MovementPaths_Plot_NDMI_grid.pdf"), width=10, height = 8)
-  # 
-  # #Calculate the average encountered band value for each individual:
-  #  #There do not seem to be any clear trajectories in individuals moving up to higher NDVI or NDMI values. We therefore calculate
-  #  #the average encountered day of snowmelt, NDVI and NDMI values along the foraging trajectory
-  #  ZAC_Chicks_MeanBandvalue <- ZAC_Paths %>% group_by(ChickID) %>% summarise(mean_Snowmelt_doy=mean(Snowmelt_doy),
-  #                                                                            mean_NDVI=mean(NDVI_gam_predict),
-  #                                                                            mean_NDMI=mean(NDMI_gam_predict),
-  #                                                                            mean_doy=mean(Date_doy))
-  # 
-  # #Plot average encountered band-values along growth parameter of each chick
-  # 
-  #   #Load estimated growth parameters per chick
-  #    ZAC_ChickGrowth <- read.csv(paste0("Input/ZAC19_ChickGrowth.csv"), header=T)
-  #    ZAC_ChickGrowth <- ZAC_ChickGrowth[ZAC_ChickGrowth$max_age>=5,]
-  # 
-  #   #Combine growth parameters with mean Band value during foraging
-  #    ZAC_Chicks_MeanBandvalue <- left_join(ZAC_Chicks_MeanBandvalue, ZAC_ChickGrowth, by="ChickID")
-  # 
-  #   #Plot average encountered day of snowmelt, NDVI and NDMI versus the upper growth asymptote per chick
-  # 
-  #     #Mean Snowmelt_doy vs upper asymptote
-  #      p4 <- ggplot()+
-  #        geom_smooth(data=ZAC_Chicks_MeanBandvalue, aes(x=mean_Snowmelt_doy, y=d, size=max_age), method="lm", formula=y~x, col="red", size=1.25)+
-  #        geom_point(data=ZAC_Chicks_MeanBandvalue, aes(x=mean_Snowmelt_doy, y=d, size=max_age), col="black")+
-  #        xlab("Mean day of snowmelt across foraging locations") +
-  #        ylab("Upper asymptote bodymass (gram)") +
-  #        theme_tom()
-  # 
-  #        ggsave(plot=p4, paste0("Output/S2/Shapefile_Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_GrowthParameter_Plot_Mean_Snowmelt_doy.pdf"), width=10, height = 8)
-  # 
-  #     #Mean NDVI vs upper asymptote
-  #      p5 <- ggplot()+
-  #        geom_point(data=ZAC_Chicks_MeanBandvalue, aes(x=mean_NDVI, y=d, size=max_age), col="black")+
-  #        geom_smooth(data=ZAC_Chicks_MeanBandvalue, aes(x=mean_NDVI, y=d, size=max_age), method="lm", formula=y~x, col="red", size=1.25)+
-  #        xlab("Mean NDVI across foraging locations") +
-  #        ylab("Upper asymptote bodymass (gram)") +
-  #        theme_tom()
-  # 
-  #        ggsave(plot=p5, paste0("Output/S2/Shapefile_Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_GrowthParameter_Plot_MeanNDVI.pdf"), width=10, height = 8)
-  # 
-  #     #Mean NDMI vs upper asymptote
-  #      p6 <- ggplot()+
-  #        geom_point(data=ZAC_Chicks_MeanBandvalue, aes(x=mean_NDMI, y=d, size=max_age), col="black")+
-  #        geom_smooth(data=ZAC_Chicks_MeanBandvalue, aes(x=mean_NDMI, y=d, size=max_age), method="lm", formula=y~x, col="red", size=1.25)+
-  #        xlab("Mean NDMI across foraging locations") +
-  #        ylab("Upper asymptote bodymass (gram)") +
-  #        theme_tom()
-  # 
-  #        ggsave(plot=p6, paste0("Output/S2/Shapefile_Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_GrowthParameter_Plot_MeanNDMI.pdf"), width=10, height = 8)
-  # 
-  #  #Construct linear mixed models to test if growth is related to average encountered band values
-  #     lmm0 <- lme(d ~ 1, random=~1|Brood, data=ZAC_Chicks_MeanBandvalue, method="ML")
-  #     lmm1 <- lme(d ~ mean_Snowmelt_doy, random=~1|Brood, data=ZAC_Chicks_MeanBandvalue, method="ML")
-  #     lmm2 <- lme(d ~ mean_Snowmelt_doy + I(mean_Snowmelt_doy^2), random=~1|Brood, data=ZAC_Chicks_MeanBandvalue, method="ML")
-  #     MuMIn::AICc(lmm0, lmm1, lmm2) #lmm0 is best supported
-  #     rm(lmm0, lmm1, lmm2)
-  # 
-  #     lmm0 <- lme(d ~ 1, random=~1|Brood, data=ZAC_Chicks_MeanBandvalue, method="ML")
-  #     lmm1 <- lme(d ~ mean_NDVI, random=~1|Brood, data=ZAC_Chicks_MeanBandvalue, method="ML")
-  #     lmm2 <- lme(d ~ mean_NDVI + I(mean_NDVI^2), random=~1|Brood, data=ZAC_Chicks_MeanBandvalue, method="ML")
-  #     MuMIn::AICc(lmm0, lmm1, lmm2) #lmm1 is best supported
-  #     rm(lmm0, lmm1, lmm2)
-  # 
-  #     lmm0 <- lme(d ~ 1, random=~1|Brood, data=ZAC_Chicks_MeanBandvalue, method="ML")
-  #     lmm1 <- lme(d ~ mean_NDMI, random=~1|Brood, data=ZAC_Chicks_MeanBandvalue, method="ML")
-  #     lmm2 <- lme(d ~ mean_NDMI + I(mean_NDMI^2), random=~1|Brood, data=ZAC_Chicks_MeanBandvalue, method="ML")
-  #     MuMIn::AICc(lmm0, lmm1, lmm2) #lmm0 is best supported
-  #     rm(lmm0, lmm1, lmm2)
-  # 
-  #     #Calculate the difference between the mean visiting date vs mean date of snowmelt for all chicks
-  #     mean(ZAC_Chicks_MeanBandvalue$mean_doy - ZAC_Chicks_MeanBandvalue$mean_Snowmelt_doy)
-  #     #Chicks on average forage at a certain location 58 days after snowmelt!
+               #For debugging
+               #i=unique(df_Locations_SnowFraction_GAM_predictions$LocationID)[1] #for debugging
   
+               #Select dataset with GAM predictions for current Location
+               df_SnowFraction_gam <- df_Locations_SnowFraction_GAM_predictions[df_Locations_SnowFraction_GAM_predictions$LocationID==i & !is.na(df_Locations_SnowFraction_GAM_predictions$SnowFraction),]
+  
+               #Use the function f_detect_threshold_date_parallel to extract the moments the GAM predictions cross the thresholds in Snowfraction_threshold_vector
+               results <- f_detect_threshold_date_parallel(subset=1, #data subset (not relevant here, set to 1)
+                                                           pixelIDs_split = list(NDSI_threshold_vector), #levels of NDSI_threshold (input needs to be a list)
+                                                           df_pixel_y = df_SnowFraction_gam, #dataframe containing GAM predictions
+                                                           pixel_ID_column="NDSI_threshold", #Grouping column
+                                                           y="SnowFraction_gam_predict", #response variable in GAM
+                                                           x="doy", #predictor variable in GAM
+                                                           pixel_gam_plots = FALSE, #Should GAM plots be created
+                                                           y_threshold = Snowfraction_threshold_vector) #Which threshold values for 'y' should be calculated
+  
+               #Store dates of snowmelt per Location
+               df_Snowmelt_SnowFraction_Locations_new <- results[[1]]
+               df_Snowmelt_SnowFraction_Locations_new <- as.data.frame(do.call(rbind, df_Snowmelt_SnowFraction_Locations_new))
+               colnames(df_Snowmelt_SnowFraction_Locations_new)[colnames(df_Snowmelt_SnowFraction_Locations_new)=="pixel_ID"] <- "NDSI_threshold"
+               colnames(df_Snowmelt_SnowFraction_Locations_new)[colnames(df_Snowmelt_SnowFraction_Locations_new)=="x_threshold"] <- "doy"
+               colnames(df_Snowmelt_SnowFraction_Locations_new)[colnames(df_Snowmelt_SnowFraction_Locations_new)=="y_threshold"] <- "Snowfraction_threshold"
+               df_Snowmelt_SnowFraction_Locations_new$LocationID <- i
+  
+               #Add snowmelt data for LocationID to general dataframe
+               df_Snowmelt_SnowFraction_Locations <- rbind(df_Snowmelt_SnowFraction_Locations, df_Snowmelt_SnowFraction_Locations_new)
+  
+              }
+
+            #Turn parallel processing off and run sequentially again after this point
+            stopCluster(cl)
+            registerDoSEQ()
+
+            #Add coordinates to each location
+            df_Snowmelt_SnowFraction_Locations <- left_join(df_Snowmelt_SnowFraction_Locations, Locations_sf, by=c("LocationID"))
+
+            #Save dates of snowmelt per Location per SnowFraction threshold as a .csv file
+            write.csv(df_Snowmelt_SnowFraction_Locations, paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Snowmelt_Snowfraction_polygon.csv"), row.names = FALSE)
+
+            #Add dates of snowmelt to the plot 'p_Locations_NDSI_grid'
+            p_Locations_SnowFraction_Snowmelt_grid <- p_Locations_SnowFraction_grid +
+              geom_point(data=df_Snowmelt_SnowFraction_Locations[!is.na(df_Snowmelt_SnowFraction_Locations$doy),], aes(x=doy, y=Snowfraction_threshold), col="red", size=3)
+
+            ggsave(plot=p_Locations_SnowFraction_Snowmelt_grid, paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Locations_Plot_Snowmelt_Snowfraction_grid_polygon.pdf"), width=12, height = 10)
+          
+        } 
+
 ###############################################################################################################################################
-###############################################################################################################################################        
-                   
+###############################################################################################################################################       
+###############################################################################################################################################
+                         
