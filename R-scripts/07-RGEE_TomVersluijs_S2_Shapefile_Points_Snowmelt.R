@@ -158,7 +158,7 @@
     resolution_cldmsk=150 #(default = 150)
 
     #Maximum fraction of cloud cover allowed in each image
-    max_cloud_fraction=1.0
+    max_cloud_fraction=0.75
 
   #(f): Water masking
 
