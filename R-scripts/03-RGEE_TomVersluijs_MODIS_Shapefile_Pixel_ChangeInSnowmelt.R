@@ -92,8 +92,11 @@
 
 #################################################################################################################
    
-   #Create output folder
+    #Create output folder
     if(dir.exists(paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt"))==FALSE){dir.create(paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt"), recursive = TRUE)}
+     
+    #Create a timestamp variable
+    timestamp <- format(Sys.time(), "%Y%m%d%H%m%S")
      
    #(5): Read study area shapefile and convert to a feature collection.
       root_fldr <- here()
@@ -143,9 +146,12 @@
            #Define the corresponding asset folder
             path_asset <- paste0(ee_get_assethome(), "/", data_ID)
             #ee_manage_assetlist()
+            
+           #Create overview of filenames in path_asset
+            path_asset_files <- ee_manage_assetlist(path_asset)$ID
 
            #Re-load the already generated snowmelt image as a feature collection
-            assetid=paste0(path_asset, "/", data_ID, "_FC_pixels_snowmelt_optimized")
+            assetid=path_asset_files[which(grepl("_FC_pixels_snowmelt_optimized", path_asset_files))]
             FC_pixels_MODIS_snowmelt <- ee$FeatureCollection(assetid)
             #FC_pixels_MODIS_snowmelt$first()$getInfo()
          
@@ -289,7 +295,7 @@
        a=Sys.time()
        task_vector1 <- ee_table_to_drive(
          collection = MODIS_FeatureCollection,
-         description = paste0(data_ID, "_Pixel_Snowmelt_MODIS_bbox"),
+         description = paste0(timestamp, "_", data_ID, "_Pixel_Snowmelt_MODIS_bbox"),
          fileFormat = "CSV",
          selectors = c('doy_snowmelt', 'Year', 'lat', 'lon', 'pixel_ID')
          )
@@ -297,7 +303,7 @@
        task_vector1$start()
        ee_monitoring(task_vector1, max_attempts = 1000000)
       
-       exported_stats <- ee_drive_to_local(task = task_vector1, dsn=paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", data_ID, "_Pixel_Snowmelt_bbox"))
+       exported_stats <- ee_drive_to_local(task = task_vector1, dsn=paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", timestamp, "_", data_ID, "_Pixel_Snowmelt_bbox"))
        MODIS_pixel_snowmelt <- read.csv(exported_stats)
        b=Sys.time()
        print(paste0("Computation finished in ",  round(as.numeric(difftime(b, a, units="mins")),2), " minutes"))
@@ -312,7 +318,7 @@
        a=Sys.time()
        task_vector2 <- ee_table_to_drive(
          collection = MODIS_FeatureCollection_clipped,
-         description = paste0(data_ID, "_Pixel_Snowmelt_MODIS_shapefile"),
+         description = paste0(timestamp, "_", data_ID, "_Pixel_Snowmelt_MODIS_shapefile"),
          fileFormat = "CSV",
          selectors = c('doy_snowmelt', 'Year', 'lat', 'lon', 'pixel_ID')
          )
@@ -320,7 +326,7 @@
        task_vector2$start()
        ee_monitoring(task_vector2, max_attempts = 1000000)
        
-       exported_stats <- ee_drive_to_local(task = task_vector2, dsn=paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", data_ID, "_Pixel_Snowmelt_shapefile"))
+       exported_stats <- ee_drive_to_local(task = task_vector2, dsn=paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", timestamp, "_", data_ID, "_Pixel_Snowmelt_shapefile"))
        MODIS_pixel_snowmelt_clipped <- read.csv(exported_stats)
        b=Sys.time()
        print(paste0("Computation finished in ",  round(as.numeric(difftime(b, a, units="mins")),2), " minutes"))
@@ -407,7 +413,7 @@
           
          #Plot on map (green indicate advancement in date of snowmelt, red indicate delay)
           Map$setCenter(coordinates_point$getInfo()$coordinates[1], coordinates_point$getInfo()$coordinates[2], 10)
-          Map$addLayer(slope, visArgs, '2000-2020 Change in date of snowmelt')
+          Map$addLayer(slope, visArgs, paste0("'", years[1], "-", rev(years)[1], " Change in date of snowmelt"))
           
        #(Method II): Manually fit a linear regression through all pixels in the dataframe 'MODIS_pixel_snowmelt':
           
@@ -450,9 +456,9 @@
           df_pixel_ChangeInSnowmelt <- as.data.frame(do.call(rbind, do.call(c, df_pixel_ChangeInSnowmelt)))
           colnames(df_pixel_ChangeInSnowmelt)[colnames(df_pixel_ChangeInSnowmelt)=="y_change"] <- "snowmelt_change"
           colnames(df_pixel_ChangeInSnowmelt)[colnames(df_pixel_ChangeInSnowmelt)=="y_intercept"] <- "snowmelt_intercept"
-          write.csv(df_pixel_ChangeInSnowmelt, file=paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", data_ID, "_Pixel_ChangeInSnowmelt_bbox.csv"), quote = FALSE, row.names=FALSE)
+          write.csv(df_pixel_ChangeInSnowmelt, file=paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", timestamp, "_", data_ID, "_Pixel_ChangeInSnowmelt_bbox.csv"), quote = FALSE, row.names=FALSE)
           ##Read dataframe
-          #df_pixel_ChangeInSnowmelt <- read.csv(file=paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", data_ID, "_Pixel_ChangeInSnowmelt.csv"), header=TRUE) 
+          #df_pixel_ChangeInSnowmelt <- read.csv(file=paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", timestamp, "_", data_ID, "_Pixel_ChangeInSnowmelt.csv"), header=TRUE) 
           
           #The dataframe df_pixel_ChangeInSnowmelt contains the change in the date of snowmelt for each individual pixel_ID within the
           #region 'aoi'. To be able to plot these data we need to transform this dataframe to a feature collection and then transform this 
@@ -464,7 +470,7 @@
           #in timing of snowmelt. In this case we're specifically interested in all pixels within aoi_Shapefile (and not all pixels within the
           #region 'aoi'). We thus first define which pixels of the current selection fall within aoi_Shapefile and store this as an index variable.
           index <- which(df_pixel_ChangeInSnowmelt$pixel_ID %in% unique(MODIS_pixel_snowmelt_clipped$pixel_ID))
-          write.csv(df_pixel_ChangeInSnowmelt[index,], file=paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", data_ID, "_Pixel_ChangeInSnowmelt_shapefile.csv"), quote = FALSE, row.names=FALSE)
+          write.csv(df_pixel_ChangeInSnowmelt[index,], file=paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", timestamp, "_", data_ID, "_Pixel_ChangeInSnowmelt_shapefile.csv"), quote = FALSE, row.names=FALSE)
           
           #Calculate the change in timing of snowmelt within aoi_Shapefile
           hist(na.omit(df_pixel_ChangeInSnowmelt$snowmelt_change[index]), nclass = 30)
@@ -480,7 +486,7 @@
           plots_per_page = 25
           plot_pixel_snowmelt <- lapply(plot_pixel_snowmelt, function(x){split(x, ceiling(seq_along(plot_pixel_snowmelt[[1]])/plots_per_page))})
           plot_pixel_snowmelt <- unname(unlist(plot_pixel_snowmelt, recursive = F))
-          pdf(paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", data_ID, "_Pixel_ChangeInSnowmelt_shapefile.pdf"), width=20, height=16, onefile = TRUE)
+          pdf(paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", timestamp, "_", data_ID, "_Pixel_ChangeInSnowmelt_shapefile.pdf"), width=20, height=16, onefile = TRUE)
           for (i in seq(length(plot_pixel_snowmelt))) { do.call("grid.arrange", plot_pixel_snowmelt[[i]]) }
           dev.off()
           
@@ -519,7 +525,7 @@
             #Change sf object to an earth engine feature collection by uploading it to the asset folder
             FC_tmp <- sf_as_ee(
               x = df_sf_tmp,
-              assetId = paste0(path_asset, "/", data_ID, "_df_pixel_ChangeInSnowmelt_", i),
+              assetId = paste0(path_asset, "/", timestamp, "_", data_ID, "_df_pixel_ChangeInSnowmelt_", i),
               overwrite = TRUE,
               monitoring = TRUE,
               via = 'getInfo_to_asset')
@@ -630,11 +636,11 @@
           #(H): To speed-up further computations with this feature collection we as an intermediate step upload and re-download it
           
             #Delete FC_pixels_ChangeInSnowmelt_optimized if it already occured in the asset folder:
-            tryCatch({ee_manage_delete(paste0(path_asset, "/", data_ID, "_FC_pixels_ChangeInSnowmelt_optimized"))}, 
+            tryCatch({ee_manage_delete(paste0(path_asset, "/", timestamp, "_", data_ID, "_FC_pixels_ChangeInSnowmelt_optimized"))}, 
                       error = function(cond){return("Path did not yet exist - no folder deleted")})
           
             #Upload to asset folder:
-            assetid2 <- paste0(path_asset, "/", data_ID, "_FC_pixels_ChangeInSnowmelt_optimized")
+            assetid2 <- paste0(path_asset, "/", timestamp, "_", data_ID, "_FC_pixels_ChangeInSnowmelt_optimized")
             task_vector3 <- ee_table_to_asset(
               collection = FC_Combined,
               overwrite = TRUE,
@@ -649,7 +655,7 @@
           #ee_manage_assetlist(path_asset)
           
           #Get feature collection from asset folder and create FC_pixels_ChangeInSnowmelt_optimized
-          #assetid2=paste0("users/escape/", data_ID, "/", data_ID, "_FC_pixels_ChangeInSnowmelt_optimized")
+          #assetid2=paste0(path_asset, "/", timestamp, "_", data_ID, "_FC_pixels_ChangeInSnowmelt_optimized")
           FC_pixels_ChangeInSnowmelt_optimized <- ee$FeatureCollection(assetid2) 
           #FC_pixels_ChangeInSnowmelt_optimized$first()$getInfo()
           #FC_pixels_ChangeInSnowmelt_optimized$size()$getInfo()
@@ -682,7 +688,7 @@
             #Create task to export the original snowmelt_change image to Google Drive  
             task_vector4 <- ee_image_to_drive(
               image=image_snowmelt_slope,
-              description= paste0(data_ID, '_PixelChangeInSnowmeltDoy_Image_DoySnowmelt'),
+              description= paste0(timestamp, "_", data_ID, '_Pixel_Image_SnowmeltDoy_Slope'),
               #scale= resolution,
               region=aoi,
               crs="EPSG:3857",
@@ -695,7 +701,7 @@
             task_vector4$start()
             print("Export original image to Google Drive:")
             ee_monitoring(task_vector4, max_attempts = 1000000)
-            ee_drive_to_local(task = task_vector4, dsn=paste0("Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", data_ID, '_PixelChangeInSnowmeltDoy_Image_DoySnowmelt'))
+            ee_drive_to_local(task = task_vector4, dsn=paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", timestamp, "_", data_ID, '_Pixel_Image_SnowmeltDoy_Slope'))
             
           #(E): Export RGB image to Google Drive (takes c.a. 2 minutes):
           
@@ -706,7 +712,7 @@
             #Create task to export RGB image to Google Drive:
             task_vector5 <- ee_image_to_drive(
               image=image_snowmelt_slope_RGB,
-              description= paste0(data_ID, '_PixelChangeInSnowmeltDoy_Image_RGB'),
+              description= paste0(timestamp, "_", data_ID, '_Pixel_Image_SnowmeltDoy_Slope_RGB'),
               #scale= resolution,
               region=aoi,
               crs="EPSG:3857",
@@ -719,7 +725,7 @@
             print("Export RGB image to Google Drive:")
             task_vector5$start()
             ee_monitoring(task_vector5, max_attempts = 1000000)
-            ee_drive_to_local(task = task_vector5, dsn=paste0("Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", data_ID, '_PixelChangeInSnowmeltDoy_Image_RGB'))
+            ee_drive_to_local(task = task_vector5, dsn=paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", timestamp, "_", data_ID, '_Pixel_Image_SnowmeltDoy_Slope_RGB'))
             
        #(9.2): Transform the Feature collection FC_pixels_ChangeInSnowmelt_optimized to an image (with snowmelt_intercept as an image band)
             
@@ -747,7 +753,7 @@
              #Create task to export the original snowmelt_change image to Google Drive  
               task_vector6 <- ee_image_to_drive(
                 image=image_snowmelt_intercept,
-                description= paste0(data_ID, '_PixelInterceptSnowmeltDoy_Image_DoySnowmelt'),
+                description= paste0(timestamp, "_", data_ID, '_Pixel_Image_SnowmeltDoy_Intercept'),
                 #scale= resolution,
                 region=aoi,
                 crs="EPSG:3857",
@@ -760,7 +766,7 @@
               task_vector6$start()
               print("Export original image to Google Drive:")
               ee_monitoring(task_vector6, max_attempts = 1000000)
-              ee_drive_to_local(task = task_vector6, dsn=paste0("Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", data_ID, '_PixelInterceptSnowmeltDoy_Image_DoySnowmelt'))
+              ee_drive_to_local(task = task_vector6, dsn=paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", timestamp, "_", data_ID, '_Pixel_Image_SnowmeltDoy_Intercept'))
               
             #(E): Export RGB image to Google Drive (takes c.a. 2 minutes):
             
@@ -771,7 +777,7 @@
              #Create task to export RGB image to Google Drive:
               task_vector7 <- ee_image_to_drive(
                 image=image_snowmelt_intercept_RGB,
-                description= paste0(data_ID, '_PixelInterceptSnowmeltDoy_Image_RGB'),
+                description= paste0(timestamp, "_", data_ID, '_Pixel_Image_SnowmeltDoy_Intercept_RGB'),
                 #scale= resolution,
                 region=aoi,
                 crs="EPSG:3857",
@@ -784,10 +790,10 @@
               print("Export RGB image to Google Drive:")
               task_vector7$start()
               ee_monitoring(task_vector7, max_attempts = 1000000)
-              ee_drive_to_local(task=task_vector7, dsn=paste0("Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", data_ID, '_PixelInterceptSnowmeltDoy_Image_RGB'))
+              ee_drive_to_local(task=task_vector7, dsn=paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", timestamp, "_", data_ID, '_Pixel_Image_SnowmeltDoy_Intercept_RGB'))
               
             #Save workspace
-            #save.image(paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", data_ID, "_Backup_Workspace_PixelChangeInSnowmeltDoy.RData"))        
+            #save.image(paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", timestamp, "_", data_ID, "_Backup_Workspace_PixelChangeInSnowmeltDoy.RData"))        
             
                
 ##################################################################################################################################################
