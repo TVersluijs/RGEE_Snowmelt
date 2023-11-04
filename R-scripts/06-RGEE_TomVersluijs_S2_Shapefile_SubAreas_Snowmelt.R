@@ -181,6 +181,9 @@
      #Create a unique data_ID
      data_ID <- paste0(area_name, substr(year_ID,(nchar(year_ID)+1)-2,nchar(year_ID)), "_S2")           
      
+     #Create a timestamp variable
+     timestamp <- format(Sys.time(), "%Y%m%d%H%m%S")
+     
      #Set mask_clouds to TRUE if a composite image needs to be generated         
      if(create_composite==TRUE){mask_clouds=TRUE}      
      
@@ -298,7 +301,7 @@
                        nudge_x =c(0.001,0,0.004,0,-0.001,0,-0.002,0,0.001,0), 
                        nudge_y =c(0.003,0.002,0,0,0,0.005,0,-0.001,-0.001,-0.001))
        
-         ggsave(plot=p1, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", data_ID, "_SubAreas.pdf"), width=10, height=8)
+         ggsave(plot=p1, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_SubAreas.pdf"), width=10, height=8)
       
       #Convert shapefile to an earthengine feature collection:  
        aoi_SubAreas <- st_transform(aoi_SubAreas, crs="EPSG:4326")
@@ -754,7 +757,7 @@
             #Setup task
              task_vector <- ee_table_to_drive(
                collection= FC_merged,
-               description = paste0(data_ID, "_Resolution", resolution, "_NDSI", NDSI_threshold_char, "_Data_MeanBandValues_SubAreas"),
+               description = paste0(timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Data_MeanBandValues_SubAreas"),
                folder="RGEE_tmp",
                fileFormat="CSV",
                selectors=c('NDSI', 'NDVI', 'NDMI', 'SNOW', 'Date', 'Cluster_ID')
@@ -765,7 +768,7 @@
              ee_monitoring(task_vector, task_time=60, max_attempts=1000000)
              
             #Import results
-             exported_stats <- ee_drive_to_local(task=task_vector, dsn=paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", data_ID, "_Resolution", resolution, "_NDSI", NDSI_threshold_char, "_Data_MeanBandValues_SubAreas"))
+             exported_stats <- ee_drive_to_local(task=task_vector, dsn=paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Data_MeanBandValues_SubAreas"))
              df_SubAreas_BandValues_new <- read.csv(exported_stats)
              unlink(exported_stats)
              
@@ -796,13 +799,13 @@
              #  ggplot() + geom_point(data=df_SubAreas_BandValues, aes(x=doy, y=SnowFraction, col=NDSI_threshold)) + theme_classic()  
              
              # #Save dataframe for current subarea
-             #  write.csv(df_SubAreas_BandValues_new, paste0("Output/S2/06_Shapefile_SubAreas_Snowmelt/", data_ID, _Resolution", resolution, "_NDSI", NDSI_threshold, "_Data_MeanBandValues_SnowFraction_SubAreas.csv"), row.names = FALSE)
+             #  write.csv(df_SubAreas_BandValues_new, paste0("Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, _Resolution", resolution, "_NDSI", NDSI_threshold_char, "_Data_MeanBandValues_SnowFraction_SubAreas.csv"), row.names = FALSE)
            
           }
      
      #Store dataframe with average bandValues and Snowfraction for all subareas for all levels of NDSI_threshold
-     write.csv(df_SubAreas_BandValues, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", data_ID, "_Resolution", resolution, "_SubAreas_Data_MeanBandValues_SnowFraction.csv"), row.names = FALSE)
-     #df_SubAreas_BandValues <- read.csv(paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", data_ID, "_Resolution", resolution, "_SubAreas_Data_MeanBandValues_SnowFraction.csv"), header=T)
+     write.csv(df_SubAreas_BandValues, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_Data_MeanBandValues_SnowFraction.csv"), row.names = FALSE)
+     #df_SubAreas_BandValues <- read.csv(paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_Data_MeanBandValues_SnowFraction.csv"), header=T)
      
 ##################################################################################################################################
 
@@ -902,8 +905,8 @@
         df_SubAreas_SnowFraction_GAM_predictions$SubArea <- as.factor(as.character(df_SubAreas_SnowFraction_GAM_predictions$SubArea))
         
         #Save dataframe with GAM fits for SnowFraction
-        write.csv(df_SubAreas_SnowFraction_GAM, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", data_ID, "_Resolution", resolution, "_SubAreas_Data_SnowFraction_GAM.csv"), row.names = FALSE)
-        write.csv(df_SubAreas_SnowFraction_GAM_predictions, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", data_ID, "_Resolution", resolution, "_SubAreas_Data_SnowFraction_Predictions_GAM.csv"), row.names = FALSE)
+        write.csv(df_SubAreas_SnowFraction_GAM, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_Data_SnowFraction_GAM.csv"), row.names = FALSE)
+        write.csv(df_SubAreas_SnowFraction_GAM_predictions, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_Data_SnowFraction_Predictions_GAM.csv"), row.names = FALSE)
           
       #(A.3) Plot the raw Snowfraction datapoints and gam predictions for each SubArea:
     
@@ -982,13 +985,13 @@
           df_SubArea_Snowfraction$SubArea <- as.factor(as.character(df_SubArea_Snowfraction$SubArea))
           
           #Save dates of snowmelt per subarea per SnowFraction threshold as a .csv file
-          write.csv(df_SubArea_Snowfraction, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", data_ID, "_Resolution", resolution, "_SubAreas_Snowmelt_Snowfraction.csv"), row.names = FALSE)
+          write.csv(df_SubArea_Snowfraction, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_Snowmelt_Snowfraction.csv"), row.names = FALSE)
           
           #Add dates of snowmelt to the plot 'p_SubArea_SnowFraction_grid'   
           p_SubArea_SnowFraction_Snowmelt_grid <- p_SubArea_SnowFraction_grid +
             geom_point(data=df_SubArea_Snowfraction[!is.na(df_SubArea_Snowfraction$doy),], aes(x=doy, y=Snowfraction_threshold), col="red", size=3)
           
-          ggsave(plot=p_SubArea_SnowFraction_Snowmelt_grid, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", data_ID, "_Resolution", resolution, "_SubAreas_Plot_Snowmelt_Snowfraction_grid.pdf"), width=16, height = 14)
+          ggsave(plot=p_SubArea_SnowFraction_Snowmelt_grid, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_Plot_Snowmelt_Snowfraction_grid.pdf"), width=16, height = 14)
         
 ########################################################################################################################################################################################
               
@@ -1053,8 +1056,8 @@
         df_SubAreas_NDSI_GAM_predictions$SubArea <- as.factor(as.character(df_SubAreas_NDSI_GAM_predictions$SubArea))
 
         #Save dataframe with GAM fits for NDSI
-        write.csv(df_SubAreas_NDSI_GAM, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", data_ID, "_Resolution", resolution, "_SubAreas_Data_NDSI_GAM.csv"), row.names = FALSE)
-        write.csv(df_SubAreas_NDSI_GAM_predictions, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", data_ID, "_Resolution", resolution, "_SubAreas_Data_NDSI_Predictions_GAM.csv"), row.names = FALSE)
+        write.csv(df_SubAreas_NDSI_GAM, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_Data_NDSI_GAM.csv"), row.names = FALSE)
+        write.csv(df_SubAreas_NDSI_GAM_predictions, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_Data_NDSI_Predictions_GAM.csv"), row.names = FALSE)
 
       #(B.3) Plot the raw NDSI datapoints and gam predictions for each SubArea:
 
@@ -1111,13 +1114,13 @@
           df_SubArea_NDSI$SubArea <- as.factor(as.character(df_SubArea_NDSI$SubArea))
 
           #Save dates of snowmelt per subarea per NDSI threshold as a .csv file
-          write.csv(df_SubArea_NDSI, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", data_ID, "_Resolution", resolution, "_SubAreas_Snowmelt_NDSI.csv"), row.names = FALSE)
+          write.csv(df_SubArea_NDSI, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_Snowmelt_NDSI.csv"), row.names = FALSE)
 
           #Add dates of snowmelt to the plot 'p_SubArea_NDSI_grid'
           p_SubArea_NDSI_Snowmelt_grid <- p_SubArea_NDSI_grid +
             geom_point(data=df_SubArea_NDSI[!is.na(df_SubArea_NDSI$doy),], aes(x=doy, y=NDSI_threshold), col="red", size=3)
 
-          ggsave(plot=p_SubArea_NDSI_Snowmelt_grid, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", data_ID, "_Resolution", resolution, "_SubAreas_Plot_Snowmelt_NDSI_grid.pdf"), width=16, height = 14)
+          ggsave(plot=p_SubArea_NDSI_Snowmelt_grid, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_Plot_Snowmelt_NDSI_grid.pdf"), width=16, height = 14)
 
 ########################################################################################################################################################################################
               
@@ -1182,8 +1185,8 @@
         df_SubAreas_NDVI_GAM_predictions$SubArea <- as.factor(as.character(df_SubAreas_NDVI_GAM_predictions$SubArea))
 
         #Save dataframe with GAM fits for NDVI
-        write.csv(df_SubAreas_NDVI_GAM, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", data_ID, "_Resolution", resolution, "_SubAreas_Data_NDVI_GAM.csv"), row.names = FALSE)
-        write.csv(df_SubAreas_NDVI_GAM_predictions, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", data_ID, "_Resolution", resolution, "_SubAreas_Data_NDVI_Predictions_GAM.csv"), row.names = FALSE)
+        write.csv(df_SubAreas_NDVI_GAM, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_Data_NDVI_GAM.csv"), row.names = FALSE)
+        write.csv(df_SubAreas_NDVI_GAM_predictions, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_Data_NDVI_Predictions_GAM.csv"), row.names = FALSE)
 
       #(C.3) Plot the raw NDVI datapoints and gam predictions for each SubArea:
 
@@ -1206,7 +1209,7 @@
             ylab("NDVI") +
             theme_tom()
 
-            ggsave(plot=p_SubArea_NDVI_grid, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", data_ID, "_Resolution", resolution, "_SubAreas_Plot_Snowmelt_NDVI_grid.pdf"), width=16, height = 14)
+            ggsave(plot=p_SubArea_NDVI_grid, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_Plot_Snowmelt_NDVI_grid.pdf"), width=16, height = 14)
             
 ########################################################################################################################################################################################
 
@@ -1271,8 +1274,8 @@
         df_SubAreas_NDMI_GAM_predictions$SubArea <- as.factor(as.character(df_SubAreas_NDMI_GAM_predictions$SubArea))
 
         #Save dataframe with GAM fits for NDMI
-        write.csv(df_SubAreas_NDMI_GAM, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", data_ID, "_Resolution", resolution, "_SubAreas_Data_NDMI_GAM.csv"), row.names = FALSE)
-        write.csv(df_SubAreas_NDMI_GAM_predictions, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", data_ID, "_Resolution", resolution, "_SubAreas_Data_NDMI_Predictions_GAM.csv"), row.names = FALSE)
+        write.csv(df_SubAreas_NDMI_GAM, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_Data_NDMI_GAM.csv"), row.names = FALSE)
+        write.csv(df_SubAreas_NDMI_GAM_predictions, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_Data_NDMI_Predictions_GAM.csv"), row.names = FALSE)
 
       #(D.3) Plot the raw NDMI datapoints and gam predictions for each SubArea:
 
@@ -1295,7 +1298,7 @@
             ylab("NDMI") +
             theme_tom()
 
-            ggsave(plot=p_SubArea_NDMI_grid, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", data_ID, "_Resolution", resolution, "_SubAreas_Plot_Snowmelt_NDMI_grid.pdf"), width=16, height = 14)
+            ggsave(plot=p_SubArea_NDMI_grid, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_Plot_Snowmelt_NDMI_grid.pdf"), width=16, height = 14)
            
 ########################################################################################################################################################################################
                 
@@ -1318,7 +1321,7 @@
          ylab("Normalized Difference Band Index") +
          theme_tom()
        
-         ggsave(plot=p_SubArea_BANDS_grid, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", data_ID, "_Resolution", resolution, "_SubAreas_Plot_AllBands_grid.pdf"), width=14, height = 12)
+         ggsave(plot=p_SubArea_BANDS_grid, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_Plot_AllBands_grid.pdf"), width=14, height = 12)
          
              
 ##################################################################################################################################       
