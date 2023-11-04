@@ -721,7 +721,7 @@
       ee_monitoring(task_vector1, task_time=60, max_attempts=1000000)
       
       #Import results
-      exported_stats <- ee_drive_to_local(task=task_vector1, dsn=paste0(here(), "/Output/S2/05_Shapefile_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Data_MeanBandValues_polygon"))
+      exported_stats <- ee_drive_to_local(task=task_vector1, dsn=paste0(here(), "/Output/S2/05_Shapefile_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Data_MeanBandValues"))
       df_BandValues <- read.csv(exported_stats)
       unlink(exported_stats)
       
@@ -740,7 +740,7 @@
       df_BandValues <- df_BandValues[,c("Date", "doy", "NDVI", "NDSI", "NDMI")]
       
       #Save dataframe with Mean BandValues
-      write.csv(df_BandValues, paste0(here(), "/Output/S2/05_Shapefile_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Data_MeanBandValues_polygon.csv"), row.names = FALSE)
+      write.csv(df_BandValues, paste0(here(), "/Output/S2/05_Shapefile_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Data_MeanBandValues.csv"), row.names = FALSE)
     
   #(25): Extract fraction of snowcover within aoi_Shapefile for each image in the image collection  
   
@@ -817,7 +817,7 @@
           ee_monitoring(task_vector2, task_time=60, max_attempts=1000000) #250s at 100m
           
           #Import results
-          exported_stats <- ee_drive_to_local(task=task_vector2, dsn=paste0(here(), "/Output/S2/05_Shapefile_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Data_SnowFraction_polygon"))
+          exported_stats <- ee_drive_to_local(task=task_vector2, dsn=paste0(here(), "/Output/S2/05_Shapefile_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Data_SnowFraction"))
           df_SnowCover_new <- read.csv(exported_stats)
           unlink(exported_stats)
           
@@ -844,12 +844,12 @@
           #  ggplot() + geom_point(data=df_SnowCover, aes(x=doy, y=SnowFraction, col=NDSI_threshold)) + theme_classic()  
           
           # #Save dataframe for current NDSI_threshold
-          #  write.csv(df_SnowCover_new, paste0(here(), "/Output/S2/05_Shapefile_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Data_SnowFraction_polygon.csv"), row.names = FALSE)
+          #  write.csv(df_SnowCover_new, paste0(here(), "/Output/S2/05_Shapefile_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Data_SnowFraction.csv"), row.names = FALSE)
         
           }
       
       #Save dataframe with snowfraction data for all NDSI thresholds
-      write.csv(df_SnowCover, paste0(here(), "/Output/S2/05_Shapefile_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Data_SnowFraction_polygon.csv"), row.names = FALSE)
+      write.csv(df_SnowCover, paste0(here(), "/Output/S2/05_Shapefile_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Data_SnowFraction.csv"), row.names = FALSE)
       
   #(26): Fit statistical models (GAMS) through the extracted snowcover data
     
@@ -905,8 +905,8 @@
           }
       
       #Save the SnowFraction data and GAM predictions per NDSI-threshold as a .csv file
-      #write.csv(df_SnowFraction_GAM, paste0(here(), "/Output/S2/05_Shapefile_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Data_SnowFraction_GAM_polygon.csv"), row.names = FALSE)
-      write.csv(df_SnowFraction_GAM_predictions, paste0(here(), "/Output/S2/05_Shapefile_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Data_SnowFraction_Predictions_GAM_polygon.csv"), row.names = FALSE)
+      #write.csv(df_SnowFraction_GAM, paste0(here(), "/Output/S2/05_Shapefile_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Data_SnowFraction_GAM.csv"), row.names = FALSE)
+      write.csv(df_SnowFraction_GAM_predictions, paste0(here(), "/Output/S2/05_Shapefile_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Data_SnowFraction_Predictions_GAM.csv"), row.names = FALSE)
       
       #Plot the raw SnowFraction datapoints and gam predictions for each NDSI-threshold:
       
@@ -959,13 +959,13 @@
         colnames(df_SnowFraction)[colnames(df_SnowFraction)=="y_threshold"] <- "Snowfraction_threshold"
         
         #Save dates of snowmelt per NDSI-threshold per SnowFraction-threshold as a .csv file
-        write.csv(df_SnowFraction, paste0(here(), "/Output/S2/05_Shapefile_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Snowmelt_Snowfraction_polygon.csv"), row.names = FALSE)
+        write.csv(df_SnowFraction, paste0(here(), "/Output/S2/05_Shapefile_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Snowmelt_Snowfraction.csv"), row.names = FALSE)
         
         #Add dates of snowmelt to the plot 'p_SnowFraction_grid'   
         p_SnowFraction_Snowmelt_grid <- p_SnowFraction_grid +
           geom_point(data=df_SnowFraction[!is.na(df_SnowFraction$doy),], aes(x=doy, y=Snowfraction_threshold), col="red", size=3)
         
-        ggsave(plot=p_SnowFraction_Snowmelt_grid, paste0(here(), "/Output/S2/05_Shapefile_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Plot_Snowmelt_Snowfraction_grid_polygon.pdf"), width=12, height = 10)
+        ggsave(plot=p_SnowFraction_Snowmelt_grid, paste0(here(), "/Output/S2/05_Shapefile_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Plot_Snowmelt_Snowfraction_grid.pdf"), width=12, height = 10)
         
 
 ##################################################################################################################################       
