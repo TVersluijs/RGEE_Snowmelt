@@ -1395,7 +1395,7 @@
       df_Locations_NDSI_predictions$LocationID <- as.factor(as.character(df_Locations_NDSI_predictions$LocationID))
 
      #Save dataframe with GAM fits for NDSI
-      write.csv(df_Locations_NDSI, paste0(here(), "/Output/MODIS/01_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Data_NDSI_GAM_polygon.csv"), row.names = FALSE)
+      #write.csv(df_Locations_NDSI, paste0(here(), "/Output/MODIS/01_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Data_NDSI_GAM_polygon.csv"), row.names = FALSE)
       write.csv(df_Locations_NDSI_predictions, paste0(here(), "/Output/MODIS/01_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Data_NDSI_Predictions_GAM_polygon.csv"), row.names = FALSE)
       
    #(D) Plot the raw NDSI datapoints and gam predictions for each Location:
@@ -1557,7 +1557,7 @@
        df_Locations_SnowFraction_GAM_predictions$LocationID <- as.factor(as.character(df_Locations_SnowFraction_GAM_predictions$LocationID))
 
       #Save dataframe with GAM fits for the SnowFraction data
-       write.csv(df_Locations_SnowFraction_GAM, paste0(here(), "/Output/MODIS/01_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Data_SnowFraction_GAM_polygon.csv"), row.names = FALSE)
+       #write.csv(df_Locations_SnowFraction_GAM, paste0(here(), "/Output/MODIS/01_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Data_SnowFraction_GAM_polygon.csv"), row.names = FALSE)
        write.csv(df_Locations_SnowFraction_GAM_predictions, paste0(here(), "/Output/MODIS/01_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Data_SnowFraction_Predictions_GAM_polygon.csv"), row.names = FALSE)
        
    #(D) Plot the raw SnowFraction datapoints and gam predictions for each Location:
@@ -1723,7 +1723,7 @@
     df_Locations_Pixel_SnowFraction_GAM_predictions$LocationID <- as.factor(as.character(df_Locations_Pixel_SnowFraction_GAM_predictions$LocationID))
 
     #Save dataframe with GAM fits for pixel level Snowfraction data
-    write.csv(df_Locations_Pixel_SnowFraction_GAM, paste0(here(), "/Output/MODIS/01_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Data_Pixel_SnowFraction_GAM_polygon.csv"), row.names = FALSE)
+    #write.csv(df_Locations_Pixel_SnowFraction_GAM, paste0(here(), "/Output/MODIS/01_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Data_Pixel_SnowFraction_GAM_polygon.csv"), row.names = FALSE)
     write.csv(df_Locations_Pixel_SnowFraction_GAM_predictions, paste0(here(), "/Output/MODIS/01_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Data_Pixel_SnowFraction_Predictions_GAM_polygon.csv"), row.names = FALSE)
     
    #(D) Plot the raw pixel-level SnowFraction datapoints and gam predictions for each Location:
