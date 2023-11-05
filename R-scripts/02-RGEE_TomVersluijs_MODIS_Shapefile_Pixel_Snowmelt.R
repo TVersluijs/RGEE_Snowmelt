@@ -767,7 +767,7 @@
                #ee_manage_assetlist(path_asset)
               
               #Save assetid2 for future downloading of FC_pixels_snowmelt_optimized
-               saveRDS(object=assetid2, file=paste0(here(), "/Output/MODIS/02_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Variable_AssetID.Rds"))
+               saveRDS(object=assetid2, file=paste0(here(), "/Output/MODIS/02_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Variable_AssetID.Rds"))
               
               #Get feature collection from asset folder and create FC_pixels_snowmelt_optimized
                #assetid2=paste0(path_asset, "/", timestamp, "_", data_ID, "_FC_pixels_snowmelt_optimized")
