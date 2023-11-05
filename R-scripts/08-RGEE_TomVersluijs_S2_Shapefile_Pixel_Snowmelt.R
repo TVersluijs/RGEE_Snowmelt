@@ -4,7 +4,7 @@
 #Snowmelt is calculated per pixel by fitting a GAM through the average NDSI data and extracting the moment this GAM crosses a user 
 #specified NDSI threshold. This script requires a single shapefile of the study area as input.
 
-#Copyright Tom Versluijs 2023-07-27. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
+#Copyright Tom Versluijs 2023-11-01. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
 
 #Before running this script make sure to install RGEE according to the instructions in script "00-RGEE_TomVersluijs_Installation.R". 
 #Note that a GoogleDrive is required.
@@ -90,7 +90,7 @@
    #(c) Dates
 
      #Specify the year of interest:
-     year_ID <- "2019"
+     year_ID <- "2022"
 
      #Date range of all images considered for analysis
      start_date <- paste0(year_ID, "-03-15") #choose date (well) before the first snowmelt occurs within the study site
@@ -105,7 +105,7 @@
 
      #Should clouds be masked from the analysis (default=TRUE).
      #Note that cloud masking will automatically be set to TRUE when mask_water="water_mask_Manual"
-     #Highly recommended to set to TRUE.
+     #Recommended to set to TRUE.
      mask_clouds=TRUE
      
      #Cloud probability threshold (ranging 0-100) for S2_CLOUD_PROBABILITY dataset
@@ -176,6 +176,12 @@
       #Create a unique data_ID
        data_ID <- paste0(area_name, substr(year_ID,(nchar(year_ID)+1)-2,nchar(year_ID)), "_S2")
         
+      #Create a timestamp variable
+       timestamp <- format(Sys.time(), "%Y%m%d%H%m%S")
+     
+      #Store NDSI_threshold as a character (used for naming of outputs)
+       NDSI_threshold_char <- gsub("\\.", "_", as.character(NDSI_threshold))  
+       
       #Create a unique Asset folder (delete this folder if already present) 
        path_asset <- paste0(ee_get_assethome(), "/", data_ID)
        #tryCatch(ee_manage_assetlist(path_asset), error=function(error_message) {message("path_asset does not yet exist")})
@@ -289,7 +295,7 @@
      
     #(8) Add NDSI, NDVI, NDMI and NDWI to the clipped image collection
       
-     #Map normalized difference functions over image collection
+     #Map Normalized Difference functions over image collection
       s2_col <- s2_col$
         map(getNDSI)$
         map(getNDVI)$
@@ -400,6 +406,7 @@
       #Add Date characteristics to each image
       s2_clouds_filtered <- s2_col$
         map(add_Date)
+      
     }
          
 ##################################################################################################################################
@@ -523,7 +530,7 @@
         a=Sys.time()
         task_vector1 <- ee_table_to_drive(
           collection = FC_merged,
-          description = paste0(data_ID, "_Pixel_NDSI_Shapefile"),
+          description = paste0(timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_NDSI_Shapefile"),
           fileFormat = "CSV",
           selectors = c('NDSI', 'Date', 'lat', 'lon')
           )
@@ -533,13 +540,13 @@
         #ee$data$getTaskList()
         #ee$data$cancelTask()
         
-        exported_stats <- ee_drive_to_local(task = task_vector1, dsn=paste0("Output/S2/08_Shapefile_Pixel_Snowmelt/", data_ID, "_Pixel_NDSI_Shapefile"))
+        exported_stats <- ee_drive_to_local(task = task_vector1, dsn=paste0(here(), "/Output/S2/08_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_NDSI_Shapefile"))
         df_pixel_ndsi <- read.csv(exported_stats)
         b=Sys.time()
         print(paste0("Computation finished in ",  round(as.numeric(difftime(b, a, units="mins")),2), " minutes"))
 
        # #Load dataframe (takes ca 2 minutes):
-       #  df_pixel_ndsi <- read.csv(paste0("Output/S2/08_Shapefile_Pixel_Snowmelt/", data_ID, "_Pixel_NDSI_Shapefile.csv"))
+       #  df_pixel_ndsi <- read.csv(paste0(here(), "/Output/S2/08_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_NDSI_Shapefile.csv"))
 
        #Add day of year
         df_pixel_ndsi$doy <- as.numeric(format(as.POSIXct(df_pixel_ndsi$Date, format = "%Y-%m-%d %H:%M:%S"), "%j"))
@@ -597,8 +604,8 @@
 
        #Load a function that iterates through all data subsets. Within each data subset it calculates day of snowmelt 
        #for every pixel, by fitting a GAM with sequential outlier removal and then linearly approximating at which day of 
-       #year the predicted NDSI value of this GAM changes from above outlier_threshold to below (direction="down"). The 
-       #code employs parallel processing using foreach and %dopar% on four local computer cores.
+       #year the predicted NDSI value of this GAM changes from above outlier_threshold to below. The code employs 
+       #parallel processing using foreach and %dopar% on four local computer cores.
         f_detect_threshold_date_parallel <- f_detect_threshold_date_parallel #sourced  
         
        #Run this function over all data subsets, combine the results and save the resulting dataframe
@@ -612,14 +619,14 @@
           df_pixel_snowmelt <- lapply(results, "[[", 1)
           df_pixel_snowmelt <- as.data.frame(do.call(rbind, do.call(c, df_pixel_snowmelt)))
           colnames(df_pixel_snowmelt)[colnames(df_pixel_snowmelt)=="x_threshold"] <- "doy_snowmelt"
-          write.csv(df_pixel_snowmelt, file=paste0("Output/S2/08_Shapefile_Pixel_Snowmelt/", data_ID, "_Pixel_Snowmelt_Shapefile.csv"), quote = FALSE, row.names=FALSE)
+          write.csv(df_pixel_snowmelt, file=paste0(here(), "/Output/S2/08_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_Snowmelt_Shapefile.csv"), quote = FALSE, row.names=FALSE)
           
           # #Store plots per pixel
           # plot_pixel_snowmelt <- lapply(results, "[[", 2)
           # plots_per_page = 25
           # plot_pixel_snowmelt <- lapply(plot_pixel_snowmelt, function(x){split(x, ceiling(seq_along(plot_pixel_snowmelt[[1]])/plots_per_page))})
           # plot_pixel_snowmelt <- unname(unlist(plot_pixel_snowmelt, recursive = F))
-          # pdf(paste0("Output/S2/Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Location_", Location_i, "_Plot_Pixel_NDSI_Snowmelt_Shapefile.pdf"), width=20, height=16, onefile = TRUE)
+          # pdf(paste0(here(), "/Output/S2/08_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Plot_Pixel_Snowmelt_Shapefile.pdf"), width=20, height=16, onefile = TRUE)
           # for (i in seq(length(plot_pixel_snowmelt))) { do.call("grid.arrange", plot_pixel_snowmelt[[i]]) }
           # dev.off()
           })
@@ -628,7 +635,7 @@
        #to c.a. 5 hours!
 
        # #Read dataframe
-       #  df_pixel_snowmelt <- read.csv(file=paste0("Output/S2/08_Shapefile_Pixel_Snowmelt/", data_ID, "_Pixel_Snowmelt_Shapefile.csv"), header=TRUE)
+       #  df_pixel_snowmelt <- read.csv(file=paste0(here(), "/Output/S2/08_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_Snowmelt_Shapefile.csv"), header=TRUE)
        #  df_pixel_snowmelt now contains the date of snowmelt for each pixel within the area depicted by aoi_Shapefile.  
         
        #Clean up the cluster after finishing the parallel runs
@@ -675,7 +682,7 @@
           #Change sf object to an earth engine feature collection by uploading it to the asset folder
            FC_tmp <- sf_as_ee(
              x = df_sf_tmp,
-             assetId = paste0(path_asset, "/", data_ID, "_df_pixel_snowmelt_", i),
+             assetId = paste0(path_asset, "/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_df_pixel_snowmelt_", i),
              overwrite = TRUE,
              monitoring = TRUE,
              via = 'getInfo_to_asset')
@@ -694,7 +701,7 @@
         # FC_pixels_snowmelt$first()$getInfo()
         # FC_pixels_snowmelt$size()$getInfo()
         
-        # #Inspect assets folder (for debugging)
+        #Inspect assets folder (for debugging)
         #  ee_manage_quota()
         #  ee_manage_assetlist(path_asset)
         
@@ -791,7 +798,7 @@
           #tryCatch(ee_manage_delete(paste0(path_asset, "/FC_pixels_snowmelt_optimized")), error=function(error_message) {message("path_asset does not yet exist")})
 
           #Upload to asset folder (This step takes 35 minutes):
-           assetid2 <- paste0(path_asset, "/", data_ID, "_FC_pixels_snowmelt_optimized")
+           assetid2 <- paste0(path_asset, "/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_FC_pixels_snowmelt_optimized")
              task_vector2 <- ee_table_to_asset(
                collection = FC_Combined,
                overwrite = TRUE,
@@ -804,8 +811,11 @@
            #ee_manage_quota()
            #ee_manage_assetlist(path_asset)
           
+          #Save assetid2 for future downloading of FC_pixels_snowmelt_optimized
+           saveRDS(object=assetid2, file=paste0(here(), "/Output/S2/08_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Variable_AssetID.Rds"))
+           
           #Get feature collection from asset folder and create FC_pixels_snowmelt_optimized
-           #assetid2=paste0("users/escape/", data_ID, "/", data_ID, "_FC_pixels_snowmelt_optimized")
+           #assetid2=paste0(path_asset, "/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_FC_pixels_snowmelt_optimized")
            FC_pixels_snowmelt_optimized <- ee$FeatureCollection(assetid2) 
            #FC_pixels_snowmelt_optimized$first()$getInfo()
            #FC_pixels_snowmelt_optimized$size()$getInfo()
@@ -832,19 +842,19 @@
             #Create task to export the original doy_snowmelt image to Google Drive  
              task_vector3 <- ee_image_to_drive(
               image=image_snowmelt,
-              description= paste0(data_ID, '_PixelSnowmeltDoy_Image_DoySnowmelt'),
+              description= paste0(timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, '_Pixel_Image_DoySnowmelt'),
               #scale= resolution,
               region=aoi,
               crs=crs,
               maxPixels=1e13,
-              dimensions=ee$Number(2048),
+              dimensions=ee$Number(4096),
               fileFormat='GeoTIFF'
               )
            
             #Start and monitor export task:
              task_vector3$start()
              ee_monitoring(task_vector3, task_time=30, max_attempts = 1000000)
-             ee_drive_to_local(task = task_vector3, dsn=paste0("Output/S2/08_Shapefile_Pixel_Snowmelt/", data_ID, "_PixelSnowmeltDoy_Image_DoySnowmelt"))
+             ee_drive_to_local(task = task_vector3, dsn=paste0(here(), "/Output/S2/08_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, '_Pixel_Image_DoySnowmelt'))
              
           #(E): Export RGB image to Google Drive (takes c.a. 2 minutes):
          
@@ -855,306 +865,26 @@
             #Create task to export RGB image to Google Drive:  
              task_vector4 <- ee_image_to_drive(
                image=image_snowmelt_RGB,
-               description= paste0(data_ID, '_PixelSnowmeltDoy_Image_RGB'),
+               description= paste0(timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, '_Pixel_Image_DoySnowmelt_RGB'),
                #scale= resolution,
                region=aoi,
                crs=crs,
                maxPixels=1e13,
-               dimensions=ee$Number(2048),
+               dimensions=ee$Number(4096),
                fileFormat='GeoTIFF'
                )
           
             #Start and monitor export task:
              task_vector4$start()
              ee_monitoring(task_vector4, task_time=30, max_attempts = 1000000)
-             ee_drive_to_local(task = task_vector4, dsn=paste0("Output/S2/08_Shapefile_Pixel_Snowmelt/", data_ID, "_PixelSnowmeltDoy_Image_RGB"))  
+             ee_drive_to_local(task = task_vector4, dsn=paste0(here(), "/Output/S2/08_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_Image_DoySnowmelt_RGB"))  
              
     #(24): Save workspace 
-     save.image(paste0("Output/S2/08_Shapefile_Pixel_Snowmelt/", data_ID, "_Backup_Workspace_PixelDateOfSnowmelt.RData"))
+     save.image(paste0(here(), "/Output/S2/08_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Backup_Workspace_PixelDoySnowmelt.RData"))
 
 
 ###########################################################################################################################################################################
 ###########################################################################################################################################################################
 ###########################################################################################################################################################################
 
-  # #OPTIONAL 1: Extract snowmelt data from image_snowmelt at points of interest
-  #        
-  #   #(0): Clear workspace
-  #    rm(list=ls())
-  #        
-  #   #(1): Load packages
-  #    #renv::restore() #revert to last version of R-packages used to successfully run this script (optional).
-  #    utils::install.packages("pacman")
-  #    library(pacman)
-  #    p_load(sf, rgee, ggplot2, mgcv, googledrive, dplyr)   
-  #        
-  #    #(2): Define ggplot2 plotting theme
-  #     theme_tom <- function(){
-  #       theme_classic() %+replace%
-  #         theme(axis.title = element_text(size=18),
-  #               axis.text = element_text(size=16),
-  #               legend.position = "none",
-  #               strip.background = element_rect(fill = "white", colour = "black", size = rel(2)),
-  #               complete = TRUE)}
-  #    
-  #   #(3): Initialize earth engine and google drive
-  #    rgee::ee_Initialize(user='tom.versluijs@gmail.com', drive=TRUE)
-  #        
-  #   #(4): Specify parameters used in the analysis
-  #    
-  #     #(a): Specify name of study area
-  #      area_name="ZAC"
-  #    
-  #     #(b): Specify the year of interest:
-  #       year_ID <- "2021" 
-  #    
-  #     #(c): Approximate central point of study area
-  #       coordinates_point <- c(-20.6, 74.45) 
-  #    
-  #     #(d): Coordinate reference system used for calculations
-  #      #EPSG:4326 is recommended for areas spanning multiple UTM zones.
-  #      #EPSG:326XX is results in reduced computation time for areas located within a single UTM zone.
-  #       crs <- "EPSG:32627"
-  #    
-  #     #(e): Date range for all images considered in analysis
-  #       start_date <- paste0(year_ID, "-03-15") #choose date (well) before the first snowmelt occurs within the study site
-  #       end_date <- paste0(year_ID, "-09-15") #choose date (well) after last date of tracking
-  #    
-  #     #(f): Buffer radius around each point of interest
-  #       Buffer_radius_m=250
-  #       
-  #     #(g): Resolution of sampling in meters
-  #       resolution=10 #default maximum resolution for Sentinel-2 = 10m
-  #    
-  #   #(5): Create a unique data_ID and Asset folder
-  #      data_ID <- paste0(area_name, substr(year_ID,(nchar(year_ID)+1)-2,nchar(year_ID)), "_S2")
-  #      path_asset <- paste0(ee_get_assethome(), "/", data_ID)     
-  #   
-  #   #(6): Calculate date range in day of year format
-  #      start_date_doy <- as.numeric(strftime(start_date, format = "%j"))
-  #      end_date_doy <- as.numeric(strftime(end_date, format = "%j"))
-  #      
-  #   #(7): Re-load generated snowmelt image ('image_snowmelt')
-  #     assetid2=paste0(path_asset, "/", data_ID, "_FC_pixels_snowmelt_optimized")
-  #     FC_pixels_snowmelt_optimized <- ee$FeatureCollection(assetid2)
-  #     
-  #     #Reduce feature collection FC_pixels_snowmelt_optimized to an Image with a 'resolution' resolution:    
-  #     image_snowmelt <- FC_pixels_snowmelt_optimized$
-  #       filter(ee$Filter$notNull(list('doy_snowmelt')))$ #pre-filter data for nulls that cannot be turned into an image
-  #       filter(ee$Filter$neq(name='doy_snowmelt', value=-9999))$ #pre-filter data for -9999 values
-  #       reduceToImage(properties=list('doy_snowmelt'), reducer=ee$Reducer$first()$setOutputs(list('doy_snowmelt')))$
-  #       reproject(crs=crs, crsTransform=NULL, scale=resolution)
-  # 
-  #   #(8): Reload Sentinel-2 native projection
-  #     s2_col <- ee$ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
-  #     point <- ee$Geometry$Point(coordinates_point[1], coordinates_point[2])
-  #     s2_col <- s2_col$filterBounds(point)$filterDate(start_date, end_date)
-  #     S2Projection <- s2_col$first()$select("B3")$projection()
-  #     #S2Projection$getInfo()
-  #     
-  #   #(8): Define a featurecollection of points corresponding to movement trajectories of chicks in Zackenberg in 2019
-  #     ZAC_Paths <- read.csv(paste0("Input/ZAC21_ChickMovement.csv"), header=T)[,c("ChickID", "BroodID", "LON_x", "LAT_y", "DateTime", "Hatch_Date")]
-  #     colnames(ZAC_Paths) <- c("ChickID", "BroodID", "LON_x", "LAT_y", "DateTime", "Hatch_Date")
-  #     ZAC_Paths$DateTime <- as.POSIXct(ZAC_Paths$DateTime, format="%d/%m/%Y %H:%M")
-  #        
-  #     #Add a unique LocationID to every unique lat/lon combination
-  #      Locations <- unique(ZAC_Paths[,c("LON_x", "LAT_y")])
-  #      Locations$LocationID <- paste0("Location_", 1:nrow(Locations))
-  #      ZAC_Paths <- left_join(ZAC_Paths, Locations, by=c("LON_x", "LAT_y"))
-  #      Locations  <-  st_as_sf(Locations, coords = c("LON_x", "LAT_y"), crs=crs)
-  #      Locations <- st_transform(Locations, crs=crs)
-  #      Locations <- sf_as_ee(Locations[,c("LocationID", "geometry")])
-  #        
-  #     #Add buffer around all point locations
-  #      Buffer_radius_m=Buffer_radius_m
-  #        
-  #      if(Buffer_radius_m>0){
-  #          bufferBy <- function(Buffer_radius_m) {
-  #            return(function(feature) {
-  #              return(feature$buffer(Buffer_radius_m))   
-  #              })
-  #            }
-  #          Locations <- Locations$map(bufferBy(Buffer_radius_m))
-  #          }
-  #        
-  #      #Locations is now a feature collection. A feature in our analysis comprises the feature type (point in case no buffer
-  #      #was added, or a circular polygon with radius Buffer_radius_m with a center the original point location), Location_ID  
-  #      #and the feature's geometry as lat and lon coordinates. A feature collection corresponds to a collection of such features 
-  #      #(i.e. a collection of different Locations, with their respective feature types, LocationIDs, DateTimes and coordinates).
-  #        
-  #     #Plot feature collection on a map (i.e. locations as points)
-  #      Map$setCenter(coordinates_point[1], coordinates_point[2], 10)
-  #      Map$addLayer(image_snowmelt,list(bands="doy_snowmelt", min=start_date_doy, max=end_date_doy, palette=c('green', 'yellow', 'red')), 'Snowmelt_doy')+
-  #      Map$addLayer(Locations, list(color="red"), paste0("MovementPositions_", year_ID))    
-  #        
-  #   #(9): Extract Sentinel-2 snowmelt_doy values for points of interest from image_snowmelt (output a feature collection)  
-  #        
-  #     #Extract snowmelt_doy values within the current image at each point in the Locations feature collection. We add this doy
-  #     #as a property to each feature (i.e. movement position). The resulting output is a feature collection for the current img
-  #     #where the snowmelt_doy values are added as a property for each movement position.
-  #      FC_image <- image_snowmelt$reduceRegions(collection = Locations, 
-  #                                               reducer = ee$Reducer$mean()$setOutputs(list('Snowmelt_doy')),
-  #                                               #scale = resolution, #implicitly set using crs below
-  #                                               crs=crs, #or S2Projection
-  #                                               crsTransform=NULL)
-  #        
-  #     #FC_image$getInfo()
-  #        
-  #     #reduceRegion does not return any values when the point is masked by clouds or does not fall within
-  #     #the boundaries of the image. Therefore we manually have to add an empty snowmelt_doy property to those features.
-  #     #We therefore set the snowmelt_doy value to a no data value of -9999 for all features where the snowmelt_doy value is NULL.
-  #      FC_image <- FC_image$map(function(feature){
-  #          snow <- ee$List(list(feature$get('Snowmelt_doy'), -9999))$reduce(ee$Reducer$firstNonNull())
-  #          return(feature$set("Snowmelt_doy", snow))
-  #          })
-  #        
-  #    #(10): Transform feature collection with Band values to a dataframe     
-  #        
-  #      #Extract the data for all features (locations) within all images of the image collection (summer year_ID)
-  #       snow_aoi <- unlist(FC_image$aggregate_array('Snowmelt_doy')$getInfo())
-  #       location_aoi <- unlist(FC_image$aggregate_array('LocationID')$getInfo())
-  #        
-  #      #Store all data in a dataframe
-  #       Locations_BandValues <- data.frame(Snowmelt_doy=round(as.numeric(snow_aoi), 5), 
-  #                                           LocationID=location_aoi)
-  #        
-  #      #Change -9999 to NA
-  #       Locations_BandValues$Snowmelt_doy[Locations_BandValues$Snowmelt_doy < -9000] <- NA
-  #      
-  #      #Sort dataframe by LocationID
-  #       index <- with(Locations_BandValues, order(LocationID))
-  #       Locations_BandValues <- Locations_BandValues[index,]
-  #        
-  #    #(11) Add Snowmelt_doy values per location to the corresponding date-location combination in ZAC_Paths
-  #        ZAC_Paths$Date_doy <- as.numeric(strftime(ZAC_Paths$DateTime , format = "%j"))
-  #        ZAC_Paths <- left_join(ZAC_Paths, Locations_BandValues, by=c("LocationID"))
-  #        write.csv(ZAC_Paths, paste0("Output/S2/08_Shapefile_Pixel_Snowmelt/", data_ID, "_ChickMovement_Snowmelt_doy_Buffer", Buffer_radius_m, ".csv"), row.names = FALSE)
-  #        
-  #       #Select only those individuals with more than 5 datapoints
-  #        ZAC_Paths <- ZAC_Paths[which(ZAC_Paths$ChickID %in% names(which(table(ZAC_Paths$ChickID)>5))), ]
-  #        
-  #        
-  #    #(12) Plot each individuals path through a landscape of Snowmelt doy values
-  #        p1 <- ggplot()+ 
-  #          geom_line(data=ZAC_Paths, aes(x=Date_doy, y=Snowmelt_doy ), col="#1620de", lwd=1.25)+
-  #          geom_abline()+
-  #          facet_wrap(~ChickID, ncol=ceiling(length(unique(ZAC_Paths$ChickID))^0.5))+
-  #          geom_smooth(data=ZAC_Paths, aes(x=Date_doy, y=Snowmelt_doy), method="lm", formula=y~x, col="red", size=1.25, se=T)+
-  #          geom_point(data=ZAC_Paths, aes(x=Date_doy, y=Snowmelt_doy ), col="black")+
-  #          xlab("Day of year") + 
-  #          ylab("Day of snowmelt") +
-  #          theme_tom()
-  #        
-  #          ggsave(plot=p1, paste0("Output/S2/08_Shapefile_Pixel_Snowmelt/", data_ID, "_MovementPaths_Snowmelt_doy_Grid_Buffer", Buffer_radius_m, ".pdf"), width=12, height = 10) 
-  #        
-  #     #(13): There do not seem to be any clear trajectories in individuals moving up to areas with a later snowmelt (except maybe 8218556)
-  #     #We therefore calculate the average encountered Snowmelt_doy values along each individual's foraging trajectory
-  #        ZAC_Chicks_MeanBandvalue <- ZAC_Paths %>% group_by(ChickID) %>% summarise(mean_Snowmelt_doy=mean(Snowmelt_doy), 
-  #                                                                                  mean_doy=mean(Date_doy))
-  #        
-  #        #Load estimated growth parameters per chick
-  #        ZAC_ChickGrowth <- read.csv(paste0("Input/ZAC21_ChickGrowth.csv"), header=T)
-  #        ZAC_ChickGrowth <- ZAC_ChickGrowth[ZAC_ChickGrowth$max_age>=5,]
-  #        
-  #        #Combine growth parameters with mean Band value during foraging
-  #        ZAC_Chicks_MeanBandvalue <- left_join(ZAC_Chicks_MeanBandvalue, ZAC_ChickGrowth, by="ChickID")
-  #        
-  #        #Combine growth parameters with mean Band value during foraging
-  #        p2 <- ggplot()+ 
-  #          geom_smooth(data=ZAC_Chicks_MeanBandvalue, aes(x=mean_Snowmelt_doy, y=d, size=max_age), method="lm", formula=y~x, col="red", size=1.25)+
-  #          geom_point(data=ZAC_Chicks_MeanBandvalue, aes(x=mean_Snowmelt_doy, y=d, size=max_age), col="black")+
-  #          xlab("Mean day of snowmelt across foraging locations") + 
-  #          ylab("Upper asymptote bodymass (gram)") +
-  #          theme_tom()
-  #        
-  #          ggsave(plot=p2, paste0("Output/S2/08_Shapefile_Pixel_Snowmelt/", data_ID, "_GrowthParameter_Mean_Snowmelt_doy_Buffer", Buffer_radius_m, ".pdf"), width=10, height = 8) 
-  #        
-  #        #Construct linear mixed models:
-  #        lmm0 <- lme(d ~ 1, random=~1|Brood, data=ZAC_Chicks_MeanBandvalue, method="ML")
-  #        lmm1 <- lme(d ~ mean_Snowmelt_doy, random=~1|Brood, data=ZAC_Chicks_MeanBandvalue, method="ML")
-  #        lmm2 <- lme(d ~ mean_Snowmelt_doy + I(mean_Snowmelt_doy^2), random=~1|Brood, data=ZAC_Chicks_MeanBandvalue, method="ML")
-  #        MuMIn::AICc(lmm0, lmm1, lmm2)
-  #        rm(lmm0, lmm1, lmm2)
-  #        
-  #        #Calculate mean visiting date vs mean date of snowmelt for all chicks (55 days!)
-  #        mean(ZAC_Chicks_MeanBandvalue$mean_doy - ZAC_Chicks_MeanBandvalue$mean_Snowmelt_doy)
-    
-#####################################################################################################################################          
-       
-# #OPTIONAL 2: Add movement trajectories to Snowmelt map:  
-#  
-#   #(0): Clear workspace
-#    rm(list=ls())
-#          
-#   #(1): Load packages
-#    #renv::restore() #revert to last version of R-packages used to successfully run this script (optional).
-#    utils::install.packages("pacman")
-#    library(pacman)
-#    p_load(rgee, stars, ggplot2, colorspace, ggnewscale, future)  
-#          
-#    #Define ggplot2 plotting theme
-#     theme_tom <- function(){
-#        theme_classic() %+replace%
-#              theme(axis.title = element_text(size=18),
-#                    axis.text = element_text(size=16),
-#                    legend.position = "none",
-#                    strip.background = element_rect(fill = "white", colour = "black", size = rel(2)),
-#                    complete = TRUE)}
-#          
-#   #(2): Initialize earth engine and google drive
-#     rgee::ee_Initialize(user='tom.versluijs@gmail.com', drive=TRUE)
-#   
-#   #(3): Specify name of study area
-#     area_name="ZAC"         
-#     
-#   #(4) Specify the year of interest
-#      year_ID <- "2021"     
-#    
-#   #(5): Load the .tif file for the snowmelt image. This .tif file has to be downloaded manually from my google drive
-#   #and placed in the local working directory (/Input) of this script.
-#    data_ID <- paste0(area_name, substr(year_ID,(nchar(year_ID)+1)-2,nchar(year_ID)), "_S2")
-#    tif=paste0("Input/", data_ID, "_PixelSnowmeltDoy_Image_RGB.tif")
-#    x=read_stars(tif)
-#    x_RGB <- st_rgb(x,3)
-#          
-#   #(6): Plot snowmelt map 
-#    p3 <- ggplot() + 
-#            geom_stars(data=x_RGB)+
-#            scale_fill_identity()+
-#            labs(x = 'Longitude', y = 'Latitude') + 
-#            theme_tom() +
-#            geom_rect(aes(xmin=508920, xmax=519800, ymin=8261350,ymax=8272600), alpha=0.5, fill="black")
-#       
-#   #(7): Plot trajectories of chicks with Age>=5 (same as used in chick growth analysis): 
-#     df <- read.csv(paste0("Input/ZAC21_ChickMovement.csv"), header=TRUE)
-#     df <- df[order(df$DateTime),] 
-#     #ChickID=c("8218553", "8218556", "8218557","8218558","8218560","8218571","8218572","8218580","8218581", "8218582") #for 2019
-#     ChickID=names(which(table(df$ChickID) > 13)) 
-#     ChickID_all <- data.frame(ChickID=unique(df$ChickID))
-#     ChickID_all$index <- 1:nrow(ChickID_all)
-#     ChickID_path <- data.frame(ChickID=ChickID, col_start=NA, col_end=NA)
-#     n <- nrow(ChickID_path)
-#     ChickID_path$col_end <- c("seagreen3","green","yellow","blue","orchid","orange", "turquoise1", "bisque", "red","lightskyblue")[1:length(ChickID)] 
-#     ChickID_path$col_start <- lighten(ChickID_path$col_end, amount=0.4)
-#     ChickID_all <- merge(ChickID_all, ChickID_path, by="ChickID", all.x=T)
-#     ChickID_all$col_start[is.na(ChickID_all$col_start)] <- "#808080"
-#     ChickID_all$col_end[is.na(ChickID_all$col_end)] <- "#808080"
-#     ChickID_all <- ChickID_all[order(ChickID_all$index),c(1,3,4)]
-#          
-#     #Plot movement data on top of snowmelt map
-#      for(i in 1:length(ChickID)){
-#        p3 <- p3+
-#          geom_point(data=df[df$ChickID==ChickID[i],], aes(x=LON_x, y=LAT_y, col=Age), size = 2)+
-#          geom_path(data=df[df$ChickID==ChickID[i],], aes(x=LON_x, y=LAT_y, color=Age), size=1.25)+
-#          scale_color_gradient(low=ChickID_all$col_start[ChickID_all$ChickID==ChickID[i]], 
-#                               high=ChickID_all$col_end[ChickID_all$ChickID==ChickID[i]], 
-#                               breaks = seq(0, max(na.omit(df$Age)), by = 1))+
-#          new_scale_color()
-#      }
-#     
-#      ggsave(plot=p3, paste0("Output/S2/08_Shapefile_Pixel_Snowmelt/", data_ID, "_Chick_Movement_Snowmelt.pdf"), width=13 , height=12 , units="in")
-          
-         
-##############################################################################################################################################################         
-             
           
