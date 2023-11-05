@@ -96,7 +96,7 @@
     if(dir.exists(paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt"))==FALSE){dir.create(paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt"), recursive = TRUE)}
      
     #Create a timestamp variable
-    timestamp <- format(Sys.time(), "%Y%m%d%H%m%S")
+    timestamp <- format(Sys.time(), "%Y%m%d%H%M%S")
      
    #(5): Read study area shapefile and convert to a feature collection.
       root_fldr <- here()

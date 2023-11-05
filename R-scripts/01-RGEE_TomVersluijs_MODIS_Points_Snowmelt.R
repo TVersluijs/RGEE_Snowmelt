@@ -180,7 +180,7 @@
     data_ID <- paste0(data_ID, "_", MODIS_cloud_masking_algorithm)
     
    #Create a timestamp variable
-    timestamp <- format(Sys.time(), "%Y%m%d%H%m%S")
+    timestamp <- format(Sys.time(), "%Y%m%d%H%M%S")
     
    #First and last day of year in dataset  
     start_date_doy <- as.numeric(strftime(start_date, format = "%j"))

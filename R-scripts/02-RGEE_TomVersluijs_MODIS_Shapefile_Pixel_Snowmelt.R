@@ -78,7 +78,7 @@
    #(c) Dates
 
      #Specify the year of interest:
-     year_ID <- "2022"
+     year_ID <- "2019"
      
      #Date range for all images considered in analysis
      start_date <- paste0(year_ID, "-03-15") #choose date (well) before the first snowmelt occurs within the study site
@@ -134,7 +134,7 @@
          data_ID <- paste0(data_ID, "_", MODIS_cloud_masking_algorithm)
           
         #Create a timestamp variable
-         timestamp <- format(Sys.time(), "%Y%m%d%H%m%S")
+         timestamp <- format(Sys.time(), "%Y%m%d%H%M%S")
          
         #Store NDSI_threshold as a character (used for naming of outputs)
          NDSI_threshold_char <- gsub("\\.", "_", as.character(NDSI_threshold))  

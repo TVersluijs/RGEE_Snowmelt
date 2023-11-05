@@ -217,7 +217,7 @@
     data_ID <- paste0(area_name, substr(year_ID,(nchar(year_ID)+1)-2,nchar(year_ID)), "_S2")           
     
     #Create a timestamp variable
-    timestamp <- format(Sys.time(), "%Y%m%d%H%m%S")
+    timestamp <- format(Sys.time(), "%Y%m%d%H%M%S")
     
     #Set mask_clouds to TRUE if a composite image needs to be generated         
     if(create_composite==TRUE){mask_clouds=TRUE}      
