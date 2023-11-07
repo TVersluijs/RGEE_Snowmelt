@@ -78,7 +78,7 @@
    #(c) Dates
 
      #Specify the year of interest:
-     year_ID <- "2019"
+     year_ID <- "2022"
      
      #Date range for all images considered in analysis
      start_date <- paste0(year_ID, "-03-15") #choose date (well) before the first snowmelt occurs within the study site
