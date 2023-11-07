@@ -5,7 +5,7 @@
 #specified NDSI threshold. This script requires that the shapefile of the study area is split-up into several smaller shapefiles to 
 #prevent memory issues on the GEE-server.	
 
-#Copyright Tom Versluijs 2023-07-31. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
+#Copyright Tom Versluijs 2023-11-01. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
 
 #Before running this script make sure to install RGEE according to the instructions in script "00-RGEE_TomVersluijs_Installation.R". 
 #Note that a GoogleDrive is required.
@@ -108,6 +108,8 @@
    #(e): Cloud masking
 
      #Should clouds be masked from the analysis (default=TRUE).
+     #Note that cloud masking will automatically be set to TRUE when mask_water="water_mask_Manual"
+     #Recommended to set to TRUE.
      mask_clouds=TRUE
 
      #Cloud probability threshold (ranging 0-100) for S2_CLOUD_PROBABILITY dataset
@@ -132,7 +134,7 @@
 
      #Should permanent waterbodies be masked from the analysis (default=TRUE).
      mask_water=TRUE
-     mask_water_type="water_mask_Manual" #either "water_mask_ESA", "water_mask_Manual", or "both"
+     mask_water_type="both" #either "water_mask_ESA", "water_mask_Manual", or "both"
      #"water_mask_ESA" uses the world wide ESA dataset with a 10m resolution which works well with large areas (default)
      #"water_mask_Manual" uses a manual approach based on NDWI, NDSI and NIR bands and generally works well for small details.
      #"both" employs both methods and sets pixels to water if one or both of these methods indicates so.
@@ -178,6 +180,12 @@
        #Create a unique data_ID
        data_ID <- paste0(area_name, substr(year_ID,(nchar(year_ID)+1)-2,nchar(year_ID)), "_S2")
        
+       #Create a timestamp variable
+       timestamp <- format(Sys.time(), "%Y%m%d%H%M%S")
+       
+       #Store NDSI_threshold as a character (used for naming of outputs)
+       NDSI_threshold_char <- gsub("\\.", "_", as.character(NDSI_threshold))  
+     
        #Create a unique Asset folder (delete this folder if already present) 
        path_asset <- paste0(ee_get_assethome(), "/", data_ID)
        #tryCatch(ee_manage_assetlist(path_asset), error=function(error_message) {message("path_asset does not yet exist")})
@@ -199,12 +207,14 @@
 ##################################################################################################################################
    
 	 #(6) Read study area shapefile and convert to a feature collection.
-         root_fldr <- here()
-         aoi_Shapefile <- st_read(paste0(root_fldr, "/Input/Shapefiles/", shapefile), quiet=T)
-         aoi_Shapefile <- st_transform(aoi_Shapefile, crs="EPSG:4326")
-         aoi_Shapefile <- sf_as_ee(aoi_Shapefile)
-         aoi_Shapefile <- ee$FeatureCollection(aoi_Shapefile)
-        #This feature collection will be used to clip the satellite imagery to the study area
+       
+       #Read aoi_Shapefile shapefile in root folder
+       root_fldr <- here()
+       aoi_Shapefile <- st_read(paste0(root_fldr, "/Input/Shapefiles/", shapefile), quiet=T)
+       aoi_Shapefile <- st_transform(aoi_Shapefile, crs="EPSG:4326")
+       aoi_Shapefile <- sf_as_ee(aoi_Shapefile)
+       aoi_Shapefile <- ee$FeatureCollection(aoi_Shapefile)
+       #This feature collection will be used to clip the satellite imagery to the study area
 		
 		#Calculate bounding box for aoi_Shapefile
         aoi <- aoi_Shapefile$geometry()$bounds()
@@ -337,7 +347,7 @@
         ##Check if CloudFraction property has been added to each image
         #s2_col$first()$propertyNames()$getInfo()
         #
-        ##Visual check of cloud mask
+        # #Visual check of cloud mask (for debugging)
         #image <- s2_col$filterDate(paste0(year_ID, "-05-31"), end_date)$first()$
         #  clipToCollection(aoi_Shapefile)$
         #  select("clouds_unadjusted", "clouds", "clouds_inv", "clouds_prob", "B4", "B3", "B2")      
@@ -352,7 +362,7 @@
         #However, Sentinel-2 satellite data is recorded as different tiles, these tiles are generally much bigger than a single study site.
         #Each Sentinel-2 tile also contains a native measure of cloud cover. This is the property 'CLOUDY_PIXEL_PERCENTAGE'. This property
         #thus refers to the percentage of cloud cover within the whole tile. We have now calculated a more appropriate measure for our
-        #shapefile area, only called 'CloudFraction'. Below we compare both measures, as we expect they should be correlated. Differences
+        #shapefile area only, called 'CloudFraction'. Below we compare both measures, as we expect they should be correlated. Differences
         #between both measures can for example arise when the study area was covered by clouds while most of the larger region (tile)
         #was not or vice versa.
         
@@ -389,7 +399,7 @@
            #Apply cloudmask for individual pixels
            map(Add_CloudMask)
          
-        ##Create timelapse video of the cloud filtered/masked RGB images
+        # #Create timelapse video of the cloud filtered/masked RGB images (for debugging)
         # videoArgs <- list(dimensions=200, region=aoi,framesPerSecond=5, crs='EPSG:3857', bands=c("B4", "B3", "B2"), min=100, max=10000, gamma=c(1.9, 1.7, 1.7))
         # tryCatch({browseURL(s2_clouds_filtered$getVideoThumbURL(videoArgs)) }, error = function(cond){return("Too many pixels. Reduce dimensions.")})
         }
@@ -527,7 +537,7 @@
             a=Sys.time()
             task_vector1 <- ee_table_to_drive(
               collection = FC_merged,
-              description = paste0(data_ID, "_Pixel_NDSI_Shapefile"),
+              description = paste0(timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_NDSI_Shapefile"),
               fileFormat = "CSV",
               selectors = c('NDSI', 'Date', 'lat', 'lon')
               )
@@ -537,13 +547,13 @@
             #ee$data$getTaskList()
             #ee$data$cancelTask()
             
-            exported_stats <- ee_drive_to_local(task = task_vector1, dsn=paste0("Output/S2/09_Shapefile_SubAreas_Pixel_Snowmelt/", data_ID, "_Pixel_NDSI_Shapefile"))
+            exported_stats <- ee_drive_to_local(task = task_vector1, dsn=paste0(here(), "/Output/S2/09_Shapefile_SubAreas_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_NDSI_Shapefile"))
             df_pixel_ndsi <- read.csv(exported_stats)
             b=Sys.time()
             print(paste0("Computation finished in ",  round(as.numeric(difftime(b, a, units="mins")),2), " minutes"))
 
            # #Load dataframe (takes ca 2 minutes):
-           #  df_pixel_ndsi <- read.csv(paste0("Output/S2/09_Shapefile_SubAreas_Pixel_Snowmelt/", data_ID, "_Pixel_NDSI_Shapefile.csv"))
+           #  df_pixel_ndsi <- read.csv(paste0(here(), "/Output/S2/09_Shapefile_SubAreas_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_NDSI_Shapefile.csv"))
 
            #Add day of year
             df_pixel_ndsi$doy <- as.numeric(format(as.POSIXct(df_pixel_ndsi$Date, format = "%Y-%m-%d %H:%M:%S"), "%j"))
@@ -616,14 +626,14 @@
               df_pixel_snowmelt <- lapply(results, "[[", 1)
               df_pixel_snowmelt <- as.data.frame(do.call(rbind, do.call(c, df_pixel_snowmelt)))
               colnames(df_pixel_snowmelt)[colnames(df_pixel_snowmelt)=="x_threshold"] <- "doy_snowmelt"
-              write.csv(df_pixel_snowmelt, file=paste0("Output/S2/09_Shapefile_SubAreas_Pixel_Snowmelt/", data_ID, "_Pixel_Snowmelt_Shapefile.csv"), quote = FALSE, row.names=FALSE)
+              write.csv(df_pixel_snowmelt, file=paste0(here(), "/Output/S2/09_Shapefile_SubAreas_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_Snowmelt_Shapefile.csv"), quote = FALSE, row.names=FALSE)
               
               # #Store plots per pixel
               # plot_pixel_snowmelt <- lapply(results, "[[", 2)
               # plots_per_page = 25
               # plot_pixel_snowmelt <- lapply(plot_pixel_snowmelt, function(x){split(x, ceiling(seq_along(plot_pixel_snowmelt[[1]])/plots_per_page))})
               # plot_pixel_snowmelt <- unname(unlist(plot_pixel_snowmelt, recursive = F))
-              # pdf(paste0("Output/S2/Points_Snowmelt/", data_ID, "_Buffer", Buffer_radius_m, "_Resolution", resolution, "_Location_", Location_i, "_Plot_Pixel_NDSI_Snowmelt_Shapefile.pdf"), width=20, height=16, onefile = TRUE)
+              # pdf(paste0(here(), "/Output/S2/09_Shapefile_SubAreas_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Plot_Pixel_Snowmelt_Shapefile.pdf"), width=20, height=16, onefile = TRUE)
               # for (i in seq(length(plot_pixel_snowmelt))) { do.call("grid.arrange", plot_pixel_snowmelt[[i]]) }
               # dev.off()
               })
@@ -631,7 +641,7 @@
            #this took 40449 seconds (11 hours). Parallel processing thus decreased computation time dramatically
 
            # #Read dataframe
-           #  df_pixel_snowmelt <- read.csv(file=paste0("Output/S2/09_Shapefile_SubAreas_Pixel_Snowmelt/", data_ID, "_Pixel_Snowmelt_Shapefile.csv"), header=TRUE)
+           #  df_pixel_snowmelt <- read.csv(file=paste0(here(), "/Output/S2/09_Shapefile_SubAreas_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_Snowmelt_Shapefile.csv"), header=TRUE)
            #  df_pixel_snowmelt now contains the date of snowmelt for each pixel within the area depicted by aoi_Shapefile.
             
            #Clean up the cluster after finishing the parallel runs
@@ -678,7 +688,7 @@
               #Change sf object to an earth engine feature collection by uploading it to the asset folder
                FC_tmp <- sf_as_ee(
                  x = df_sf_tmp,
-                 assetId = paste0(path_asset, "/", data_ID, "_df_pixel_snowmelt_", i),
+                 assetId = paste0(path_asset, "/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_df_pixel_snowmelt_", i),
                  overwrite = TRUE,
                  monitoring = TRUE,
                  via = 'getInfo_to_asset')
@@ -933,7 +943,7 @@
                #tryCatch(ee_manage_delete(paste0(path_asset, "/FC_pixels_snowmelt_optimized")), error=function(error_message) {message("path_asset does not yet exist")})
                
               #Upload to asset folder (This step takes 35 minutes):
-               assetid2 <- paste0(path_asset, "/", data_ID, "_FC_pixels_snowmelt_optimized")
+               assetid2 <- paste0(path_asset, "/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_FC_pixels_snowmelt_optimized")
                  task_vector2 <- ee_table_to_asset(
                    collection = FC_Combined,
                    overwrite = TRUE,
@@ -946,15 +956,18 @@
                #ee_manage_quota()
                #ee_manage_assetlist(path_asset)
               
+              #Save assetid2 for future downloading of FC_pixels_snowmelt_optimized
+               saveRDS(object=assetid2, file=paste0(here(), "/Output/S2/09_Shapefile_SubAreas_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Variable_AssetID.Rds"))     
+                 
               #Get feature collection from asset folder and create FC_pixels_snowmelt_optimized
-               #assetid2=paste0("users/escape/", data_ID, "/", data_ID, "_FC_pixels_snowmelt_optimized")
+               #assetid2=paste0(path_asset, "/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_FC_pixels_snowmelt_optimized")
                FC_pixels_snowmelt_optimized <- ee$FeatureCollection(assetid2) 
                #FC_pixels_snowmelt_optimized$first()$getInfo()
                #FC_pixels_snowmelt_optimized$size()$getInfo()
            
         #(23): Transform the Feature collection FC_pixels_snowmelt_optimized to an image (with doy_snowmelt as an image band)
                
-              #(A): Reduce feature collection FC_pixels_snowmelt_optimized to an Image with a 10m resolution:    
+              #(A): Reduce feature collection FC_pixels_snowmelt_optimized to an Image with a 'resolution' resolution:    
                image_snowmelt <- FC_pixels_snowmelt_optimized$
                  filter(ee$Filter$notNull(list('doy_snowmelt')))$ #pre-filter data for nulls that cannot be turned into an image
                  filter(ee$Filter$neq(name='doy_snowmelt', value=-9999))$ #pre-filter data for -9999 values
@@ -966,7 +979,7 @@
                
               #(C): Plot snowmelt day of year as a coloured image
                Map$setCenter(coordinates_point$getInfo()$coordinates[1], coordinates_point$getInfo()$coordinates[2], 10)
-               Map$addLayer(s2_col$filterDate(paste0(year_ID, "-07-30"), end_date)$first(),list(bands=c("B4", "B3", "B2"), min=100, max=8000, gamma=c(1.9, 1.7, 1.7)), 'TRUE COLOR')+ 
+               Map$addLayer(s2_col$filterDate(paste0(year_ID, "-06-30"), end_date)$first(),list(bands=c("B4", "B3", "B2"), min=100, max=8000, gamma=c(1.9, 1.7, 1.7)), 'TRUE COLOR')+ 
                Map$addLayer(image_snowmelt,list(bands="doy_snowmelt", min=start_date_doy, max=end_date_doy, palette=c('green', 'yellow', 'red')), 'Snowmelt_doy')
          
               #(D): Export original image to Google Drive (takes c.a. 2 minutes):
@@ -974,7 +987,7 @@
                 #Create task to export the original doy_snowmelt image to Google Drive  
                  task_vector3 <- ee_image_to_drive(
                   image=image_snowmelt,
-                  description= paste0(data_ID, '_PixelSnowmeltDoy_Image_DoySnowmelt'),
+                  description= paste0(timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, '_Pixel_Image_DoySnowmelt'),
                   #scale= resolution,
                   region=aoi,
                   crs=crs,
@@ -986,7 +999,7 @@
                 #Start and monitor export task:
                  task_vector3$start()
                  ee_monitoring(task_vector3, task_time=30, max_attempts = 1000000)
-                 ee_drive_to_local(task = task_vector3, dsn=paste0("Output/S2/09_Shapefile_SubAreas_Pixel_Snowmelt/", data_ID, "_PixelSnowmeltDoy_Image_DoySnowmelt"))
+                 ee_drive_to_local(task = task_vector3, dsn=paste0(here(), "/Output/S2/09_Shapefile_SubAreas_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_Image_DoySnowmelt"))
                  
               #(E): Export RGB image to Google Drive (takes c.a. 2 minutes):
              
@@ -997,7 +1010,7 @@
                 #Create task to export RGB image to Google Drive:  
                  task_vector4 <- ee_image_to_drive(
                    image=image_snowmelt_RGB,
-                   description= paste0(data_ID, '_PixelSnowmeltDoy_Image_RGB'),
+                   description= paste0(timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, '_Pixel_Image_DoySnowmelt_RGB'),
                    #scale= resolution,
                    region=aoi,
                    crs=crs,
@@ -1009,10 +1022,10 @@
                 #Start and monitor export task:
                  task_vector4$start()
                  ee_monitoring(task_vector4, task_time=30, max_attempts = 1000000)
-                 ee_drive_to_local(task = task_vector4, dsn=paste0("Output/S2/09_Shapefile_SubAreas_Pixel_Snowmelt/", data_ID, "_PixelSnowmeltDoy_Image_RGB"))  
+                 ee_drive_to_local(task = task_vector4, dsn=paste0(here(), "/Output/S2/09_Shapefile_SubAreas_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_Image_DoySnowmelt_RGB"))  
                  
         #(24): Save workspace 
-         save.image(paste0("Output/S2/09_Shapefile_SubAreas_Pixel_Snowmelt/", data_ID, "_Backup_Workspace_PixelDateOfSnowmelt.RData"))
+         save.image(paste0(here(), "/Output/S2/09_Shapefile_SubAreas_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Backup_Workspace_PixelDoySnowmelt.RData"))
          
     #The snowmelt image is now completed and can be downloaded as .tif file from the RGEE_backup folder on my Google Drive.
     #The optional code below uses the generated snowmelt image to extract the snowmelt day of year at specific points of interest.
@@ -1021,173 +1034,3 @@
 ###########################################################################################################################################################################
 ###########################################################################################################################################################################
 ###########################################################################################################################################################################
-
-  # #OPTIONAL 1: Extract snowmelt data from image_snowmelt at points of interest
-  #        
-  #   #(0): Clear workspace
-  #    rm(list=ls())
-  #        
-  #   #(1): Load packages
-  #    #renv::restore() #revert to last version of R-packages used to successfully run this script (optional).
-  #    utils::install.packages("pacman")
-  #    library(pacman)
-  #    p_load(sf, rgee, ggplot2, mgcv, googledrive, dplyr)       
-  #        
-  #    #(2): Define ggplot2 plotting theme
-  #     theme_tom <- function(){
-  #       theme_classic() %+replace%
-  #         theme(axis.title = element_text(size=18),
-  #               axis.text = element_text(size=16),
-  #               legend.position = "none",
-  #               strip.background = element_rect(fill = "white", colour = "black", size = rel(2)),
-  #               complete = TRUE)}
-  #    
-  #   #(3): Initialize earth engine and google drive
-  #    ee_Initialize(user='tom.versluijs@gmail.com', drive=TRUE)
-  #    #ee_check() 
-  #    
-  #    
-  #   #(4): Specify parameters used in the analysis
-  #    
-  #     #(a): Specify name of study area
-  #      area_name="TAY"
-  #    
-  #     #(b): Specify the year of interest
-  #      year_ID <- "2019" 
-  #    
-  #     #(c): Approximate central point of study area
-  #      coordinates_point <- c(98.532, 76.081)
-  #    
-  #     #(d): Coordinate reference system used for calculations
-  #     #EPSG:4326 is recommended for areas spanning multiple UTM zones, but increased computation time (i.e. spherical coordinate system).
-  #     #EPSG:326XX is results in reduced computation time for areas located within a single UTM zone (i.e. planar coordinate system).
-  #      crs <- "EPSG:32647"
-  #    
-  #     #(e): Date range for all images considered in analysis
-  #      start_date <- paste0(year_ID, "-03-15") #choose date (well) before the first snowmelt occurs within the study site
-  #      end_date <- paste0(year_ID, "-08-15") #choose date (well) after last date of tracking
-  #    
-  #     #(f): Buffer radius around each point of interest
-  #      Buffer_radius_m=0
-  # 
-  #     #(g): resolution of sampling
-  #      resolution=10 #default maximum resolution for Sentinel-2 = 10m
-  #      
-  #   #(5): Create a unique data_ID and Asset folder
-  #     data_ID <- paste0(area_name, substr(year_ID,(nchar(year_ID)+1)-2,nchar(year_ID)), "_S2")
-  #     path_asset <- paste0(ee_get_assethome(), "/", data_ID)     
-  #    
-  #   #(6): Calculate date range in day of year format
-  #     start_date_doy <- as.numeric(strftime(start_date, format = "%j"))
-  #     end_date_doy <- as.numeric(strftime(end_date, format = "%j"))
-  #      
-  #   #(7): Re-load generated snowmelt image ('image_snowmelt')
-  #     assetid2=paste0(path_asset, "/", data_ID, "_FC_pixels_snowmelt_optimized")
-  #     FC_pixels_snowmelt_optimized <- ee$FeatureCollection(assetid2) 
-  #     
-  #     #Reduce feature collection FC_pixels_snowmelt_optimized to an Image with a 10m resolution:    
-  #     image_snowmelt <- FC_pixels_snowmelt_optimized$
-  #       filter(ee$Filter$notNull(list('doy_snowmelt')))$ #pre-filter data for nulls that cannot be turned into an image
-  #       filter(ee$Filter$neq(name='doy_snowmelt', value=-9999))$ #pre-filter data for -9999 values
-  #       reduceToImage(properties=list('doy_snowmelt'), reducer=ee$Reducer$first()$setOutputs(list('doy_snowmelt')))$
-  #       reproject(crs=crs, crsTransform=NULL, scale=resolution)
-  #   
-  #   #(8): Reload Sentinal-2 native projection
-  #     s2_col <- ee$ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
-  #     point <- ee$Geometry$Point(coordinates_point[1], coordinates_point[2])
-  #     s2_col <- s2_col$filterBounds(point)$filterDate(start_date, end_date)
-  #     S2Projection <- s2_col$first()$select("B3")$projection()
-  #     #S2Projection$getInfo()
-  #     
-  #     
-  #   #(8): Define a featurecollection of points of interest (e.g. chick locations, arthropod traps)
-  #     TAY_Locations <- read.csv(paste0("Input/TAY19_Traps.csv"), header=T)
-  #     TAY_Locations$SnowMelt_Date <-as.Date(TAY_Locations$SnowMelt_2019 , "%d/%m/%Y")
-  #        
-  #     #Add a unique LocationID to every unique lat/lon combination
-  #      Locations <- unique(TAY_Locations[,c("LON_x", "LAT_y")])
-  #      Locations$LocationID <- paste0("Location_", 1:nrow(Locations))
-  #      TAY_Locations <- left_join(TAY_Locations, Locations, by=c("LON_x", "LAT_y"))
-  #      Locations  <-  st_as_sf(Locations, coords = c("LON_x", "LAT_y"), crs = crs)
-  #      Locations <- st_transform(Locations, crs=crs)
-  #      Locations <- sf_as_ee(Locations[,c("LocationID", "geometry")])
-  #        
-  #     #Add buffer around all point locations
-  #      Buffer_radius_m=Buffer_radius_m
-  #        
-  #      if(Buffer_radius_m>0){
-  #          bufferBy <- function(Buffer_radius_m) {
-  #            return(function(feature) {
-  #              return(feature$buffer(Buffer_radius_m))   
-  #              })
-  #            }
-  #          Locations <- Locations$map(bufferBy(Buffer_radius_m))
-  #          }
-  #        
-  #      #Locations is now a feature collection. A feature in our analysis comprises the feature type (point in case no buffer
-  #      #was added, or a circular polygon with radius Buffer_radius_m with a center the original point location), Location_ID  
-  #      #and the feature's geometry as lat and lon coordinates. A feature collection corresponds to a collection of such features 
-  #      #(i.e. a collection of different Locations, with their respective feature types, LocationIDs, DateTimes and coordinates).
-  #        
-  #     #Plot feature collection on a map (i.e. locations as points)
-  #      Map$setCenter(coordinates_point[1], coordinates_point[2], 10)
-  #      Map$addLayer(image_snowmelt,list(bands="doy_snowmelt", min=start_date_doy, max=end_date_doy, palette=c('green', 'yellow', 'red')), 'Snowmelt_doy')+
-  #      Map$addLayer(Locations, list(color="red"), paste0("Locations_", year_ID))    
-  #        
-  #   #(9): Extract Sentinel-2 band values for points of interest from image_snowmelt (output a feature collection)  
-  #        
-  #     #Extract Band values within the current image at each point in the Locations feature collection. We add this band
-  #     #value as a property to each feature (i.e. movement position). The resulting output is a feature collection for the current img
-  #     #where the band values are added as a property for each movement position.
-  #      FC_image <- image_snowmelt$reduceRegions(collection = Locations, 
-  #                                               reducer = ee$Reducer$mean()$setOutputs(list('Snowmelt_doy')),
-  #                                               #scale = resolution, #implicitly set using crs below
-  #                                               crs=S2Projection,
-  #                                               crsTransform=NULL)
-  #        
-  #     #FC_image$getInfo()
-  #        
-  #     #reduceRegion does not return any band-values when the point is masked by clouds or does not fall within
-  #     #the boundaries of the image. Therefore we manually have to add an empty NDSI (or NDVI, NDMI) property to those features.
-  #     #We therefore set the band value to a no data value of -9999 for all features where the band value is NULL.
-  #      FC_image <- FC_image$map(function(feature){
-  #          snow <- ee$List(list(feature$get('Snowmelt_doy'), -9999))$reduce(ee$Reducer$firstNonNull())
-  #          return(feature$set("Snowmelt_doy", snow))
-  #          })
-  #        
-  #   #(10): Transform feature collection with Band values to a dataframe     
-  #        
-  #      #Extract the data for all features (locations) within all images of the image collection (summer year_ID)
-  #       snow_aoi <- unlist(FC_image$aggregate_array('Snowmelt_doy')$getInfo())
-  #       location_aoi <- unlist(FC_image$aggregate_array('LocationID')$getInfo())
-  #        
-  #      #Store all data in a dataframe
-  #       Locations_BandValues <- data.frame(Snowmelt_doy=round(as.numeric(snow_aoi), 5), 
-  #                                           LocationID=location_aoi)
-  #        
-  #      #Change -9999 to NA
-  #       Locations_BandValues$Snowmelt_doy[Locations_BandValues$Snowmelt_doy < -9000] <- NA
-  #      
-  #      #Sort dataframe by LocationID
-  #       index <- with(Locations_BandValues, order(LocationID))
-  #       Locations_BandValues <- Locations_BandValues[index,]
-  #        
-  #   #(11) Add Snowmelt_doy values per location to the corresponding date-location combination in TAY_Locations
-  #        TAY_Locations$Date_doy <- as.numeric(strftime(TAY_Locations$SnowMelt_Date , format = "%j"))
-  #        TAY_Locations <- left_join(TAY_Locations, Locations_BandValues, by=c("LocationID"))
-  #        write.csv(TAY_Locations, paste0("Output/S2/09_Shapefile_SubAreas_Pixel_Snowmelt/", data_ID, "_Locations_Snowmelt_doy_Buffer", Buffer_radius_m, ".csv"), row.names = FALSE)
-  # 
-  #        
-  #       #Plot relation between estimated date of snowmelt, and satellite extracted date of snowmelt 
-  #        ggplot(data=TAY_Locations, aes(y=Date_doy, x=Snowmelt_doy))+
-  #          geom_point()+
-  #          stat_smooth(method="lm", formula=y~x, se=T, col="red")+
-  #          geom_abline(slope=1, intercept=0, lty=2)+
-  #          theme_tom()
-  #        
-  #        mean(na.omit(with(TAY_Locations, Date_doy - Snowmelt_doy)))
-         
-###########################################################################################################################################################################
-###########################################################################################################################################################################
-###########################################################################################################################################################################
-  
