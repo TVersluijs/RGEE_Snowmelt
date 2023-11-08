@@ -1,22 +1,22 @@
 ####################################################################################################################################
 #
-#                                       modis - Water detection and masking functions
+#                                       MODIS - Water detection and masking functions
 #
 ####################################################################################################################################
 
-#DESCRIPTION: This script contains functions that can be mapped over a modis image collection to detect and mask pixels that are
+#DESCRIPTION: This script contains functions that can be mapped over a MODIS image collection to detect and mask pixels that are
 #covered by permanent (i.e. year-round) waterbodies.
 
 ####################################################################################################################################
 
 
-#(I): Detect water pixels using the MODIS XXX map with a xx meter resolution
+#(I): Detect water pixels using the MODIS Terra land water mask
  compute_Water_MODIS <- function(){
    
-   #Load ESA Worldcover map
+   #Load MODIS Terra land water mask
    MODIS_MOD44W <- ee$ImageCollection('MODIS/006/MOD44W')$first()
    
-   #Select all pixels that correspond to permanent waterbodies (index 80)
+   #Select all pixels that correspond to permanent waterbodies
    MODIS_water <- MODIS_MOD44W$select('water_mask')
    
    #Return water mask
