@@ -83,7 +83,7 @@
    #(c) Dates
 
      #Specify date and year ranges of all images
-     years <- 2000:2022
+     years <- 2000:2023
      start_mmdd <- "-03-15"
      end_mmdd <- "-09-15"
 
