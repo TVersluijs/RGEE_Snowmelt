@@ -30,16 +30,16 @@
    
    #Water can in general be detected by looking at NDWI values (>0 indicates water). This method works well in non build-up areas (Du 2016, Xu 2006)
    #However, high NDWI values per se do not indicate water as snow can also have high NDWI values. To properly detect waterbodies, we thus have to mask
-   #snowcovered areas first. Snow can be differentiated with water by looking at NIR reflectance values as water has NIR values < 0.15, while
-   #snow has NIR values > 0.15. Thus, to mask waterbodies we follow the following steps:
+   #snowcovered areas first. Snow can be differentiated from water by looking at NIR reflectance values (REF?). Thus, to mask waterbodies we conduct the 
+   #following steps:
    
    #(A): select all images between start_date_NDWI and end_date_NDWI with a cloudcover percentage < 5% (s2_NDWI_mask)
    #(B): Calculate a median NDWI image for all images in s2_NDWI_mask
-   #(C): select all pixels with median_NDWI > 0.0 (these are WATER or SNOW pixels)
+   #(C): select all pixels with median_NDWI > NDWI_threshold (these are WATER or SNOW pixels)
    #(D): select all images between start_date_NDSI and end_date_NDSI with a cloudcover percentage < 5% (s2_NDSI_mask)
    #(E): Calculate median NDSI and NIR (B8) images for all images in s2_NDSI_mask
-   #(F): Select all pixels with a median_NDSI > 0.42 and a median_B8 > 1000 (these are SNOW pixels)
-   #(G): Subtract the snow-covered pixels from the water-and-snow pixels in step 13 to retain water-pixels only
+   #(F): Select all pixels with a median_NDSI > NDSI_threshold and a median_B8 > NIR_threshold (these are SNOW pixels)
+   #(G): Subtract the snow-covered pixels from the water-and-snow pixels in step C to retain water-pixels only
    #(H): Return these waterpixels as binary output to be used for masking water pixels
    
    #(A): select all images between start_date_NDWI and end_date_NDWI with a cloudcover percentage < 5% (s2_NDWI_mask)
@@ -66,7 +66,7 @@
    
    #(D): select all images between start_date_NDSI and end_date_NDSI with a cloudcover percentage < 5% (s2_NDSI_mask)
    s2_NDSI_mask <- img_col$
-     #Filter dates for which a median NDWI image will be generaged
+     #Filter dates for which a median NDSI image will be generated
      filterDate(start_date_NDSI, end_date_NDSI)$
      #Filter selection to only contain images with less than 5% cloudcover (CloudFraction=0.05)
      filter(ee$Filter$lt('CloudFraction', 0.05))$

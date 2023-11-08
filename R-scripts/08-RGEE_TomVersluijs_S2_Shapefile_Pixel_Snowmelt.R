@@ -76,16 +76,16 @@
    #(b) Area of interest
 
      #Specify name of study area (used as prefix in output files)
-     area_name="ZAC"
+     area_name="UTQ"
 
      #Name of Shapefile located in Input folder (specific area of interest)
      #Follow the guide "Manual_CreateShapefilePolygons.docx" when creating this shapefile.
-     shapefile <- "ZAC_Outline_EPSG4326.shp"
+     shapefile <- "Utqiagvik2022_Outline_EPSG4326.shp"
 
      #Coordinate reference system used for calculations
      #EPSG:4326 is recommended for areas spanning multiple UTM zones, but increased computation time (i.e. spherical coordinate system).
      #EPSG:326XX is results in reduced computation time for areas located within a single UTM zone (i.e. planar coordinate system).
-     crs <- "EPSG:32627"
+     crs <- "EPSG:32604"
 
    #(c) Dates
 
@@ -140,8 +140,8 @@
        #NDWI threshold above which is pixel is perceived as water (or snow!)
        NDWI_threshold=0.0
 
-       #NDSI and NIR thresholds above which a pixel is perceived as snow
-       NIR_threshold=1100
+       #NDSI and NIR thresholds above which a pixel is perceived as snow 
+       NIR_threshold=1100 #values between 1 - 10000
 
        #Date range to detect permanent waterbodies based on NDWI
        start_date_NDWI <- paste0(year_ID, "-07-15")
