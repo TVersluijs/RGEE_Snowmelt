@@ -59,7 +59,7 @@
    #(a): MODIS satellite
 
      #MODIS dataset
-     MODIS_dataset <- "MODIS/006/MOD09GA"
+     MODIS_dataset <- "MODIS/061/MOD09GA"
        
      #Specify resolution of images in meters
      resolution=500 #default maximum resolution for MODIS = 500m
@@ -81,7 +81,7 @@
    #(c) Dates
 
      #Specify the year of interest:
-     year_ID <- "2022"
+     year_ID <- "2023"
      
      #Date range for all images considered in analysis
      start_date <- paste0(year_ID, "-03-15") #choose date (well) before the first snowmelt occurs within the study site

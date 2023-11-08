@@ -78,7 +78,7 @@
   #(a): MODIS satellite
 
     #MODIS dataset
-    MODIS_dataset <- "MODIS/006/MOD09GA"
+    MODIS_dataset <- "MODIS/061/MOD09GA"
 
     #Spatial resolution of satellite image
     #Note that this parameter only affects the calculation of the fraction of snowcover using the function

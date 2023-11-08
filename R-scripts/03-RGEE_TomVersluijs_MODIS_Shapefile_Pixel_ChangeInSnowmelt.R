@@ -60,6 +60,9 @@
 
    #(a): MODIS satellite
 
+     #MODIS dataset
+     MODIS_dataset <- "MODIS/061/MOD09GA"
+      
      #Specify resolution of images in meters
      resolution=500 #default maximum resolution for MODIS = 500m
 
@@ -125,7 +128,7 @@
        end_date <- paste0(years[1], end_mmdd)
        start_date_doy <- as.numeric(strftime(start_date, format = "%j"))
        end_date_doy <- as.numeric(strftime(end_date, format = "%j"))
-       MODIS_col<-ee$ImageCollection('MODIS/006/MOD09GA')
+       MODIS_col<-ee$ImageCollection(MODIS_dataset)
        MODIS_col <- MODIS_col$filterBounds(aoi)$filterDate(start_date, end_date)
        modisProjection <- MODIS_col$first()$select("sur_refl_b01")$projection()
        #modisProjection$getInfo()
