@@ -78,7 +78,7 @@
      #Specify name of study area (used as prefix in output files)
      area_name="TAY"
 
-     #Name of Shapefiles located in Input folder (specific area of interest)
+     #Name of Shapefiles (located in '/Input/Shapefiles' folder)
 	   #Follow the guide "Manual_CreateShapefilePolygons.docx" when creating this shapefile.
      shapefile <- "TAY_Outline_EPSG4326.shp"
      shapefile_subarea1 <- "TAY_SubArea1_EPSG4326.shp"

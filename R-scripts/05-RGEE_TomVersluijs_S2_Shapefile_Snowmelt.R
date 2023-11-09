@@ -61,7 +61,7 @@
      #Specify name of study area (used as prefix in output files)
      area_name="ZAC"
 
-     #Name of Shapefile located in Input folder (specific area of interest)
+     #Name of Shapefile (located in '/Input/Shapefiles' folder)
 	   #Follow the guide "Manual_CreateShapefilePolygons.docx" when creating this shapefile.
      shapefile <- "ZAC_Outline_EPSG4326.shp"
 

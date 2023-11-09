@@ -289,7 +289,7 @@
       
       #Plot the locations:
       p_shapefile <- ggplot() + 
-        geom_sf(data = df_locations, fill=sf.colors(), col = "black")+
+        geom_sf(data = df_locations, fill=sf.colors(nrow(df_locations)), col = "black")+
         geom_sf_label(data = df_locations, aes(label=LocationID), colour="black")+
         theme_tom()
       

@@ -71,7 +71,7 @@
      #Specify name of study area
      area_name <- "ZAC"
 
-     #Name of Shapefile located in Input folder (specific area of interest)
+     #Name of Shapefile used to create MODIS annual snowmelt maps
      #Follow the guide "Manual_CreateShapefilePolygons.docx" when creating this shapefile.
      shapefile <- "ZAC_Outline_EPSG4326.shp"
      
