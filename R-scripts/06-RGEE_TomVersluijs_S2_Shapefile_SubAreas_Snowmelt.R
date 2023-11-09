@@ -71,12 +71,12 @@
      #Specify name of study area (used as prefix in output files)
      area_name="ZAC"
 
-     #Name of Shapefile located in Input folder (specific area of interest)
-	 #Follow the guide "Manual_CreateShapefilePolygons.docx" when creating this shapefile.
+     #Name of Shapefile with outline encompassing al sub areas (located in '/Input/Shapefiles' folder)
+	   #Follow the guide "Manual_CreateShapefilePolygons.docx" when creating this shapefile.
      shapefile <- "ZAC_Outline_EPSG4326.shp"
 
-     #Name of Shapefiles for each subArea located in Input folder
-	 #Follow the guide "Manual_CreateShapefilePolygons.docx" when creating this shapefile.
+     #Name of Shapefile containing a separate polygon for each sub area (located in '/Input/Shapefiles' folder)
+	   #Follow the guide "Manual_CreateShapefilePolygons.docx" when creating this shapefile.
      shapefile_subareas <- "ZAC_TenEqualSizeVoronoiPolygons_EPSG4326.shp"
 
      #Coordinate reference system used for calculations
@@ -286,20 +286,17 @@
       #  Map$addLayer(ndvi_s2,list(min=-1, max=1, palette=c('#FF0000','#00FF00')), 'NDVI')+
       #  Map$addLayer(ndwi_s2,list(min=0, max=1, palette=c('000000', '0dffff', '0524ff', 'ffffff')), 'NDWI')
       
-    #(9): Load shapefile containing 10 subareas shown as voronoi polygons around centroids of 10-mean centering of 10000 
-    #random points within the shapefile area
+    #(9): Load shapefile with SubAreas (i.e. multipolygon)
       
       #Read shapefiles
        root_fldr <- here()
        aoi_SubAreas <- st_read(paste0(root_fldr, "/Input/Shapefiles/", shapefile_subareas), quiet=T)
       
-      #Plot the 10 Sub areas within the shapefile area:
+      #Plot the shapefile polygons:
        p1 <- ggplot() + 
-         geom_sf(data = aoi_SubAreas, fill=sf.colors(10), col = "black")+
+         geom_sf(data = aoi_SubAreas, fill=sf.colors(nrow(aoi_SubAreas)), col = "black")+
          theme_tom()+
-         geom_sf_label(data = aoi_SubAreas, aes(label=Cluster_ID), colour="black", 
-                       nudge_x =c(0.001,0,0.004,0,-0.001,0,-0.002,0,0.001,0), 
-                       nudge_y =c(0.003,0.002,0,0,0,0.005,0,-0.001,-0.001,-0.001))
+         geom_sf_label(data = aoi_SubAreas, aes(label=LocationID), colour="black")
        
          ggsave(plot=p1, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_SubAreas.pdf"), width=10, height=8)
       
@@ -307,7 +304,7 @@
        aoi_SubAreas <- st_transform(aoi_SubAreas, crs="EPSG:4326")
        aoi_SubAreas <- sf_as_ee(aoi_SubAreas)
        aoi_SubAreas <- ee$FeatureCollection(aoi_SubAreas)
-       #Note that the feature$property "Cluster_ID" has a unique number (0-9) for each of the subareas within the study area 
+       #Note that the feature$property "LocationID" has a unique number (0-9) for each of the subareas within the study area 
       
       #Plot featurecollection
        image <- s2_col$first()
@@ -760,7 +757,7 @@
                description = paste0(timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Data_MeanBandValues_SubAreas"),
                folder="RGEE_tmp",
                fileFormat="CSV",
-               selectors=c('NDSI', 'NDVI', 'NDMI', 'SNOW', 'Date', 'Cluster_ID')
+               selectors=c('NDSI', 'NDVI', 'NDMI', 'SNOW', 'Date', 'LocationID')
                )
              
             #Run and monitor task
@@ -785,7 +782,7 @@
              df_SubAreas_BandValues_new$doy[df_SubAreas_BandValues_new$doy < -9000] <- NA
              df_SubAreas_BandValues_new$SubArea[df_SubAreas_BandValues_new$SubArea < -9000] <- NA
     
-            #Sort dataframe by ClusterID and doy
+            #Sort dataframe by SubArea and doy
              index <- with(df_SubAreas_BandValues_new, order(SubArea, doy))
              df_SubAreas_BandValues_new <- df_SubAreas_BandValues_new[index,]
             
