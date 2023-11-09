@@ -3,7 +3,10 @@
 #Use Sentinel-2 data to extract time series of the average NDVI, NDMI, and NDSI and the fraction of snowcover for all sub areas 
 #located within a shapefile (these sub areas can be specified by creating a multipolygon in e.g. QGIS). The fraction of snowcover 
 #is estimated by calculating the fraction of pixels per subarea with an NDSI value larger than the user specified NDSI-threshold. 
-#This corresponds to the method='snowfraction' in other scripts.
+#This corresponds to the method='snowfraction' in other scripts.The user can specify whether clouds and permanent waterbodies 
+#need to be masked, and whether a composite image per day of year needs to be generated (merging multiple satellite photos for 
+#that day). The current script requires a shapefile including subareas within the study area as input. It only works for small 
+#areas of c.a. 50 km2 (larger areas might result in computation errors unless the spatial resolution of the analyses is decreased).
 
 #Copyright Tom Versluijs 2023-11-01. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
 

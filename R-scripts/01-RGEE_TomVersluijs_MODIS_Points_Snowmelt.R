@@ -1,11 +1,12 @@
 #####################################################################################################################################
 
-#In this script the timing of snow melt is calculated based on MODIS data for all locations specified in an input file. The 
-#user can specify a bufferzone (radius) to depict the area in which snow melt will be analysed per location. All locations are analysed
-#consecutively (using a loop). First, a location specific bounding box is drawn per point location (taking into account the specified 
-#buffer zone) and MODIS satellite data is extracted within this bounding box. Second, clouds and permanent water bodies are 
-#filtered within this bounding box. Finally, snow melt is analysed within each locations's buffer zone based on one of the following 
-#methods (specified by the user by setting the parameter 'method'):
+#In this script the timing of snow melt is calculated based on MODIS data for all locations specified in an input file. The user
+#can specify a bufferzone (radius) to depict the area in which snow melt will be analysed per location. No shapefile is required as 
+#input for this script, which allows for input locations to be spaced far apart. All locations are analysed consecutively (using a 
+#loop). First, a location specific bounding box is drawn per point location (taking into account the specified buffer zone) and 
+#MODIS satellite data is extracted within this bounding box. Second, clouds and permanent water bodies are filtered within this 
+#bounding box. Finally, snow melt is analysed within each locations's buffer zone based on one of the following methods (specified 
+#by the user by setting the parameter 'method'):
 
 # (I):   'avg_NDSI':     Calculate the average NDSI value over time within each point's buffer zone, fit a GAM through these data 
 #                        and calculate when this model passes the specified NDSI threshold representing the moment of snow melt.
@@ -23,6 +24,8 @@
 #with the 'snowfraction' method because this simply calculates the fraction of pixels per timestep where NDSI>NDSI_threshold,
 #which thus still includes all unfiltered noise. It is harder to justify the avg_NDSI method, because it is rather unclear
 #what this average NDSI value entails.
+
+			
 
 #Copyright Tom Versluijs 2023-11-01. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
 

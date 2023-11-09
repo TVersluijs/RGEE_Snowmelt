@@ -1,12 +1,13 @@
 #####################################################################################################################################
 
-#In this script the timing of snow melt is calculated based on Sentinel-2 data for all locations specified in an input file. The
-#user can specify a bufferzone (radius) to depict the area in which snow melt will be analysed per location. All locations are analysed 
-#consecutively (using a loop). First, a location specific bounding box is drawn per point location (taking into account the specified 
-#buffer zone) and Sentinel-2 satellite data is extracted within this bounding box. Second, clouds and permanent water bodies are
-#filtered within this bounding box. Third, if this bounding box overlaps with multiple satellite tiles for a certain day, a composite
-#image is created (picking the pixel with least cloud cover). Finally, snow melt is analysed within each locations's buffer zone based 
-#on one of the following methods (specified by the user by setting the parameter 'method'):
+#In this script the timing of snow melt is calculated based on Sentinel-2 data for all locations specified in an input file. No 
+#shapefile is required as input for this script, which allows for input locations to be spaced far apart. The user can specify a 
+#bufferzone (radius) to depict the area in which snow melt will be analysed per location. All locations are analysed consecutively 
+#(using a loop). First, a location specific bounding box is drawn per point location (taking into account the specified buffer zone) 
+#and Sentinel-2 satellite data is extracted within this bounding box. Second, clouds and permanent water bodies are filtered within 
+#this bounding box. Third, if this bounding box overlaps with multiple satellite tiles for a certain day, a composite image is 
+#created (picking the pixel with least cloud cover). Finally, snow melt is analysed within each locations's buffer zone based on 
+#one of the following methods (specified by the user by setting the parameter 'method'):
 
 # (I):   'avg_NDSI':     Calculate the average NDSI value over time within each point's buffer zone, fit a GAM through these data 
 #                        and calculate when this model passes the specified NDSI threshold representing the moment of snow melt. 

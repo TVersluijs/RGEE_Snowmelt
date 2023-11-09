@@ -15,16 +15,17 @@
 
 #The 'snowfraction' method is preferred, because it intuitively makes sense to look a the fraction of snow-covered pixels
 #over time. It is harder to justify the avg_NDSI method, because it is rather unclear what this average NDSI value entails.
-#The best approach would be to calculate the date of snowmelt on a pixel level using GAMS fitted through pixel-level NDSI data
-#(i.e. method = 'pixel_gam'). This approach is conducted in script "08-RGEE_TomVersluijs_S2_Shapefile_Pixel_Snowmelt.R" for
-#all pixels in a user-specified shapefile. The result is a pixel level map of the timing of snowmelt. Script "10-RGEE_TomVersluijs_
-#S2_ExtractSnowFraction.R" can then be used to extract timeseries of the fraction of snowcover for points of interest from this map.
+#A better approach would be to calculate the date of snowmelt on a pixel level using GAMS fitted through pixel-level NDSI data (i.e.
+#method = 'pixel_gam'). The latter approach is conducted in script "04-RGEE_TomVersluijs_S2_Points_Snowmelt.R" for all pixels within
+#the buffer zone of point locations. This approach is also conducted in script "08-RGEE_TomVersluijs_S2_Shapefile_Pixel_Snowmelt.R" 
+#for all pixels in a user-specified shapefile, resulting in a pixel level map of the timing of snowmelt. Script "10-RGEE_TomVersluijs_
+#S2_ExtractSnowFraction.R" can then be used to extract timeseries of the fraction of snowcover for points/polygons of interest from this 
+#map.
 
-#This script is similar to the script '04-RGEE_TomVersluijs_S2_Points_Snowmelt.R'. However, in the latter script all points  
-#are analysed consecutively using a loop, which makes that script significantly slower to run. It does however not rely on a 
-#shapefile and thus works for points spaced much further apart (i.e. tracking data of birds migratory birds). The current
-#script only works for small areas of c.a. 50-100 km2 (larger areas might result in computation errors). Moreover, the
-#'pixel_gam' method is implemented in script 04, but not in the current script.
+#The current script is similar to the script '04-RGEE_TomVersluijs_S2_Points_Snowmelt.R'. However, in the latter script all points  
+#are analysed consecutively using a loop, which makes that script significantly slower to run. That script does not rely on a shapefile 
+#and thus works for points spaced much further apart (i.e. tracking data of migratory birds). The current script only works for small 
+#areas of c.a. 50-100 km2 (larger areas might result in computation errors unless the spatial resolution of the analyses is decreased).
 
 #Copyright Tom Versluijs 2023-11-01. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
 

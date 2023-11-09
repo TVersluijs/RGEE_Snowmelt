@@ -1,7 +1,8 @@
 ##################################################################################################################################
 
-#Extract timeseries of the fraction of snowcover from a pixel-level snow melt map for a set of input locations. Input locations
-#can either be point locations with a corresponding buffer zone, or a set of (sub)set of shapefiles.
+#Extract timeseries of the fraction of snowcover from a pixel-level snow melt map for a set of input locations. This corresponds 
+#to the method 'pixel_gam' in the other scripts. Input locations can either be point locations with a corresponding buffer zone, 
+#or a collection of polygons in a shapefile.
 
 #This script depends on a snowmelt map generated for MODIS using script "02-RGEE_TomVersluijs_#MODIS_Shapefile_Pixel_Snowmelt.R", 
 #or for Sentinel-2 using script "08-RGEE_TomVersluijs_S2_Shapefile_Pixel_Snowmelt.R". Please run either script before continuing 

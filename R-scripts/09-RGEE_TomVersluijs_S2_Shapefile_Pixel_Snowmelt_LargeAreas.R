@@ -1,9 +1,10 @@
 ##################################################################################################################################
 
-#Use Sentinel-2 data to create pixel-level maps (10m resolution) of the timing of snowmelt for an area larger than c.a. 50km2.
-#Snowmelt is calculated per pixel by fitting a GAM through the average NDSI data and extracting the moment this GAM crosses a user 
-#specified NDSI threshold. This script requires that the shapefile of the study area is split-up into several smaller shapefiles to 
-#prevent memory issues on the GEE-server.	
+#Use Sentinel-2 data to create pixel-level maps (20m resolution) of the timing of snowmelt for an area up to c.a. 200km2.
+#Snowmelt is calculated per pixel by fitting a GAM through the average NDSI data and extracting the moment this GAM crosses a 
+#user-specified NDSI threshold. This script requires that the shapefile of the study area is split-up into exactly four smaller 
+#shapefiles to prevent memory issues on the GEE-server. No composite image can be generated because this will result in computation 
+#errors.					
 
 #Copyright Tom Versluijs 2023-11-01. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
 

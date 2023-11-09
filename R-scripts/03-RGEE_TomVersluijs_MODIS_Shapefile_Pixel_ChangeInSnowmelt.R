@@ -1,9 +1,9 @@
 ##################################################################################################################################
 
 #This script requires the snow melt maps generated using script "02-RGEE_TomVersluijs_MODIS_Shapefile_Pixel_Snowmelt.R" as input.
-#It imports the pixel-level snow melt images for all analyzed years and transforms them into an image with the change in the 
-#timing of snowmelt over the years for each pixel (i.e. slope of linear regression) and another image with the average timing
-#of snowmelt over the years for each pixel (i.e. intercept of linear regression).
+#It imports the pixel-level maps for all analyzed years and transforms them into an image with the change in the timing of 
+#snowmelt over the years for each pixel (i.e. slope of linear regression) and another image with the average timing of snowmelt 
+#over the years for each pixel (i.e. intercept of linear regression).
 
 #Copyright Tom Versluijs 2023-11-01. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
 

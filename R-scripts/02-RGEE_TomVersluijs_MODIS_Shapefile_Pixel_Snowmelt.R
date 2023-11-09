@@ -1,6 +1,6 @@
 ##################################################################################################################################
 
-#Extract MODIS satellite data and Calculate the date of snowmelt for every 500mx500m pixel in an area of interest (shapefile).
+#Extract MODIS satellite data and calculate the date of snowmelt for every 500mx500m pixel in an area of interest (shapefile).
 #Snowmelt is calculated per pixel by fitting a GAM through the average NDSI data and extracting the moment this GAM crosses 
 #a user specified NDSI threshold. This script requires a shapefile of the study area as input.
 
