@@ -197,7 +197,7 @@
      #Check if this assetid path exists in the 'path_asset' asset folder
       if(!assetid1 %in% ee_manage_assetlist(path_asset)$ID){print("AssetID not found in asset folder. Inspect ee_manage_assetlist(path_asset) to find the correct assetID.")}
 
-   #Check if buffer size is large enought relative to resolution
+   #Check if buffer size is large enough relative to resolution
     if(Location_type=="points" & (Buffer_radius_m < 2 * resolution)){print("ERROR: Buffer size too small relative to specified resolution of image. Increase Buffer_radius_m for better estimates of fraction of snowcover.")}
       
       
@@ -274,8 +274,11 @@
          
           #Plot feature collection on a map (i.e. locations as points)
           Map$setCenter(coordinates_point[1], coordinates_point[2], 10)
-          Map$addLayer(Locations_ee, list(color="red"), paste0("Locations_", year_ID)) 
-      
+          Map$addLayer(Locations_ee, list(color="red"), paste0("Locations_", year_ID))
+          
+       #(3): Create an affix for output naming
+         output_affix <- paste0("_Buffer", Buffer_radius_m, "_Res", resolution)
+        
     }
       
   #(2): For shapefiles:
@@ -307,6 +310,9 @@
       #Plot featurecollection
       Map$setCenter(coordinates_point[1], coordinates_point[2], 10)
       Map$addLayer(Locations_ee, list(color="red"), paste0("Locations_", year_ID))
+      
+      #Create an affix for output naming
+      output_affix <- paste0("_Res", resolution)
       
     }
 
@@ -370,7 +376,7 @@
     #Use ee_table_to_drive() to prevent memory limits
      task_vector5 <- ee_table_to_drive(
       collection = FC_snowmelt_locations,
-      description = paste0(timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Data_Pixel_Snowmelt"),
+      description = paste0(timestamp, "_", data_ID, output_affix, "_Locations_Data_Pixel_Snowmelt"),
       fileFormat = "CSV",
       selectors = c('LocationID', 'lat', 'lon', 'doy_snowmelt')
       )
@@ -382,7 +388,7 @@
      ee_monitoring(task_vector5, quiet=FALSE, max_attempts = 1000000)
     
     #Copy file from Google Drive to R-environment
-     exported_stats <- ee_drive_to_local(task = task_vector5, dsn=paste0(dir_Output, "/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Data_Pixel_Snowmelt"))
+     exported_stats <- ee_drive_to_local(task = task_vector5, dsn=paste0(dir_Output, "/", timestamp, "_", data_ID, output_affix, "_Locations_Data_Pixel_Snowmelt"))
      df_locations_pixel_snowmelt <- read.csv(exported_stats)
      unlink(exported_stats)
 
@@ -398,7 +404,7 @@
        df_locations_pixel_snowmelt$NDSI_threshold <- as.factor(NDSI_threshold)
       
       #Save dataframe
-       write.csv(df_locations_pixel_snowmelt, file=paste0(dir_Output, "/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Data_Pixel_Snowmelt.csv"), quote = FALSE, row.names=FALSE)
+       write.csv(df_locations_pixel_snowmelt, file=paste0(dir_Output, "/", timestamp, "_", data_ID, output_affix, "_Locations_Data_Pixel_Snowmelt.csv"), quote = FALSE, row.names=FALSE)
 
 
 ##################################################################################################################################
@@ -461,12 +467,12 @@
         df_Locations_SnowFraction <- rbind(df_Locations_SnowFraction, df_Location_SnowFraction_new)
         
         # #Save dataframe for current location
-        # write.csv(df_Location_SnowFraction_new, paste0(dir_Output, "/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Location_", Location_i, "_Data_SnowFraction.csv"), row.names = FALSE)
+        # write.csv(df_Location_SnowFraction_new, paste0(dir_Output, "/", timestamp, "_", data_ID, output_affix, "_Location_", Location_i, "_Data_SnowFraction.csv"), row.names = FALSE)
 
       }
        
     #Save snowfraction data per location
-    write.csv(df_Locations_SnowFraction, paste0(dir_Output, "/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Data_SnowFraction.csv"), row.names = FALSE)
+    write.csv(df_Locations_SnowFraction, paste0(dir_Output, "/", timestamp, "_", data_ID, output_affix, "_Locations_Data_SnowFraction.csv"), row.names = FALSE)
     
 
 ##################################################################################################################################
@@ -534,8 +540,8 @@
     df_Locations_SnowFraction_GAM_predictions$LocationID <- as.factor(as.character(df_Locations_SnowFraction_GAM_predictions$LocationID))
     
     #Save dataframe with GAM fits for Location specific Snowfraction data
-    #write.csv(df_Locations_SnowFraction_GAM, paste0(dir_Output, "/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Data_SnowFraction_GAM.csv"), row.names = FALSE)
-    write.csv(df_Locations_SnowFraction_GAM_predictions, paste0(dir_Output, "/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_GAM_Predictions_SnowFraction.csv"), row.names = FALSE)
+    #write.csv(df_Locations_SnowFraction_GAM, paste0(dir_Output, "/", timestamp, "_", data_ID, output_affix, "_Locations_Data_SnowFraction_GAM.csv"), row.names = FALSE)
+    write.csv(df_Locations_SnowFraction_GAM_predictions, paste0(dir_Output, "/", timestamp, "_", data_ID, output_affix, "_Locations_GAM_Predictions_SnowFraction.csv"), row.names = FALSE)
     
     #(D) Plot the raw SnowFraction datapoints and gam predictions for each Location:
     
@@ -546,18 +552,6 @@
          xlab(paste0("Day of year (starting at 01-01-", year_ID,")")) +
          ylab(paste0("Snowcover fraction per location in ", year_ID)) +
          theme_tom()
-    
-      #Plot SnowFraction and model predictions in a separate plot per location
-      p_Locations_SnowFraction_grid = ggplot()+
-        geom_point(data=df_Locations_SnowFraction_GAM[df_Locations_SnowFraction_GAM$outliers==FALSE,], aes(x=doy, y=SnowFraction))+
-        geom_point(data=df_Locations_SnowFraction_GAM[df_Locations_SnowFraction_GAM$outliers==TRUE,], aes(x=doy, y=SnowFraction), col="black", pch=16, alpha=0.2)+
-        geom_line(data=df_Locations_SnowFraction_GAM_predictions, aes(x=doy, y=SnowFraction_gam_predict), col="#1620de", lwd=1.25)+
-        geom_vline(xintercept = 150, colour="grey", lty=2)+
-        geom_hline(yintercept = Snowfraction_threshold_vector, colour="grey", lty=2)+
-        facet_wrap(~LocationID, ncol=ceiling(length(unique(df_Locations_SnowFraction_GAM$LocationID))^0.5))+
-        xlab(paste0("Day of year (starting at 01-01-", year_ID,")")) +
-        ylab(paste0("Snowcover fraction per location in ", year_ID)) +
-        theme_tom()
   
     #(E) Calculate at which day of year the pixel-level SnowFraction is equal to Snowfraction_threshold_vector for each location using predictions from mod_gam
     
@@ -594,14 +588,54 @@
         df_Snowmelt_Locations$NDSI_threshold <- NDSI_threshold
         
         #Save dates of snowmelt per Location per SnowFraction threshold as a .csv file
-        write.csv(df_Snowmelt_Locations, paste0(dir_Output, "/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Snowmelt_Snowfraction.csv"), row.names = FALSE)
+        write.csv(df_Snowmelt_Locations, paste0(dir_Output, "/", timestamp, "_", data_ID, output_affix, "_Locations_Snowmelt_Snowfraction.csv"), row.names = FALSE)
   
-        #Add dates of snowmelt to the plot 'p_Locations_NDSI_grid'  
-        p_Locations_SnowFraction_Snowmelt_grid <- p_Locations_SnowFraction_grid +
-          geom_point(data=df_Snowmelt_Locations[!is.na(df_Snowmelt_Locations$doy),], aes(x=doy, y=Snowfraction_threshold), col="red", size=3)
+        #Create a separate plot with GAM predictions per location:
         
-        ggsave(plot=p_Locations_SnowFraction_Snowmelt_grid, paste0(dir_Output, "/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Plot_Snowfraction.pdf"), width=12, height = 10)
-        
+          #Create an empty list to store plots
+          list_plots_snowfraction <- list(list())
+          
+          #Store all levels of LocationID and sort them in ascending order
+          levelIDs <- sort(unique(df_Locations_SnowFraction_GAM_predictions$LocationID))
+          
+          #Loop through all levels of LocationID
+          for(i in levelIDs){
+            
+            #i=levelIDs[1]
+            
+            #Create an index variable for parameter i
+            i_index <- which(levelIDs == i)
+            
+            #select datasets for current Location:
+            df_Location_SnowFraction_GAM <- df_Locations_SnowFraction_GAM[df_Locations_SnowFraction_GAM$LocationID==i,]
+            df_Location_SnowFraction_GAM_predictions <- df_Locations_SnowFraction_GAM_predictions[df_Locations_SnowFraction_GAM_predictions$LocationID==i,]
+            df_Location_SnowfractionDate <- df_Snowmelt_Locations[df_Snowmelt_Locations$LocationID==i,]
+            
+            #create plot for current Location and store it in list_plots_snowfraction:
+            list_plots_snowfraction[[i_index]] <- ggplot()+ 
+              geom_point(data=df_Location_SnowFraction_GAM[df_Location_SnowFraction_GAM$outliers==FALSE,], aes(x=doy, y=SnowFraction))+
+              geom_point(data=df_Location_SnowFraction_GAM[df_Location_SnowFraction_GAM$outliers==TRUE,], aes(x=doy, y=SnowFraction), col="black", pch=16, alpha=0.2)+
+              geom_line(data=df_Location_SnowFraction_GAM_predictions, aes(x=doy, y=SnowFraction_gam_predict), col="#1620de", lwd=1.25)+
+              geom_point(data=df_Location_SnowfractionDate[!is.na(df_Location_SnowfractionDate$doy),], aes(x=doy, y=Snowfraction_threshold), col="red", size=3)+
+              geom_vline(xintercept = 150, colour="grey", lty=2)+
+              geom_hline(yintercept = Snowfraction_threshold_vector, colour="grey", lty=2)+
+              xlab(paste0("Day of year (starting at 01-01-", year_ID, ")")) +
+              ylab("Fraction of snow-covered pixels") +
+              ggtitle(paste0("Polygon: ", i))+
+              theme_tom()
+            
+          }
+          
+          #Plot SnowFraction and model predictions in a separate plot per Location
+          plots_snowfraction <- list(list_plots_snowfraction)
+          plots_per_page = 25
+          plots_snowfraction <- lapply(plots_snowfraction, function(x){split(x, ceiling(seq_along(plots_snowfraction[[1]])/plots_per_page))})
+          plots_snowfraction <- unname(unlist(plots_snowfraction, recursive = F))
+          pdf(paste0(dir_Output, "/", timestamp, "_", data_ID, output_affix, "_Locations_Plot_Snowfraction.pdf"), width=20, height=16, onefile = TRUE)
+          for (k in seq(length(plots_snowfraction))) { do.call("grid.arrange", plots_snowfraction[[k]]) }
+          dev.off()
+
+             
 
 #####################################################################################################################################          
 #####################################################################################################################################          
