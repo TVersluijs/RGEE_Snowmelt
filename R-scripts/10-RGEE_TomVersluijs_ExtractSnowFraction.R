@@ -518,8 +518,8 @@
         index <- which(df_Location_SnowFraction_GAM$outliers==FALSE)
         mod_gam <- with(df_Location_SnowFraction_GAM[index,], mgcv::gam(SnowFraction ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
         
-        #Use gam to make predictions on a more detailed (1-day) day of year interval
-        df_Locations_SnowFraction_GAM_predictions_new <- data.frame(LocationID=i, doy=seq(min(df_Location_SnowFraction_GAM$doy), max(df_Location_SnowFraction_GAM$doy), 1))
+        #Use gam to make predictions on a more detailed interval
+        df_Locations_SnowFraction_GAM_predictions_new <- data.frame(LocationID=i, doy=seq(min(df_Location_SnowFraction_GAM$doy), max(df_Location_SnowFraction_GAM$doy), 0.01))
         df_Locations_SnowFraction_GAM_predictions_new$SnowFraction_gam_predict <- stats::predict(mod_gam, newdata=df_Locations_SnowFraction_GAM_predictions_new, type="response")
         df_Locations_SnowFraction_GAM_predictions_new <- df_Locations_SnowFraction_GAM_predictions_new[order(df_Locations_SnowFraction_GAM_predictions_new$doy),]
         df_Locations_SnowFraction_GAM_predictions_new$year <- year_ID
