@@ -1399,7 +1399,7 @@
 
      #Save dataframe with GAM fits for NDSI
       #write.csv(df_Locations_NDSI, paste0(here(), "/Output/MODIS/01_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Data_NDSI_GAM_polygon.csv"), row.names = FALSE)
-      write.csv(df_Locations_NDSI_predictions, paste0(here(), "/Output/MODIS/01_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Data_NDSI_Predictions_GAM_polygon.csv"), row.names = FALSE)
+      write.csv(df_Locations_NDSI_predictions, paste0(here(), "/Output/MODIS/01_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_GAM_Predictions_NDSI_polygon.csv"), row.names = FALSE)
       
    #(D) Plot the raw NDSI datapoints and gam predictions for each Location:
 
@@ -1425,7 +1425,7 @@
         ylab("NDSI") +
         theme_tom()
 
-     #  ggsave(plot=p_Locations_NDSI_grid, paste0(here(), "/Output/MODIS/01_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Plot_NDSI_grid_polygon.pdf"), width=12, height = 10)
+     #  ggsave(plot=p_Locations_NDSI_grid, paste0(here(), "/Output/MODIS/01_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Plot_NDSI_polygon.pdf"), width=12, height = 10)
 
    #(E) Calculate at which day of year the average NDSI is equal to NDSI_threshold_vector for each location using predictions from mod_gam
 
@@ -1482,7 +1482,7 @@
       p_Locations_NDSI_Snowmelt_grid <- p_Locations_NDSI_grid +
        geom_point(data=df_Snowmelt_NDSI_Locations[!is.na(df_Snowmelt_NDSI_Locations$doy),], aes(x=doy, y=NDSI_threshold), col="red", size=3)
       
-      ggsave(plot=p_Locations_NDSI_Snowmelt_grid, paste0(here(), "/Output/MODIS/01_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Plot_Snowmelt_NDSI_grid_polygon.pdf"), width=12, height = 10)
+      ggsave(plot=p_Locations_NDSI_Snowmelt_grid, paste0(here(), "/Output/MODIS/01_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Plot_Snowmelt_NDSI_polygon.pdf"), width=12, height = 10)
     
       }
   
@@ -1561,7 +1561,7 @@
 
       #Save dataframe with GAM fits for the SnowFraction data
        #write.csv(df_Locations_SnowFraction_GAM, paste0(here(), "/Output/MODIS/01_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Data_SnowFraction_GAM_polygon.csv"), row.names = FALSE)
-       write.csv(df_Locations_SnowFraction_GAM_predictions, paste0(here(), "/Output/MODIS/01_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Data_SnowFraction_Predictions_GAM_polygon.csv"), row.names = FALSE)
+       write.csv(df_Locations_SnowFraction_GAM_predictions, paste0(here(), "/Output/MODIS/01_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_GAM_Predictions_SnowFraction_polygon.csv"), row.names = FALSE)
        
    #(D) Plot the raw SnowFraction datapoints and gam predictions for each Location:
 
@@ -1586,7 +1586,7 @@
        ylab(paste0("Snowcover fraction per location in ", year_ID)) +
        theme_tom()
 
-      # ggsave(plot=p_Locations_SnowFraction_grid, paste0(here(), "/Output/MODIS/01_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Plot_SnowFraction_grid_polygon.pdf"), width=12, height = 10)
+      # ggsave(plot=p_Locations_SnowFraction_grid, paste0(here(), "/Output/MODIS/01_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Plot_SnowFraction_polygon.pdf"), width=12, height = 10)
 
    #(E) Calculate at which day of year the SnowFraction is equal to Snowfraction_threshold_vector for each location using predictions from mod_gam
 
@@ -1648,7 +1648,7 @@
       p_Locations_SnowFraction_Snowmelt_grid <- p_Locations_SnowFraction_grid +
         geom_point(data=df_SnowFraction_Locations[!is.na(df_SnowFraction_Locations$doy),], aes(x=doy, y=Snowfraction_threshold), col="red", size=3)
       
-      ggsave(plot=p_Locations_SnowFraction_Snowmelt_grid, paste0(here(), "/Output/MODIS/01_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Plot_Snowmelt_Snowfraction_grid_polygon.pdf"), width=12, height = 10)
+      ggsave(plot=p_Locations_SnowFraction_Snowmelt_grid, paste0(here(), "/Output/MODIS/01_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Plot_Snowmelt_Snowfraction_polygon.pdf"), width=12, height = 10)
       
    }
      
@@ -1727,7 +1727,7 @@
 
     #Save dataframe with GAM fits for pixel level Snowfraction data
     #write.csv(df_Locations_Pixel_SnowFraction_GAM, paste0(here(), "/Output/MODIS/01_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Data_Pixel_SnowFraction_GAM_polygon.csv"), row.names = FALSE)
-    write.csv(df_Locations_Pixel_SnowFraction_GAM_predictions, paste0(here(), "/Output/MODIS/01_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Data_Pixel_SnowFraction_Predictions_GAM_polygon.csv"), row.names = FALSE)
+    write.csv(df_Locations_Pixel_SnowFraction_GAM_predictions, paste0(here(), "/Output/MODIS/01_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_GAM_Predictions_Pixel_SnowFraction_polygon.csv"), row.names = FALSE)
     
    #(D) Plot the raw pixel-level SnowFraction datapoints and gam predictions for each Location:
 
@@ -1753,7 +1753,7 @@
        ylab(paste0("Snowcover fraction per location in ", year_ID)) +
        theme_tom()
 
-      # ggsave(plot=p_Locations_Pixel_SnowFraction_grid, paste0(here(), "/Output/MODIS/01_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Plot_Pixel_SnowFraction_grid_polygon.pdf"), width=12, height = 10)
+      # ggsave(plot=p_Locations_Pixel_SnowFraction_grid, paste0(here(), "/Output/MODIS/01_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Plot_Pixel_SnowFraction_polygon.pdf"), width=12, height = 10)
 
    #(E) Calculate at which day of year the pixel-level SnowFraction is equal to Snowfraction_threshold_vector for each location using predictions from mod_gam
 
@@ -1815,7 +1815,7 @@
       p_Locations_Pixel_SnowFraction_Snowmelt_grid <- p_Locations_Pixel_SnowFraction_grid +
         geom_point(data=df_Pixel_SnowFraction_Locations[!is.na(df_Pixel_SnowFraction_Locations$doy),], aes(x=doy, y=Snowfraction_threshold), col="red", size=3)
       
-      ggsave(plot=p_Locations_Pixel_SnowFraction_Snowmelt_grid, paste0(here(), "/Output/MODIS/01_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Plot_Snowmelt_Pixel_Snowfraction_grid_polygon.pdf"), width=12, height = 10)
+      ggsave(plot=p_Locations_Pixel_SnowFraction_Snowmelt_grid, paste0(here(), "/Output/MODIS/01_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Plot_Snowmelt_Pixel_Snowfraction_polygon.pdf"), width=12, height = 10)
       
   }
 
