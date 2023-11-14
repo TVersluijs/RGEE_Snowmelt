@@ -910,7 +910,7 @@
       
       #Save the SnowFraction data and GAM predictions per NDSI-threshold as a .csv file
       #write.csv(df_SnowFraction_GAM, paste0(here(), "/Output/S2/05_Shapefile_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Data_SnowFraction_GAM.csv"), row.names = FALSE)
-      write.csv(df_SnowFraction_GAM_predictions, paste0(here(), "/Output/S2/05_Shapefile_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Data_SnowFraction_Predictions_GAM.csv"), row.names = FALSE)
+      write.csv(df_SnowFraction_GAM_predictions, paste0(here(), "/Output/S2/05_Shapefile_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_GAM_Predictions_SnowFraction.csv"), row.names = FALSE)
       
       #Plot the raw SnowFraction datapoints and gam predictions for each NDSI-threshold:
       
@@ -969,7 +969,7 @@
         p_SnowFraction_Snowmelt_grid <- p_SnowFraction_grid +
           geom_point(data=df_SnowFraction[!is.na(df_SnowFraction$doy),], aes(x=doy, y=Snowfraction_threshold), col="red", size=3)
         
-        ggsave(plot=p_SnowFraction_Snowmelt_grid, paste0(here(), "/Output/S2/05_Shapefile_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Plot_Snowmelt_Snowfraction_grid.pdf"), width=12, height = 10)
+        ggsave(plot=p_SnowFraction_Snowmelt_grid, paste0(here(), "/Output/S2/05_Shapefile_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Plot_Snowfraction.pdf"), width=12, height = 10)
         
 
 ##################################################################################################################################       
