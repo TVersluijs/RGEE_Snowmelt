@@ -30,15 +30,14 @@
 Extract_BandValuesAtSubAreas = function(img, FC_initial) {
 
     ##For debugging
-    #img <- s2_snow_masked$select("NDSI", "NDVI", "NDMI", "SNOW")$filterDate(paste0(year_ID, "-06-05"), paste0(year_ID, "-07-31"))$first()
+    #img <- s2_snow_masked$select("FSC_Gascoin2020", "FSC_Aalstad2020", NDSI", "NDVI", "NDMI", "SNOW")$filterDate(paste0(year_ID, "-06-05"), paste0(year_ID, "-07-31"))$first()
 
     #(A): Calculate the mean NDSI, NDVI, NDMI and SNOW value for the current image within each subarea in the aoi_SubAreas feature collection.
     #We add these mean values as properties to each feature (i.e. sub area). The resulting output is a feature collection for the current
     #image where these means are added as properties for each sub area (i.e. different features). Note that taking the mean of the binary
     #SNOW band results in a fraction of snow covered pixels for each image. ReduceRegions does not include masked pixels (i.e. pixels
     #defined as cloud or water) when calculating these means.
-      FC_image <- img$select("NDSI", "NDVI", "NDMI","SNOW")$
-          reduceRegions(collection = aoi_SubAreas,
+      FC_image <- img$reduceRegions(collection = aoi_SubAreas,
                         reducer = ee$Reducer$mean(), #$setOutputs(list('NDSI'))
                         scale = resolution,
                         crs=crs,
@@ -140,18 +139,22 @@ Extract_BandValuesAtSubAreas = function(img, FC_initial) {
       #the boundaries of the image. Therefore we manually have to add an empty band property to those features.
       #We therefore set the band value to a no data value of -9999 for all features where the band value is NULL.
        FC_image <- FC_image$map(function(feature){
+          fsc_gascoin2020 <- ee$List(list(feature$get('FSC_Gascoin2020'), -9999))$reduce(ee$Reducer$firstNonNull())
+          fsc_aalstad2020 <- ee$List(list(feature$get('FSC_Aalstad2020'), -9999))$reduce(ee$Reducer$firstNonNull())
           ndsi <- ee$List(list(feature$get('NDSI'), -9999))$reduce(ee$Reducer$firstNonNull())
           ndvi <- ee$List(list(feature$get('NDVI'), -9999))$reduce(ee$Reducer$firstNonNull())
           ndmi <- ee$List(list(feature$get('NDMI'), -9999))$reduce(ee$Reducer$firstNonNull())
-          snow <- ee$List(list(feature$get('SNOW'), -9999))$reduce(ee$Reducer$firstNonNull())
+          #snow <- ee$List(list(feature$get('SNOW'), -9999))$reduce(ee$Reducer$firstNonNull())
           date <- ee$List(list(feature$get('Date'), -9999))$reduce(ee$Reducer$firstNonNull())
           #totalpixels <- ee$List(list(feature$get('TotalPixels'), -9999))$reduce(ee$Reducer$firstNonNull())
           #snowypixels <- ee$List(list(feature$get('SnowyPixels'), -9999))$reduce(ee$Reducer$firstNonNull())
           return(feature$
+                   set("FSC_Gascoin2020", fsc_gascoin2020)$
+                   set("FSC_Aalstad2020", fsc_aalstad2020)$
                    set("NDSI", ndsi)$
                    set("NDVI", ndvi)$
                    set("NDMI", ndmi)$
-                   set("SNOW", snow)$
+                   #set("SNOW", snow)$
                    set("Date", date)#$
                    #set("TotalPixels", totalpixels)$
                    #set("SnowyPixels", snowypixels)
