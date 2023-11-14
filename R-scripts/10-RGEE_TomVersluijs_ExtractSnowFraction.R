@@ -461,12 +461,12 @@
         df_Locations_SnowFraction <- rbind(df_Locations_SnowFraction, df_Location_SnowFraction_new)
         
         # #Save dataframe for current location
-        # write.csv(df_Location_SnowFraction_new, paste0(dir_Output, "/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Location_", Location_i, "_Data_Pixel_SnowFraction.csv"), row.names = FALSE)
+        # write.csv(df_Location_SnowFraction_new, paste0(dir_Output, "/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Location_", Location_i, "_Data_SnowFraction.csv"), row.names = FALSE)
 
       }
        
     #Save snowfraction data per location
-    write.csv(df_Locations_SnowFraction, paste0(dir_Output, "/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Data_Pixel_SnowFraction.csv"), row.names = FALSE)
+    write.csv(df_Locations_SnowFraction, paste0(dir_Output, "/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Data_SnowFraction.csv"), row.names = FALSE)
     
 
 ##################################################################################################################################
@@ -534,8 +534,8 @@
     df_Locations_SnowFraction_GAM_predictions$LocationID <- as.factor(as.character(df_Locations_SnowFraction_GAM_predictions$LocationID))
     
     #Save dataframe with GAM fits for Location specific Snowfraction data
-    #write.csv(df_Locations_SnowFraction_GAM, paste0(dir_Output, "/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Data_Pixel_SnowFraction_GAM.csv"), row.names = FALSE)
-    write.csv(df_Locations_SnowFraction_GAM_predictions, paste0(dir_Output, "/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Data_Pixel_SnowFraction_Predictions_GAM.csv"), row.names = FALSE)
+    #write.csv(df_Locations_SnowFraction_GAM, paste0(dir_Output, "/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Data_SnowFraction_GAM.csv"), row.names = FALSE)
+    write.csv(df_Locations_SnowFraction_GAM_predictions, paste0(dir_Output, "/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_GAM_Predictions_SnowFraction.csv"), row.names = FALSE)
     
     #(D) Plot the raw SnowFraction datapoints and gam predictions for each Location:
     
@@ -594,13 +594,13 @@
         df_Snowmelt_Locations$NDSI_threshold <- NDSI_threshold
         
         #Save dates of snowmelt per Location per SnowFraction threshold as a .csv file
-        write.csv(df_Snowmelt_Locations, paste0(dir_Output, "/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Snowmelt_Pixel_Snowfraction.csv"), row.names = FALSE)
+        write.csv(df_Snowmelt_Locations, paste0(dir_Output, "/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Snowmelt_Snowfraction.csv"), row.names = FALSE)
   
         #Add dates of snowmelt to the plot 'p_Locations_NDSI_grid'  
         p_Locations_SnowFraction_Snowmelt_grid <- p_Locations_SnowFraction_grid +
           geom_point(data=df_Snowmelt_Locations[!is.na(df_Snowmelt_Locations$doy),], aes(x=doy, y=Snowfraction_threshold), col="red", size=3)
         
-        ggsave(plot=p_Locations_SnowFraction_Snowmelt_grid, paste0(dir_Output, "/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Plot_Pixel_Snowmelt_Snowfraction_grid.pdf"), width=12, height = 10)
+        ggsave(plot=p_Locations_SnowFraction_Snowmelt_grid, paste0(dir_Output, "/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Plot_Snowfraction.pdf"), width=12, height = 10)
         
 
 #####################################################################################################################################          
