@@ -33,5 +33,24 @@
                                        list('B3'=img$select('B3'),
                                             'B8'=img$select('B8')))$rename('NDWI')$copyProperties(img, img$propertyNames())))}
 
+#(V): Fractional Snow Cover (FSC) function for Sentinel 2 images:
+  get_FSC <- function(img){
+    
+    #Gascoin (2020) Remote Sensing:
+    x <- img$expression('2.65 * ndsi - 1.42', list('ndsi'=img$select('NDSI')))
+    FSC_Gascoin2020 <- img$expression('0.5 * ((exp((x)) - exp(-(x))) / (exp((x)) + exp(-(x)))) + 0.5', list('x'=x))$rename('FSC_Gascoin2020')
+    
+    #Aalstad (2020) Remote Sensing of Environment
+    FSC_Aalstad2020 <- img$expression('(1.45 * ndsi) - 0.01', list('ndsi'=img$select('NDSI')))$rename('FSC_Aalstad2020')
+    FSC_Aalstad2020 <- FSC_Aalstad2020$where(FSC_Aalstad2020$lt(0), ee$Image(0))
+    FSC_Aalstad2020 <- FSC_Aalstad2020$where(FSC_Aalstad2020$gt(1), ee$Image(1))
+    
+    #Return both measures as separate bands
+    return(img$addBands(FSC_Gascoin2020)$
+               addBands(FSC_Aalstad2020)$
+               copyProperties(img, img$propertyNames()))
+    
+    }
+  
 
 ######################################################################################################################################
