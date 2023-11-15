@@ -86,7 +86,7 @@
    #(d) Snow detection
 
      #NDSI threshold for snow detection
-     NDSI_threshold_vector = c(0.42, 0.3, 0.5)
+     NDSI_threshold_vector = c(0.4, 0.3, 0.5)
 
      #Define the snowcover fraction within the aoi for which the date of its occurrence will be calculated
      Snowfraction_threshold_vector = c(0.25, 0.5, 0.75) 
@@ -153,11 +153,11 @@
      #parameters for auxiliary function to filter outliers from GAM using a two-step approach
      outlier_removal=TRUE #should sequential outlier removal be employed when fitting GAMs to the data
      outlier_thresh_1=0.4 #first threshold in outlier removal (relative to y-range of data, default=0.4)
-     outlier_thresh_2=0.3 #second threshold in outlier removal (relative to y-range of data, default=0.3)
+     outlier_thresh_2=0.2 #second threshold in outlier removal (relative to y-range of data, default=0.2)
        
      #Specify the degree of GAM smoothing by setting the 'k' parameter
      gam_k_outlier=10 #Number of knots when filtering outliers (default=10)
-     gam_k=50 #Number of knots when making model predictions (default=50). 
+     gam_k=25 #Number of knots when making model predictions (default=25). 
      #Larger values result in a more precise GAM-fit, but might result in overfitting.
  
      
