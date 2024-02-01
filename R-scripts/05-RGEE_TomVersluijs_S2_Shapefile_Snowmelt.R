@@ -2,11 +2,17 @@
 
 #Use Sentinel-2 data to extract time series of the average NDVI, NDMI, and NDSI and the fraction of snowcover for a single area of 
 #interest (i.e. a single shapefile). The fraction of snowcover is estimated by calculating the fraction of pixels with an NDSI value
-#larger than the user specified NDSI-threshold. This corresponds to the method='snowfraction' in other scripts. The user can specify 
-#whether clouds and permanent waterbodies need to be masked, and whether a composite image per day of year needs to be generated 
-#(merging multiple satellite photos for that day). The current script requires a shapefile of the study area as input. It only works 
-#for small areas of c.a. 50 km2 (larger areas might result in computation errors unless the spatial resolution of the analysis is 
-#decreased).
+#larger than the user specified NDSI-threshold for each timestep. This corresponds to the method='snowfraction' in other scripts. 
+#The user can specify  whether clouds and permanent waterbodies need to be masked, and whether a composite image per day of year 
+#needs to be generated (merging multiple satellite photos for that day). The current script requires a shapefile of the study area 
+#as input. It only works for small areas of c.a. 50 km2 (larger areas might result in computation errors unless the spatial 
+#resolution of the analysis is decreased).
+
+#Note that in this script (05), snowmelt is not calculated based on pixel-level snowmelt data (i.e. 'pixel_gam' method is not 
+#implemented). This approach is instead implemented in script "08-RGEE_TomVersluijs_S2_Shapefile_Pixel_Snowmelt.R" and involves 
+#fitting of GAMS through NDSI data per pixel and extracting the moment this GAM passes a user-defined NDSI-threshold. This results 
+#in a pixel-level map of the date of snowmelt. Script "10-RGEE_TomVersluijs_S2_ExtractSnowFraction.R" can then be used to extract 
+#timeseries of the fraction of snowcover for points/polygon(s) of interest from this map.
 
 #Copyright Tom Versluijs 2023-11-01. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
 
@@ -120,7 +126,7 @@
 
      #Should permanent waterbodies be masked from the analysis (default=TRUE).
      mask_water=TRUE
-     mask_water_type="both" #either "water_mask_ESA", "water_mask_Manual", or "both"
+     mask_water_type="water_mask_ESA" #either "water_mask_ESA", "water_mask_Manual", or "both"
      #"water_mask_ESA" uses the world wide ESA dataset with a 10m resolution which works well with large areas (default)
      #"water_mask_Manual" uses a manual approach based on NDWI, NDSI and NIR bands and generally works well for small details.
      #"both" employs both methods and sets pixels to water if one or both of these methods indicates so.

@@ -1,7 +1,7 @@
 #######################################################################################################################################
 
-#In this script the timing of snow melt is calculated based on Sentinel-2 data for all locations specified in an input file. The user
-#can specify a bufferzone (radius) to depict the area in which snow melt will be analysed per location. All locations (including 
+#In this script the timing of snow melt is calculated based on Sentinel-2 data for all point locations specified in an input file. The 
+#user can specify a bufferzone (radius) to depict the area in which snow melt will be analysed per location. All locations (including 
 #buffer zone) are required to be located within a single shapefile and are then analysed simultaneously. First, clouds and permanent 
 #water bodies are filtered within the shapefile. Second, if the shapefile overlaps with multiple satellite tiles for a certain day,   
 #a composite image is created (picking the pixel with least cloudcover). Finally, snow melt is analysed for each location's buffer 
@@ -13,19 +13,21 @@
 # (II): 'snowfraction': Calculate the fraction of pixels within each buffer zone over time where NDSI > 'NDSI_threshold', fits a
 #                       GAM through these data and extract the moment when this model passes a user-specified 'Snowfraction_threshold'.
 
-#The 'snowfraction' method is preferred, because it intuitively makes sense to look a the fraction of snow-covered pixels
-#over time. It is harder to justify the avg_NDSI method, because it is rather unclear what this average NDSI value entails.
-#A better approach would be to calculate the date of snowmelt on a pixel level using GAMS fitted through pixel-level NDSI data (i.e.
-#method = 'pixel_gam'). The latter approach is conducted in script "04-RGEE_TomVersluijs_S2_Points_Snowmelt.R" for all pixels within
-#the buffer zone of point locations. This approach is also conducted in script "08-RGEE_TomVersluijs_S2_Shapefile_Pixel_Snowmelt.R" 
-#for all pixels in a user-specified shapefile, resulting in a pixel level map of the timing of snowmelt. Script "10-RGEE_TomVersluijs_
-#S2_ExtractSnowFraction.R" can then be used to extract timeseries of the fraction of snowcover for points/polygons of interest from this 
-#map.
+#The 'snowfraction' method is preferred, because it intuitively makes sense to look a the fraction of snow-covered pixels over time.
+#It is harder to justify the 'avg_NDSI' method, because it is rather unclear what this average NDSI value entails. An even better approach 
+#is to calculate the date of snowmelt on a pixel level by fitting GAMS through pixel-level NDSI data (i.e. method = 'pixel_gam'), and to
+#use these pixel-level snowmelt dates to calculate the fraction of snow-covered pixels at each day of year. However, this approach
+#is not implemented in this script (07). Instead, it is implemented in script "04-RGEE_TomVersluijs_S2_Points_Snowmelt.R", and in script
+#"08-RGEE_TomVersluijs_S2_Shapefile_Pixel_Snowmelt.R". In the former script, these calculations are made for all pixels within the buffer
+#zone of point locations. In the latter script these calculates are made for all pixels within a user-specified shapefile, resulting in a 
+#pixel-level map of the timing of snowmelt. Script "10-RGEE_TomVersluijs_S2_ExtractSnowFraction.R" can then be used to extract timeseries 
+#of the fraction of snowcover for points/polygons of interest from this map.
 
-#The current script is similar to the script '04-RGEE_TomVersluijs_S2_Points_Snowmelt.R'. However, in the latter script all points  
+#The current script (07) is similar to the script '04-RGEE_TomVersluijs_S2_Points_Snowmelt.R'. However, in the latter script all points  
 #are analysed consecutively using a loop, which makes that script significantly slower to run. That script does not rely on a shapefile 
 #and thus works for points spaced much further apart (i.e. tracking data of migratory birds). The current script only works for small 
 #areas of c.a. 50-100 km2 (larger areas might result in computation errors unless the spatial resolution of the analyses is decreased).
+#In addition, the 'pixel_gam' method is implemented in script "04", but not in the current script "07".
 
 #Copyright Tom Versluijs 2023-11-01. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
 
@@ -165,7 +167,7 @@
 
     #Should permanent waterbodies be masked from the analysis (default=TRUE).
     mask_water=TRUE
-    mask_water_type="both" #either "water_mask_ESA", "water_mask_Manual", or "both"
+    mask_water_type="water_mask_ESA" #either "water_mask_ESA", "water_mask_Manual", or "both"
     #"water_mask_ESA" uses the world wide ESA dataset with a 10m resolution which works well with large areas (default)
     #"water_mask_Manual" uses a manual approach based on NDWI, NDSI and NIR bands and generally works well for small details.
     #"both" employs both methods and sets pixels to water if one or both of these methods indicates so.

@@ -1,12 +1,21 @@
 ##################################################################################################################################
 
-#Use Sentinel-2 data to extract time series of the average NDVI, NDMI, and NDSI and the fraction of snowcover for all sub areas 
-#located within a shapefile (these sub areas can be specified by creating a multipolygon in e.g. QGIS). The fraction of snowcover 
-#is estimated by calculating the fraction of pixels per subarea with an NDSI value larger than the user specified NDSI-threshold. 
-#This corresponds to the method='snowfraction' in other scripts.The user can specify whether clouds and permanent waterbodies 
-#need to be masked, and whether a composite image per day of year needs to be generated (merging multiple satellite photos for 
-#that day). The current script requires a shapefile including subareas within the study area as input. It only works for small 
-#areas of c.a. 50 km2 (larger areas might result in computation errors unless the spatial resolution of the analyses is decreased).
+#Use Sentinel-2 data to extract time series of (I) the average fractional snowcover (FSC), (II) the average NDVI, NDMI and NDSI,
+#and (III) the fraction of snowcover, for all sub areas located within a shapefile. These sub areas can be specified by creating a
+#multipolygon in e.g. QGIS (see manual). The fractional snowcover (FSC) is calculated based on two methods: following Gascoin et 
+#al 2020, and Aalstad et al 2020. This FSC is a within-pixel estimate of the fraction of snowcover, which is then averaged over
+#all pixels per subarea. The fraction of snowcover is instead estimated by calculating the fraction of pixels per subarea with an 
+#NDSI value larger than the user specified NDSI-threshold for each timestep. This corresponds to the method='snowfraction' in 
+#other scripts. The user can specify whether clouds and permanent waterbodies need to be masked, and whether a composite image 
+#per day of year needs to be generated (merging multiple satellite photos for that day). The current script requires a shapefile 
+#of subareas within the study area as input. It only works for small areas of c.a. 50 km2 (larger areas might result in 
+#computation errors unless the spatial resolution of the analyses is decreased).
+
+#Note that in this script (06), snowmelt is not calculated based on pixel-level snowmelt data (i.e. 'pixel_gam' method is not 
+#implemented). This approach is instead implemented in script "08-RGEE_TomVersluijs_S2_Shapefile_Pixel_Snowmelt.R" and involves 
+#fitting of GAMS through NDSI data per pixel and extracting the moment this GAM passes a user-defined NDSI-threshold. This results 
+#in a pixel-level map of the date of snowmelt. Script "10-RGEE_TomVersluijs_S2_ExtractSnowFraction.R" can then be used to extract 
+#timeseries of the fraction of snowcover for points/polygons of interest from this map.
 
 #Copyright Tom Versluijs 2023-11-01. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
 
@@ -106,9 +115,9 @@
      
      #Define the preferred method for the analysis of snowmelt
      method=c("avg_NDSI", "snowfraction") #either "avg_NDSI", "snowfraction", or a combination using c()
-     #(1) "avg_NDSI":     Calculates the average FSC, NDSI, NDVI and NDMI values within each point's bufferzone over time and extracts the moment 
+     #(1) "avg_NDSI":     Calculates the average FSC, NDSI, NDVI and NDMI values within each subarea over time and extracts the moment 
      #                    when the NDSI value is equal to 'NDSI_threshold'.
-     #(2) "snowfraction": Counts the fraction of pixels within the aoi with NDSI > 'NDSI_threshold' over time and extracts the moment 
+     #(2) "snowfraction": Counts the fraction of pixels within each subarea with NDSI > 'NDSI_threshold' over time and extracts the moment 
      #                    when this fraction is equal to 'Snowfraction_threshold'.
      
    #(e): Cloud masking

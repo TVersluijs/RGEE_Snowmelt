@@ -1,7 +1,7 @@
 #####################################################################################################################################
 
-#In this script the timing of snow melt is calculated based on Sentinel-2 data for all locations specified in an input file. No 
-#shapefile is required as input for this script, which allows for input locations to be spaced far apart. The user can specify a 
+#In this script the timing of snow melt is calculated based on Sentinel-2 data for all point-locations specified in an input file. 
+#No shapefile is required as input for this script, which allows for input locations to be spaced far apart. The user can specify a 
 #bufferzone (radius) to depict the area in which snow melt will be analysed per location. All locations are analysed consecutively 
 #(using a loop). First, a location specific bounding box is drawn per point location (taking into account the specified buffer zone) 
 #and Sentinel-2 satellite data is extracted within this bounding box. Second, clouds and permanent water bodies are filtered within 
@@ -140,11 +140,11 @@
      method=c("avg_NDSI", "snowfraction", "pixel_gam") #either "avg_NDSI", "snowfraction", "pixel_gam" or a combination using c()
      #(1) "avg_NDSI":     Calculates the average NDSI, NDVI and NDMI values within each point's bufferzone over time and extracts the moment 
      #                    when the NDSI value is equal to 'NDSI_threshold'.
-     #(2) "snowfraction": Counts the fraction of pixels within the aoi with NDSI > 'NDSI_threshold' over time and extracts the moment 
-     #                    when this fraction is equal to 'Snowfraction_threshold'.
-     #(3) "pixel_gam":    Fits a GAM through the NDSI data per pixel and calculates when this function passes NDSI_threshold. Then use these
-     #                    pixel-specific dates of snowmelt to calculate a fraction of snowcovered pixels for each day of year, and extract 
+     #(2) "snowfraction": Counts the fraction of pixels within each point's bufferzone with NDSI > 'NDSI_threshold' over time and extracts 
      #                    the moment when this fraction is equal to 'Snowfraction_threshold'.
+     #(3) "pixel_gam":    Fits a GAM through the NDSI data per pixel and calculates when this function passes NDSI_threshold. Then use these
+     #                    pixel-specific dates of snowmelt to calculate a fraction of snowcovered pixels within each point's bufferzone for 
+     #                    each day of year, and extract the moment when this fraction is equal to 'Snowfraction_threshold'.
      
      #should pixel-level image of date of snowmelt be exported to Google Drive (only applicable when method="pixel_gam")
      export_pixel_image_to_drive=TRUE 
@@ -178,7 +178,7 @@
 
      #Should permanent waterbodies be masked from the analysis (default=TRUE).
      mask_water=TRUE
-     mask_water_type="both" #either "water_mask_ESA", "water_mask_Manual", or "both"
+     mask_water_type="water_mask_ESA" #either "water_mask_ESA", "water_mask_Manual", or "both"
      #"water_mask_ESA" uses the world wide ESA dataset with a 10m resolution which works well with large areas (default)
      #"water_mask_Manual" uses a manual approach based on NDWI, NDSI and NIR bands and generally works well for small details.
      #"both" employs both methods and sets pixels to water if one or both of these methods indicates so.
