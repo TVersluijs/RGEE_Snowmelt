@@ -137,15 +137,15 @@ Script to install RGEE by manually setting the Python path. This script is adapt
 Extract timeseries of the fraction of snowcover from a pixel-level snow melt map for a set of input locations. This corresponds 
 to the method 'pixel_gam' in the other scripts. Input locations can either be point locations with a corresponding buffer zone, 
 or a collection of polygons in a shapefile. This script depends on a snowmelt map generated for MODIS using script "02-RGEE_
-TomVersluijs_#MODIS_Shapefile_Pixel_Snowmelt.R", or for Sentinel-2 using script "08-RGEE_TomVersluijs_S2_Shapefile_Pixel_
+TomVersluijs_MODIS_Shapefile_Pixel_Snowmelt.R", or for Sentinel-2 using script "08-RGEE_TomVersluijs_S2_Shapefile_Pixel_
 Snowmelt.R". Please run either script before continuing with the analysis in this script.
 
 ## MODIS SCRIPTS:
 
 ### *01-RGEE_TomVersluijs_MODIS_Points_Snowmelt.R
 In this script the date of snow melt is calculated based on MODIS data for all locations specified in an input file. The user 
-can specify a bufferzone (radius) to depict the area in which snow melt will be analysed per location. No shapefile is required as 
-input for this script, which allows for input locations to be spaced far apart.	All locations are analysed consecutively (using a 
+can specify a bufferzone (radius) to depict the area in which snow melt will be analysed per location. <i>No shapefile is required as 
+input for this script, which allows for input locations to be spaced far apart.</i>	All locations are analysed consecutively (using a 
 loop). First, a location specific bounding box is drawn per point location taking into account the specified buffer zone) and 
 MODIS satellite data is extracted within this bounding box. Second, clouds and permanent water bodies are filtered within this 
 bounding box. Finally, snow melt is analysed within each locations's buffer zone based on one of the following methods (specified 
@@ -206,8 +206,8 @@ for each pixel (i.e. intercept of linear regression).
 
 ### *04-RGEE_TomVersluijs_S2_Points_Snowmelt.R
 In this script the timing of snow melt is calculated based on Sentinel-2 data for all point-locations specified in an input file. The
-user can specify a bufferzone (radius) to depict the area in which snow melt will be analysed per location. <b> No shapefile is required as 
-input for this script, which allows for input locations to be spaced far apart. All locations are analysed consecutively (using a loop). </b> 
+user can specify a bufferzone (radius) to depict the area in which snow melt will be analysed per location. <i> No shapefile is required as 
+input for this script, which allows for input locations to be spaced far apart. All locations are analysed consecutively (using a loop). </i> 
 First, a location specific bounding box is drawn per point location (taking into account the specified buffer zone) and Sentinel-2 
 satellite data is extracted within this bounding box. Second, clouds and permanent water bodies can be filtered within this bounding 
 box. Third, if this bounding box overlaps with multiple satellite tiles for a certain day, a composite image can be created (picking 
@@ -243,8 +243,8 @@ Use Sentinel-2 data to extract time series of the average NDVI, NDMI, and NDSI a
 interest (i.e. a single shapefile). The fraction of snowcover is estimated by calculating the fraction of pixels with an NDSI value
 larger than the user specified NDSI-threshold for each timestep. This corresponds to the method='snowfraction' in other scripts. 
 The user can specify  whether clouds and permanent waterbodies need to be masked, and whether a composite image per day of year 
-needs to be generated (merging multiple satellite photos for that day). The current script requires a shapefile of the study area 
-as input. It only works for small areas of c.a. 50 km2 (larger areas might result in computation errors unless the spatial 
+needs to be generated (merging multiple satellite photos for that day). <i>The current script requires a shapefile of the study area 
+as input.</i> It only works for small areas of c.a. 50 km2 (larger areas might result in computation errors unless the spatial 
 resolution of the analysis is decreased). Note that in this script (05), snowmelt is not calculated based on pixel-level snowmelt 
 data (i.e. 'pixel_gam' method is not implemented). This approach is instead implemented in script "08-RGEE_TomVersluijs_S2_Shape
 file_Pixel_Snowmelt.R" and involves fitting of GAMS through NDSI data per pixel and extracting the moment this GAM passes a user-
@@ -266,8 +266,8 @@ al 2020, and Aalstad et al 2020. This FSC is a within-pixel estimate of the frac
 all pixels per subarea. The fraction of snowcover is instead estimated by calculating the fraction of pixels per subarea with an 
 NDSI value larger than the user specified NDSI-threshold for each timestep. This corresponds to the method='snowfraction' in 
 other scripts. The user can specify whether clouds and permanent waterbodies need to be masked, and whether a composite image 
-per day of year needs to be generated (merging multiple satellite photos for that day). The current script requires a shapefile 
-of subareas within the study area as input. It only works for small areas of c.a. 50 km2 (larger areas might result in 
+per day of year needs to be generated (merging multiple satellite photos for that day). <i>The current script requires a shapefile 
+of subareas within the study area as input.</i> It only works for small areas of c.a. 50 km2 (larger areas might result in 
 computation errors unless the spatial resolution of the analyses is decreased). Note that in this script (06), snowmelt is not 
 calculated based on pixel-level snowmelt data (i.e. 'pixel_gam' method is not implemented). This approach is instead implemented 
 in script "08-RGEE_TomVersluijs_S2_Shapefile_Pixel_Snowmelt.R" and involves fitting of GAMS through NDSI data per pixel and 
@@ -284,15 +284,15 @@ points/polygons of interest from this map.
 
 ### *07-RGEE_TomVersluijs_S2_Shapefile_Points_Snowmelt.R
 In this script the timing of snowmelt is calculated based on Sentinel-2 data for all point locations specified in an input file. The 
-user can specify a bufferzone (radius) to depict the area in which snow melt will be analysed per location. <b> All locations (including 
-buffer zone) are required to be located within a single shapefile and are then analysed simultaneously. </b> First, clouds and permanent 
+user can specify a bufferzone (radius) to depict the area in which snow melt will be analysed per location. <i> All locations (including 
+buffer zone) are required to be located within a single shapefile and are then analysed simultaneously. </i> First, clouds and permanent 
 water bodies can be filtered within the shapefile. Second, if the shapefile overlaps with multiple satellite tiles for a certain day,   
 a composite image can be created (picking the pixel with least cloudcover). Finally, snow melt is analysed for each location's buffer 
 zone based on one of the following methods (specified by the user by setting the parameter 'method'): (1) 'avg_NDSI': Calculate the 
 average NDSI value over time within each point's buffer zone, fits a GAM through these data and calculates when this model passes 
 the specified NDSI threshold defining the moment of snow melt. In addition, time series of the average NDVI and NDMI are extracted 
-within each point's buffer zone. (2) 'snowfraction': Calculate the fraction of pixels within each buffer zone over time where NDSI 
-> 'NDSI_threshold', fits a GAM through these data and extract the moment when this model passes a user-specified 'Snowfraction_threshold'.
+within each point's buffer zone. (2) 'snowfraction': Calculate the fraction of pixels within each buffer zone over time where NDSI larger 
+than 'NDSI_threshold', fits a GAM through these data and extract the moment when this model passes a user-specified 'Snowfraction_threshold'.
 The 'snowfraction' method is preferred, because it intuitively makes sense to look a the fraction of snow-covered pixels over time.
 It is harder to justify the 'avg_NDSI' method, because it is rather unclear what this average NDSI value entails. An even better approach 
 is to calculate the date of snowmelt on a pixel level by fitting GAMS through pixel-level NDSI data (i.e. method = 'pixel_gam'), and to
