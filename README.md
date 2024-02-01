@@ -286,7 +286,7 @@ points/polygons of interest from this map.
 In this script the timing of snowmelt is calculated based on Sentinel-2 data for all point locations specified in an input file. The 
 user can specify a bufferzone (radius) to depict the area in which snow melt will be analysed per location. <i> All locations (including 
 buffer zone) are required to be located within a single shapefile and are then analysed simultaneously. </i> First, clouds and permanent 
-water bodies can be filtered within the shapefile. Second, if the shapefile overlaps with multiple satellite tiles for a certain day,   
+water bodies can be filtered within the shapefile. Second, if the shapefile overlaps with multiple satellite tiles for a certain day,
 a composite image can be created (picking the pixel with least cloudcover). Finally, snow melt is analysed for each location's buffer 
 zone based on one of the following methods (specified by the user by setting the parameter 'method'): (1) 'avg_NDSI': Calculate the 
 average NDSI value over time within each point's buffer zone, fits a GAM through these data and calculates when this model passes 
