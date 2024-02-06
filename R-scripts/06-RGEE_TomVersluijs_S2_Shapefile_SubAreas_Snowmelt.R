@@ -81,20 +81,20 @@
    #(b) Area of interest
 
      #Specify name of study area (used as prefix in output files)
-     area_name="ZAC"
+     area_name="UTQ"
 
      #Name of Shapefile with outline encompassing al sub areas (located in '/Input/Shapefiles' folder)
 	   #Follow the guide "Manual_CreateShapefilePolygons.docx" when creating this shapefile.
-     shapefile <- "ZAC_Outline_EPSG4326.shp"
+     shapefile <- "Utqiagvik2022_Outline_EPSG4326.shp"
 
      #Name of Shapefile containing a separate polygon for each sub area (located in '/Input/Shapefiles' folder)
 	   #Follow the guide "Manual_CreateShapefilePolygons.docx" when creating this shapefile.
-     shapefile_subareas <- "ZAC_TenEqualSizeVoronoiPolygons_EPSG4326.shp"
+     shapefile_subareas <- "Utqiagvik2022_Nests_EPSG4326.shp"
 
      #Coordinate reference system used for calculations
      #EPSG:4326 is recommended for areas spanning multiple UTM zones, but increased computation time (i.e. spherical coordinate system).
      #EPSG:326XX is results in reduced computation time for areas located within a single UTM zone (i.e. planar coordinate system).
-     crs <- "EPSG:32627"
+     crs <- "EPSG:32604"
 
    #(c) Dates
 
@@ -111,7 +111,7 @@
      NDSI_threshold_vector = 0.4
      
      #Define the snowcover fraction for which the date of its occurrence will be calculated (specify multiple using c())
-     Snowfraction_threshold_vector = c(0.25, 0.5, 0.75)
+     Snowfraction_threshold_vector = seq(0.25, 0.75, 0.05)
      
      #Define the preferred method for the analysis of snowmelt
      method=c("avg_NDSI", "snowfraction") #either "avg_NDSI", "snowfraction", or a combination using c()
@@ -182,7 +182,7 @@
      #parameters for auxiliary function to filter outliers from GAM using a two-step approach
      outlier_removal=TRUE #should sequential outlier removal be employed when fitting GAMs to the data
      outlier_thresh_1=0.4 #first threshold in outlier removal (relative to y-range of data, default=0.4)
-     outlier_thresh_2=0.2 #second threshold in outlier removal (relative to y-range of data, default=0.2)
+     outlier_thresh_2=0.3 #second threshold in outlier removal (relative to y-range of data, default=0.2)
        
      #Specify the degree of GAM smoothing by setting the 'k' parameter
      gam_k_outlier=10 #Number of knots when filtering outliers (default=10)

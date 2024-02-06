@@ -9,22 +9,42 @@
 
 ####################################################################################################################################
 
+#NOTE ON RESAMPLING
+
+  #SPATIAL RESOLUTIONS OF L2A-BANDS:
+  # -B3 (Green)   = 10m 
+  # -B4 (Red)     = 10m 
+  # -B8 (NIR)     = 10m 
+  # -B11 (SWIR 1) = 20m 
+  
+  #SPATIAL RESOLUTION OF NORMALIZED DIFFERENCE FUNCTIONS:
+  # -NDSI: band B3 & B11  --> 20m
+  # -NDVI: band B8 & B4   == 10m
+  # -NDMI: band B8 & B11  --> 20m
+  # -NDWI: band B3 & B8   == 10m
+  
+  #Thus for NDSI, and NDMI we resample the B3 and B8 band respectively to match the 20m resolution of the B11 band.
+  #The default resampling is 'nearest-neighbour' in Google Earth Engine. Instead, we specify 'bicubic' using the
+  #resample function. As both FSC measures are derived from NDSI, they also inherit a 20m spatial resolution.
+
+####################################################################################################################################
+
 #(I): Normalized Difference Snow Index (NDSI) function for Sentinel 2 images:
   getNDSI <- function(img){
     return(img$addBands(img$expression('(B3 - B11) / (B3 + B11)',
-                                       list('B11' = img$select('B11'),
-                                            'B3'  = img$select('B3')))$rename('NDSI')$copyProperties(img, img$propertyNames())))}
+                                       list('B3'  = img$select('B3')$resample('bicubic')$reproject(img$select('B11')$projection()),
+                                            'B11' = img$select('B11')))$rename('NDSI')$copyProperties(img, img$propertyNames())))}
 
 #(II): Normalized Difference Vegetation Index (NDVI) function for Sentinel 2 images:
   getNDVI <- function(img){
     return(img$addBands(img$expression('(B8 - B4) / (B8 + B4)',
-                                       list('B8'=img$select('B8'),
-                                            'B4'=img$select('B4')))$rename('NDVI')$copyProperties(img, img$propertyNames())))}
+                                       list('B4'=img$select('B4'),
+                                            'B8'=img$select('B8')))$rename('NDVI')$copyProperties(img, img$propertyNames())))}
 
 #(III): Normalized Difference Moisture Index (NDMI) function for Sentinel 2 images:
   getNDMI <- function(img){
     return(img$addBands(img$expression('(B8 - B11) / (B8 + B11)',
-                                       list('B8'=img$select('B8'),
+                                       list('B8'=img$select('B8')$resample('bicubic')$reproject(img$select('B11')$projection()),
                                             'B11'=img$select('B11')))$rename('NDMI')$copyProperties(img, img$propertyNames())))}
 
 #(IV): Normalized Difference Water Index (NDWI) function for Sentinel 2 images:
