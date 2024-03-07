@@ -182,7 +182,7 @@
      #parameters for auxiliary function to filter outliers from GAM using a two-step approach
      outlier_removal=TRUE #should sequential outlier removal be employed when fitting GAMs to the data
      outlier_thresh_1=0.4 #first threshold in outlier removal (relative to y-range of data, default=0.4)
-     outlier_thresh_2=0.3 #second threshold in outlier removal (relative to y-range of data, default=0.2)
+     outlier_thresh_2=0.2 #second threshold in outlier removal (relative to y-range of data, default=0.2)
        
      #Specify the degree of GAM smoothing by setting the 'k' parameter
      gam_k_outlier=10 #Number of knots when filtering outliers (default=10)
