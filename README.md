@@ -24,7 +24,8 @@ information in the file 'CITATION.cff' found in the root folder of this Github r
 #######################################################################################
 
 -(1) Make sure to download the complete github folder 'RGEE_Snowmelt' to make sure all dependencies between input files, scripts and output folders function properly. The complete repository can be
-     cloned to your own Github repository using '<>Code/Clone' or to your local drive using '<>Code/Download ZIP'.
+     cloned to your own Github repository using '<>Code/Clone', or to your local drive using '<>Code/Download ZIP'. IMPORTANT: make sure that you place the folder on a directory to which you have 
+	 admin rights. Issues might also arise when trying to install RGEE from network drives.
 	 
 -(2) Update to the newest versions of R and R-Studio before running the scripts. The scripts were developed with R-version 4.3.0 and R-Studio 2023.06.1 build 524.
 
@@ -32,7 +33,7 @@ information in the file 'CITATION.cff' found in the root folder of this Github r
      getting RGEE to function properly can be quite a frustrating first hurdle to take. Things will get easier once everything is up and running!
 	 
 -(4) It is recommended to use the library() and p_load() functions in each script to install the newest versions of all required R-packages and their dependencies.	However, if this results in 
-     an error then the latest versions of R-packages (including dependencies) that were used to succesfully run the scripts are stored in the file "renv.lock". These specific versions can be 
+     an error, then the latest versions of R-packages (including dependencies) that were used to succesfully run the scripts are stored in the file "renv.lock". These specific versions can be 
 	 downloaded and installed by running renv::restore() at the beginning of each script.	  
 	 
 -(5) All scripts in this Github folder need to be run from within the R-project "RGEE_Snowmelt.Rproj" in the root directory. Thus, first open the 'RGEE_Snowmelt.Rproj' file in RStudio, and then

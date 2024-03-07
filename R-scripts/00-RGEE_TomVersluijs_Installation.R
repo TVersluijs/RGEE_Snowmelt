@@ -39,10 +39,10 @@
   ## install Miniconda3 at https://docs.conda.io/en/latest/miniconda.html (keep all default settings, i.e. install for local user only)
   ## open 'anaconda' in the command prompt (window button --> anaconda, you will see anaconda prompt)
   ## then type in the commands below one-by-one (without the #) to install the rgee_py environment and packages:
-  # conda create -n rgee_py pip python     #or "conda create -n rgee_py pip python=3.09" for a specific version
+  # conda create -n rgee_py pip python     #or "conda create -n rgee_py pip python=3.11" for a specific version
   # conda activate rgee_py
   # pip install google-api-python-client
-  # pip install earthengine-api            #or 'pip install earthengine-api==0.1.329' for specific version
+  # pip install earthengine-api            #or 'pip install earthengine-api==0.1.370' for specific version
   # pip install numpy
 
   ## ok conda should now be installed, now lets get the path to the environment, type inside anaconda:
@@ -157,6 +157,19 @@
   #If after running that there are four green checkmarks at 'user', 'Google Drive credentials', 'Initializing Google Earth Engine'
   #and 'Earth Engine account' then the installation and initialization has completed succesfully. Congrats!
 
+  # #If at this point you get the error that your credentials have expired, you could downgrade the earthengine API version to
+  # #version 0.1.370 (https://github.com/r-spatial/rgee/issues/353#issuecomment-1983765552)
+  # library(reticulate)
+  # py_config() # see the name of your conda (python) environment, in my case "r-reticulate" 
+  # reticulate::py_install('earthengine-api==0.1.370', envname='r-reticulate') 
+  # 
+  # # Check the installation of "earthengine-api" with 
+  # pyl <- py_list_packages()
+  # pyl[pyl$package == "earthengine-api", ]
+  # 
+  # # check python version with
+  # py_run_string("import sys; print(sys.version)")
+  
 ######################################################################################################################################
 
 #(7): Some final checks

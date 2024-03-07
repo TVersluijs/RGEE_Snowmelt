@@ -11,7 +11,7 @@ file you can find (I) Usage notes, (II) Which script to use?, and (III) Detailed
 Copyright: Tom S.L. Versluijs 2023 (tom.versluijs@gmail.com)
 
 When using any of these scripts for scientific publications, please cite the original Github repository by following the provided
-information in the file 'CITATION.dff' found in the root folder of this Github repository.
+information in the file 'CITATION.cff' found in the root folder of this Github repository.
 
 
 #######################################################################################
@@ -21,16 +21,17 @@ information in the file 'CITATION.dff' found in the root folder of this Github r
 #######################################################################################
 
 -(1) Make sure to download the complete github folder 'RGEE_Snowmelt' to make sure all dependencies between input files, scripts and output folders function properly. The complete repository can be
-     cloned to your own Github repository using '<>Code/Clone' or to your local drive using '<>Code/Download ZIP'.
+     cloned to your own Github repository using '<>Code/Clone', or to your local drive using '<>Code/Download ZIP'. IMPORTANT: make sure that you place the folder on a directory to which you have 
+     admin rights. Issues might also arise when trying to install RGEE from network drives.
 	 
 -(2) Update to the newest versions of R and R-Studio before running the scripts. The scripts were developed with R-version 4.3.0 and R-Studio 2023.06.1 build 524.
 
 -(3) If RGEE has not yet been installed, or does not function properly, make sure to install RGEE and its python dependencies using the script "00-RGEE_TomVersluijs_Installation.R". Note that
      getting RGEE to function properly can be quite a frustrating first hurdle to take. Things will get easier once everything is up and running!
 	 
--(4) It is recommended to use the library() and p_load() functions in each script to install the newest versions of all required R-packages and their dependencies.	However, if this results in 
-     an error then the latest versions of R-packages (including dependencies) that were used to succesfully run the scripts are stored in the file "renv.lock". These specific versions can be 
-	 downloaded and installed by running renv::restore() at the beginning of each script.	  
+-(4) It is recommended to use the library() and p_load() functions in each script to install the newest versions of all required R-packages and their dependencies. However, if this results in 
+     an error, then the latest versions of R-packages (including dependencies) that were used to succesfully run the scripts are stored in the file "renv.lock". These specific versions can be 
+     downloaded and installed by running renv::restore() at the beginning of each script.	  
 	 
 -(5) All scripts in this Github folder need to be run from within the R-project "RGEE_Snowmelt.Rproj" in the root directory. Thus, first open the 'RGEE_Snowmelt.Rproj' file in RStudio, and then
      select the required script under 'Files/RGEE/R-scripts', or "/File/Open file..."
@@ -46,9 +47,9 @@ information in the file 'CITATION.dff' found in the root folder of this Github r
      parameters the complete code can be selected (CTRL-A) and can be run at once (CTRL + ENTER, or CTRL + R, or by clicking Run in R-Studio).
 	 
 -(10) Sentinel-2 scripts can be computationally demanding and depending on the occupancy of the Google Earth Engine servers might take up to 16 hours to complete! The servers can sometimes be
-     so busy that the script returns a 'computation time out' or 'computation error'. If this happens, please try to run the script again at some other time. If the code still results in an
-	 computation error then your spatial extend is probably to large for the specified resolution. Either decrease the spatial resolution of the analysis by setting the parameter 'resolution',
-	 or reduce the spatial extent of the analysis.
+      so busy that the script returns a 'computation time out' or 'computation error'. If this happens, please try to run the script again at some other time. If the code still results in an
+      computation error then your spatial extend is probably to large for the specified resolution. Either decrease the spatial resolution of the analysis by setting the parameter 'resolution',
+      or reduce the spatial extent of the analysis.
 	 
 -(11) For questions regarding potential errors and bugs please contact tom.versluijs@gmail.com.
 
