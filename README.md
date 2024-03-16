@@ -25,9 +25,9 @@ information in the file 'CITATION.cff' found in the root folder of this Github r
 
 -(1) Make sure to download the complete github folder 'RGEE_Snowmelt' to make sure all dependencies between input files, scripts and output folders function properly. The complete repository can be
      cloned to your own Github repository using '<>Code/Clone', or to your local drive using '<>Code/Download ZIP'. IMPORTANT: make sure that you place the folder on a directory to which you have 
-	 admin rights. Issues might also arise when trying to install RGEE from network drives.
+	 admin rights.
 	 
--(2) Update to the newest versions of R and R-Studio before running the scripts. The scripts were developed with R-version 4.3.0 and R-Studio 2023.06.1 build 524.
+-(2) Update to the newest versions of R and R-Studio before running the scripts. The scripts were developed with R-version 4.3.2 and R-Studio 2023.12.1 build 402.
 
 -(3) If RGEE has not yet been installed, or does not function properly, make sure to install RGEE and its python dependencies using the script "00-RGEE_TomVersluijs_Installation.R". Note that
      getting RGEE to function properly can be quite a frustrating first hurdle to take. Things will get easier once everything is up and running!
