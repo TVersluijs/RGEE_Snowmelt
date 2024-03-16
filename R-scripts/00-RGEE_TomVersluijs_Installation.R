@@ -2,8 +2,8 @@
 
 # Script: Script with installation procedures to use RGEE
 # Author: Tom Versluijs adapted from Ricardo Dal'Agnol da Silva
-# Date Created: 2023-01-15
-# R version 4.2.2 (2023-01-15)
+# Date Created: 2024-03-116
+# R version 4.3.2
 # Adapted from the following video tutorial: https://www.youtube.com/watch?v=1-k6wNL2hlo&ab_channel=RicardoDalagnol
 
 ######################################################################################################################################
@@ -26,7 +26,6 @@
   ## you need a GEE account before being able to use RGEE.
   ## log in the https://code.earthengine.google.com/ and register for one.
 
-
 ######################################################################################################################################
 
 #(2): installing python through conda environment 
@@ -42,13 +41,17 @@
   # conda create -n rgee_py pip python     #or "conda create -n rgee_py pip python=3.11" for a specific version
   # conda activate rgee_py
   # pip install google-api-python-client
-  # pip install earthengine-api            #or 'pip install earthengine-api==0.1.370' for specific version
+  # pip install earthengine-api==0.1.370            #or 'pip install earthengine-api' for the newest version
   # pip install numpy
+  
+  #Important: there is a bug in the newest versions of the earthengine-api that result in the error "credentials have expired" when
+  #initializing google earth engine using RGEE. To prevent this we have installed an older version of the earthengine-api (0.1.370)
+  #at line 44.
 
   ## ok conda should now be installed, now lets get the path to the environment, type inside anaconda:
   # conda env list
 
-  ## copy the path to the rgee_py environment, you will need it set in the variable below inside R:
+  ## copy the path to the rgee_py environment, you will need to set it in the variable below inside R:
   ## note the use of double backslashes \\ 
   ## this below is where is located in MY computer, you have to use the 'conda env list' command to find where it is located on yours
   rgee_environment_dir = "C:\\Users\\tomve\\miniconda3\\envs\\rgee_py"
@@ -69,9 +72,9 @@
   #         import ee
   #         ee.Authenticate()
   # 
-  #     Credentials should be saved to C:/Users/tomve/AppData/Roaming/gcloud/application_default_credentials.json.
+  #     Credentials on my computer have been saved to C:/Users/tomve/AppData/Roaming/gcloud/application_default_credentials.json.
   #
-  # RESTART THE R SESSION AFTER INSTALLING gcloud BEFORE RUNNING THE NEXT LINES
+  # RESTART THE R SESSION AFTER INSTALLING GCLOUD BEFORE RUNNING THE NEXT LINES
 
   #Check if gcloud is found in windows
   system("gcloud --version")
@@ -82,7 +85,7 @@
 
 ######################################################################################################################################
 
-  ## R: version at least 4.3.0 (this is the version that I tested so far and works)
+  ## R: version at least 4.3.2 (this is the version that I tested so far and works)
   # Link: https://cran.r-project.org/bin/windows/base/
 
   ## RStudio: a recent version is recommended.
@@ -155,13 +158,17 @@
 
   ##The first time running ee_Initialize some text will appear about google drive credentials, and ask you to log in your GEE account.
   #If after running that there are four green checkmarks at 'user', 'Google Drive credentials', 'Initializing Google Earth Engine'
-  #and 'Earth Engine account' then the installation and initialization has completed succesfully. Congrats!
+  #and 'Earth Engine account' then the installation and initialization has completed succesfully. Congratulations!
 
-  # #If at this point you get the error that your credentials have expired, you could downgrade the earthengine API version to
+  #As a final step we create an asset folder on your local machine for the temporary storage of output files
+  ee$data$createAssetHome("users/Tom_assets")
+  #ee_get_assethome()
+  
+  # #If ee_initialize() results in an error that your credentials have expired, you should downgrade the earthengine API version to
   # #version 0.1.370 (https://github.com/r-spatial/rgee/issues/353#issuecomment-1983765552)
   # library(reticulate)
-  # py_config() # see the name of your conda (python) environment, in my case "r-reticulate" 
-  # reticulate::py_install('earthengine-api==0.1.370', envname='r-reticulate') 
+  # py_config() # see the name of your conda (python) environment, in my case "rgee_py" 
+  # reticulate::py_install('earthengine-api==0.1.370', envname='rgee_py') 
   # 
   # # Check the installation of "earthengine-api" with 
   # pyl <- py_list_packages()
