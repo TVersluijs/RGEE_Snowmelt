@@ -81,7 +81,7 @@
        NDSI_threshold=0.4 #only a single value allowed 
        
       #What coordinate reference system was used to generate the snow melt map
-       crs <- "EPSG:32604"
+       crs <- "EPSG:32627"
        
       #Specify the name of the study area
        area_name="ZAC"
@@ -628,9 +628,9 @@
           
           #Plot SnowFraction and model predictions in a separate plot per Location
           plots_snowfraction <- list(list_plots_snowfraction)
+          plots_snowfraction <- do.call(c, plots_snowfraction)
           plots_per_page = 25
-          plots_snowfraction <- lapply(plots_snowfraction, function(x){split(x, ceiling(seq_along(plots_snowfraction[[1]])/plots_per_page))})
-          plots_snowfraction <- unname(unlist(plots_snowfraction, recursive = F))
+          plots_snowfraction <- split(plots_snowfraction, ceiling(seq_along(plots_snowfraction)/plots_per_page))
           pdf(paste0(dir_Output, "/", timestamp, "_", data_ID, output_affix, "_Locations_Plot_Snowfraction.pdf"), width=20, height=16, onefile = TRUE)
           for (k in seq(length(plots_snowfraction))) { do.call("grid.arrange", plots_snowfraction[[k]]) }
           dev.off()
