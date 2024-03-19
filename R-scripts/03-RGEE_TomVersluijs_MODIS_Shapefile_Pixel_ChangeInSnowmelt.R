@@ -480,15 +480,16 @@
           mean(na.omit(df_pixel_ChangeInSnowmelt$snowmelt_change[index]))
           #An average DELAY in the date of snowmelt of 0.011 days per year! But, this is largely due to the very late year 2018.
           
-          #Store plots of changes in timing of snowmelt for all pixels within aoi_Shapefile
+          #Combine all plots of changes in timing of snowmelt for all pixels within aoi_Shapefile in a single list
           plot_pixel_snowmelt <- lapply(results, "[[", 2)
-          plot_pixel_snowmelt <- plot_pixel_snowmelt[[1]]
+          plot_pixel_snowmelt <- do.call(c, plot_pixel_snowmelt)
+          
+          #Restrict to only those pixels wihtin aoi_shapefile
           plot_pixel_snowmelt <- plot_pixel_snowmelt[index]
-          plot_pixel_snowmelt <- list(plot_pixel_snowmelt)
-         
+
+          #Plot the GAM fits with 25 plots per pdf page
           plots_per_page = 25
-          plot_pixel_snowmelt <- lapply(plot_pixel_snowmelt, function(x){split(x, ceiling(seq_along(plot_pixel_snowmelt[[1]])/plots_per_page))})
-          plot_pixel_snowmelt <- unname(unlist(plot_pixel_snowmelt, recursive = F))
+          plot_pixel_snowmelt <- split(plot_pixel_snowmelt, ceiling(seq_along(plot_pixel_snowmelt)/plots_per_page))
           pdf(paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", timestamp, "_", data_ID, "_Pixel_ChangeInSnowmelt_shapefile.pdf"), width=20, height=16, onefile = TRUE)
           for (i in seq(length(plot_pixel_snowmelt))) { do.call("grid.arrange", plot_pixel_snowmelt[[i]]) }
           dev.off()
