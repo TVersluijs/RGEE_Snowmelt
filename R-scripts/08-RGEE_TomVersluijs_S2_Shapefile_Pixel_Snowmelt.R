@@ -624,9 +624,9 @@
           
           # #Store plots per pixel
           # plot_pixel_snowmelt <- lapply(results, "[[", 2)
+          # plot_pixel_snowmelt <- do.call(c, plot_pixel_snowmelt)
           # plots_per_page = 25
-          # plot_pixel_snowmelt <- lapply(plot_pixel_snowmelt, function(x){split(x, ceiling(seq_along(plot_pixel_snowmelt[[1]])/plots_per_page))})
-          # plot_pixel_snowmelt <- unname(unlist(plot_pixel_snowmelt, recursive = F))
+          # plot_pixel_snowmelt <- split(plot_pixel_snowmelt, ceiling(seq_along(plot_pixel_snowmelt)/plots_per_page))
           # pdf(paste0(here(), "/Output/S2/08_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Plot_Pixel_Snowmelt_Shapefile.pdf"), width=20, height=16, onefile = TRUE)
           # for (i in seq(length(plot_pixel_snowmelt))) { do.call("grid.arrange", plot_pixel_snowmelt[[i]]) }
           # dev.off()
