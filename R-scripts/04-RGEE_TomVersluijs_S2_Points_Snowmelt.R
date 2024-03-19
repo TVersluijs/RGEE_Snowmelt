@@ -218,6 +218,9 @@
      gam_k=25 #Number of knots when making model predictions (default=25). 
      #Larger values result in a more precise GAM-fit, but might result in overfitting.
 
+     #Specify whether plots of the GAM fit per pixel should be generated as a pdf file (only applicable when method="pixel_gam")
+     pixel_gam_plots=TRUE
+     
      
 ##################################################################################################################################
           
@@ -1090,7 +1093,7 @@
             print("  -Step 2: Calculate the date of snowmelt for each pixel within each location's bounding box:")
             results <- lapply(1:length(pixelIDs_split), FUN=f_detect_threshold_date_parallel,
                               pixelIDs_split=pixelIDs_split, df_pixel_y=df_pixel_ndsi, pixel_ID_column="pixel_ID", 
-                              y="NDSI", x="doy", pixel_gam_plots=T, y_threshold=NDSI_threshold_vector)
+                              y="NDSI", x="doy", pixel_gam_plots=pixel_gam_plots, y_threshold=NDSI_threshold_vector)
 
             #Clean up the cluster after finishing the parallel runs
             stopCluster(cl)
@@ -1108,13 +1111,15 @@
             #df_pixel_snowmelt <- read.csv(file=paste0(here(), "/Output/S2/04_Points_Snowmelt/DataLocations/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Location_", Location_i, "_Data_Pixel_Snowmelt_bbox.csv"), header=TRUE)
 
            #Store plots
-            plot_pixel_snowmelt <- lapply(results, "[[", 2)
-            plots_per_page = 25
-            plot_pixel_snowmelt <- lapply(plot_pixel_snowmelt, function(x){split(x, ceiling(seq_along(plot_pixel_snowmelt[[1]])/plots_per_page))})
-            plot_pixel_snowmelt <- unname(unlist(plot_pixel_snowmelt, recursive = F))
-            pdf(paste0(here(), "/Output/S2/04_Points_Snowmelt/DataLocations/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Location_", Location_i, "_Plot_Pixel_NDSI_Snowmelt_bbox.pdf"), width=20, height=16, onefile = TRUE)
-            for (i in seq(length(plot_pixel_snowmelt))) { do.call("grid.arrange", plot_pixel_snowmelt[[i]]) }
-            dev.off()
+            if(pixel_gam_plots==TRUE){
+             plot_pixel_snowmelt <- lapply(results, "[[", 2)
+             plot_pixel_snowmelt <- do.call(c, plot_pixel_snowmelt)
+             plots_per_page = 25
+             plot_pixel_snowmelt <- split(plot_pixel_snowmelt, ceiling(seq_along(plot_pixel_snowmelt)/plots_per_page))
+             pdf(paste0(here(), "/Output/S2/04_Points_Snowmelt/DataLocations/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Location_", Location_i, "_Plot_Pixel_NDSI_Snowmelt_bbox.pdf"), width=20, height=16, onefile = TRUE)
+             for(i in seq(length(plot_pixel_snowmelt))) { do.call("grid.arrange", plot_pixel_snowmelt[[i]]) }
+             dev.off()
+             }
 
            #The dataframe df_pixel_snowmelt now contains the date of snowmelt for each individual pixel_ID within the
            #aoi (i.e. the defined bounding box). To be able to plot these data we transform this dataframe to a feature
