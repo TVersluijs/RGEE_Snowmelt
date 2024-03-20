@@ -905,19 +905,13 @@
             df_pixel_snowmelt <- as.data.frame(do.call(rbind, do.call(c, df_pixel_snowmelt)))
             colnames(df_pixel_snowmelt)[colnames(df_pixel_snowmelt)=="x_threshold"] <- "doy_snowmelt"
             colnames(df_pixel_snowmelt)[colnames(df_pixel_snowmelt)=="y_threshold"] <- "NDSI_threshold"
-            write.csv(df_pixel_snowmelt, file=paste0(here(), "/Output/MODIS/01_Points_Snowmelt/DataLocations/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Location_", Location_i, "_Data_Pixel_Snowmelt_bbox.csv"), quote = FALSE, row.names=FALSE)
-            ##Read dataframe
+            #write.csv(df_pixel_snowmelt, file=paste0(here(), "/Output/MODIS/01_Points_Snowmelt/DataLocations/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Location_", Location_i, "_Data_Pixel_Snowmelt_bbox.csv"), quote = FALSE, row.names=FALSE)
             #df_pixel_snowmelt <- read.csv(file=paste0(here(), "/Output/MODIS/01_Points_Snowmelt/DataLocations/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Location_", Location_i, "_Data_Pixel_Snowmelt_bbox.csv"), header=TRUE)
 
-           #Store GAM plots per pixel
+           #Store GAM plots per pixel within aoi (bounding box!) as a list
             if(pixel_gam_plots==TRUE){
               plot_pixel_snowmelt <- lapply(results, "[[", 2)
               plot_pixel_snowmelt <- do.call(c, plot_pixel_snowmelt)
-              plots_per_page = 25
-              plot_pixel_snowmelt <- split(plot_pixel_snowmelt, ceiling(seq_along(plot_pixel_snowmelt)/plots_per_page))
-              pdf(paste0(here(), "/Output/MODIS/01_Points_Snowmelt/DataLocations/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Location_", Location_i, "_Plot_Pixel_NDSI_Snowmelt_bbox.pdf"), width=20, height=16, onefile = TRUE)
-              for (i in seq(length(plot_pixel_snowmelt))) { do.call("grid.arrange", plot_pixel_snowmelt[[i]]) }
-              dev.off()
               }
   
            #The dataframe df_pixel_snowmelt now contains the date of snowmelt for each individual pixel_ID within the
@@ -1242,8 +1236,11 @@
                  #Only select columns "pixel_ID",  "doy_snowmelt" and "NDSI_threshold"
                   df_pixel_snowmelt_shapefile <- df_pixel_snowmelt_shapefile[,c("pixel_ID", "doy_snowmelt", "NDSI_threshold")]
 
-               #(E): Save dataframe
-                 write.csv(df_pixel_snowmelt_shapefile, file=paste0(here(), "/Output/MODIS/01_Points_Snowmelt/DataLocations/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Location_", Location_i, "_NDSI", NDSI_threshold_char, "_Data_Pixel_Snowmelt_polygon.csv"), quote = FALSE, row.names=FALSE)
+                 #Store the pixelID of all pixels within aoi_Shapefile        
+                  pixelIDs_shapefile <- unique(df_pixel_snowmelt_shapefile$pixel_ID)     
+                  
+               #(E): Save dataframe (is done for all NDSI-thresholds simultaneously further below)
+                 #write.csv(df_pixel_snowmelt_shapefile, file=paste0(here(), "/Output/MODIS/01_Points_Snowmelt/DataLocations/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Location_", Location_i, "_NDSI", NDSI_threshold_char, "_Data_Pixel_Snowmelt_polygon.csv"), quote = FALSE, row.names=FALSE)
 
            #(I.8): Calculate the fraction of snowcovered pixels within aoi_Shapefile per doy
                  
@@ -1291,6 +1288,26 @@
 
            }
      
+         #Store the date of snowmelt for all pixels within aoi_Shapefile (i.e. buffer zone)
+          df_pixel_snowmelt_shapefile <- df_pixel_snowmelt[df_pixel_snowmelt$pixel_ID %in% pixelIDs_shapefile,]
+          df_pixel_snowmelt_shapefile <- df_pixel_snowmelt_shapefile[,-which(colnames(df_pixel_snowmelt_shapefile) %in% c("lon", "lat"))]
+          write.csv(df_pixel_snowmelt_shapefile, file=paste0(here(), "/Output/MODIS/01_Points_Snowmelt/DataLocations/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Location_", Location_i, "_Data_Pixel_Snowmelt_polygon.csv"), quote = FALSE, row.names=FALSE)
+          
+         #Store NDSI timeseries for all pixels within aoi shapefile (i.e. buffer zone)
+          df_pixel_ndsi_shapefile <- df_pixel_ndsi[df_pixel_ndsi$pixel_ID %in% pixelIDs_shapefile,]
+          write.csv(df_pixel_ndsi_shapefile, file=paste0(here(), "/Output/MODIS/01_Points_Snowmelt/DataLocations/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Location_", Location_i, "_Data_Pixel_NDSI_polygon.csv"), quote = FALSE, row.names=FALSE)
+          unlink(paste0(here(), "/Output/MODIS/01_Points_Snowmelt/DataLocations/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Location_", Location_i, "_Data_Pixel_NDSI_bbox.csv"))
+                
+         #Store plots of NDSI timeseries for all pixels within aoi_Shapefile (i.e. buffer zone)
+          if(pixel_gam_plots==TRUE){
+            plot_pixel_snowmelt_shapefile <- plot_pixel_snowmelt[which(pixelIDs %in% pixelIDs_shapefile)]
+            plots_per_page = 25
+            plot_pixel_snowmelt_shapefile <- split(plot_pixel_snowmelt_shapefile, ceiling(seq_along(plot_pixel_snowmelt_shapefile)/plots_per_page))
+            pdf(paste0(here(), "/Output/MODIS/01_Points_Snowmelt/DataLocations/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Location_", Location_i, "_Plot_Pixel_NDSI_Snowmelt_polygon.pdf"), width=20, height=16, onefile = TRUE)
+            for (i in seq(length(plot_pixel_snowmelt_shapefile))) { do.call("grid.arrange", plot_pixel_snowmelt_shapefile[[i]]) }
+            dev.off()
+            }
+          
         }
      
     }

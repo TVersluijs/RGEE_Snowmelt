@@ -594,18 +594,12 @@
             df_pixel_snowmelt <- as.data.frame(do.call(rbind, do.call(c, df_pixel_snowmelt)))
             colnames(df_pixel_snowmelt)[colnames(df_pixel_snowmelt)=="x_threshold"] <- "doy_snowmelt"
             #write.csv(df_pixel_snowmelt, file=paste0(here(), "/Output/MODIS/02_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_Snowmelt_bbox.csv"), quote = FALSE, row.names=FALSE)
-            ##Read dataframe
             #df_pixel_snowmelt <- read.csv(file=paste0(here(), "/Output/MODIS/02_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_Snowmelt_bbox.csv"), header=TRUE)  
             
-           #Store GAM plots per pixel
+           #Store GAM plots per pixel within aoi (bounding box!) as a list
             if(pixel_gam_plots==TRUE){
               plot_pixel_snowmelt <- lapply(results, "[[", 2)
               plot_pixel_snowmelt <- do.call(c, plot_pixel_snowmelt)
-              plots_per_page = 25
-              plot_pixel_snowmelt <- split(plot_pixel_snowmelt, ceiling(seq_along(plot_pixel_snowmelt)/plots_per_page))
-              pdf(paste0("Output/MODIS/02_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_NDSI_Snowmelt_bbox.pdf"), width=20, height=16, onefile = TRUE)
-              for (i in seq(length(plot_pixel_snowmelt))) { do.call("grid.arrange", plot_pixel_snowmelt[[i]]) }
-              dev.off()
               }
         
            #The dataframe df_pixel_snowmelt now contains the date of snowmelt for each individual pixel_ID (514584 10mx10m pixels)
@@ -887,7 +881,7 @@
                  a=Sys.time()
                  task_vector5 <- ee_table_to_drive(
                    collection = FC_snowmelt,
-                   description = paste0(timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_Snowmelt_shapefile"),
+                   description = paste0(timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_Snowmelt_polygon"),
                    fileFormat = "CSV",
                    selectors = c('doy_snowmelt', 'lat', 'lon')
                    )
@@ -896,7 +890,7 @@
                  task_vector5$start()
                  print("Transform image_snowmelt to a feature Collection of doy_snowmelt values for all pixels:")
                  ee_monitoring(task_vector5, max_attempts = 1000000)
-                 exported_stats <- ee_drive_to_local(task = task_vector5, dsn=paste0("Output/MODIS/02_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_Snowmelt_shapefile"))
+                 exported_stats <- ee_drive_to_local(task = task_vector5, dsn=paste0("Output/MODIS/02_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_Snowmelt_polygon"))
                  df_pixel_snowmelt_shapefile <- read.csv(exported_stats)
                  b=Sys.time()
                  print(paste0("Computation finished in ",  round(as.numeric(difftime(b, a, units="mins")),2), " minutes"))
@@ -907,9 +901,27 @@
                 #Only select columns "pixel_ID" and "doy_snowmelt"
                  df_pixel_snowmelt_shapefile <- df_pixel_snowmelt_shapefile[,c("pixel_ID", "doy_snowmelt")]
                  
-              #(E): Save dataframe
-                write.csv(df_pixel_snowmelt_shapefile, file=paste0(here(), "/Output/MODIS/02_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_Snowmelt_shapefile.csv"), quote = FALSE, row.names=FALSE)
+                #Store the pixelID of all pixels within aoi_Shapefile        
+                 pixelIDs_shapefile <- unique(df_pixel_snowmelt_shapefile$pixel_ID) 
                  
+              #(E): Save dataframe with the date of snowmelt for all pixels within aoi_Shapefile (i.e. buffer zone)
+                write.csv(df_pixel_snowmelt_shapefile, file=paste0(here(), "/Output/MODIS/02_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_Snowmelt_polygon.csv"), quote = FALSE, row.names=FALSE)
+                 
+              #(F): Store NDSI timeseries for all pixels within aoi Shapefile (i.e. buffer zone)
+                df_pixel_ndsi_shapefile <- df_pixel_ndsi[df_pixel_ndsi$pixel_ID %in% pixelIDs_shapefile,]
+                write.csv(df_pixel_ndsi_shapefile, file=paste0(here(), "/Output/MODIS/02_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_NDSI_polygon.csv"), quote = FALSE, row.names=FALSE)
+                unlink(paste0(here(), "/Output/MODIS/02_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_NDSI_bbox.csv"))
+                
+              #(G): Store plots of NDSI timeseries for all pixels within aoi_Shapefile (i.e. buffer zone)
+                if(pixel_gam_plots==TRUE){
+                  plot_pixel_snowmelt_shapefile <- plot_pixel_snowmelt[which(pixelIDs %in% pixelIDs_shapefile)]
+                  plots_per_page = 25
+                  plot_pixel_snowmelt_shapefile <- split(plot_pixel_snowmelt_shapefile, ceiling(seq_along(plot_pixel_snowmelt_shapefile)/plots_per_page))
+                  pdf(paste0(here(), "/Output/MODIS/02_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Plot_Pixel_NDSI_Snowmelt_polygon.pdf"), width=20, height=16, onefile = TRUE)
+                  for (i in seq(length(plot_pixel_snowmelt_shapefile))) { do.call("grid.arrange", plot_pixel_snowmelt_shapefile[[i]]) }
+                  dev.off()
+                  }
+                
         #(19): Save workspace
          #save.image(paste0(here(), "/Output/MODIS/02_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Backup_Workspace_PixelDateOfSnowmelt.RData"))
          
