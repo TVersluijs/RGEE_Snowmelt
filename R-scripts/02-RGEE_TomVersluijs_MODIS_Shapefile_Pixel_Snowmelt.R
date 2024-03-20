@@ -520,7 +520,7 @@
             df_pixel_ndsi$doy <- as.numeric(format(as.POSIXct(df_pixel_ndsi$Date, format = "%Y-%m-%d %H:%M:%S"), "%j"))          
             
            #Make sure each latitude/longitude combination gets its own pixel_ID (takes ca 1 minute):
-            df_pixel_ndsi$pixel_ID <- paste0(format(df_pixel_ndsi$lat, nsmall = 5), "_", format(df_pixel_ndsi$lon, nsmall = 5))
+            df_pixel_ndsi$pixel_ID <- paste0(format(round(df_pixel_ndsi$lat, 5), nsmall = 5), "_", format(round(df_pixel_ndsi$lon, 5), nsmall = 5))
 
          #(C): Calculate the date of snowmelt for each pixel in the dataframe
             
@@ -902,7 +902,7 @@
                  print(paste0("Computation finished in ",  round(as.numeric(difftime(b, a, units="mins")),2), " minutes"))
       
                 #Make sure each latitude/longitude combination gets its own pixel_ID (takes ca 1 minute):
-                 df_pixel_snowmelt_shapefile$pixel_ID <- paste0(format(df_pixel_snowmelt_shapefile$lat, nsmall = 5), "_", format(df_pixel_snowmelt_shapefile$lon, nsmall = 5))
+                 df_pixel_snowmelt_shapefile$pixel_ID <- paste0(format(round(df_pixel_snowmelt_shapefile$lat, 5), nsmall = 5), "_", format(round(df_pixel_snowmelt_shapefile$lon, 5), nsmall = 5))
                  
                 #Only select columns "pixel_ID" and "doy_snowmelt"
                  df_pixel_snowmelt_shapefile <- df_pixel_snowmelt_shapefile[,c("pixel_ID", "doy_snowmelt")]

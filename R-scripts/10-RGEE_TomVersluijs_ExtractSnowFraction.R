@@ -398,7 +398,7 @@
        df_locations_pixel_snowmelt$LocationID <- as.factor(df_locations_pixel_snowmelt$LocationID)
      
       #Make sure each latitude/longitude combination gets its own pixel_ID
-       df_locations_pixel_snowmelt$pixel_ID <- paste0(format(df_locations_pixel_snowmelt$lat, nsmall = 5), "_", format(df_locations_pixel_snowmelt$lon, nsmall = 5))
+       df_locations_pixel_snowmelt$pixel_ID <- paste0(format(round(df_locations_pixel_snowmelt$lat, 5), nsmall = 5), "_", format(round(df_locations_pixel_snowmelt$lon, 5), nsmall = 5))
       
       #Add NDSI_threshold as a new column
        df_locations_pixel_snowmelt$NDSI_threshold <- as.factor(NDSI_threshold)
