@@ -373,22 +373,25 @@
   
   #(D): Transform feature collection FC_snowmelt_locations to a dataframe:
 
+    #create a current timestamp to prevent identical names on Google Drive
+     current_timestamp1 <- gsub('\\.', '', format(Sys.time(), "%y%m%d%H%M%OS2"))
+  
     #Use ee_table_to_drive() to prevent memory limits
-     task_vector5 <- ee_table_to_drive(
+     task_vector1 <- ee_table_to_drive(
       collection = FC_snowmelt_locations,
-      description = paste0(timestamp, "_", data_ID, output_affix, "_Locations_Data_Pixel_Snowmelt"),
+      description = paste0(current_timestamp1, "_", data_ID, output_affix, "_Locations_Data_Pixel_Snowmelt"),
       fileFormat = "CSV",
       selectors = c('LocationID', 'lat', 'lon', 'doy_snowmelt')
       )
     
     #Execute task
-     task_vector5$start()
+     task_vector1$start()
      cat("\n")
      print("  -Extract the date of snowmelt from the snowmelt image for all pixels within each Location:")
-     ee_monitoring(task_vector5, quiet=FALSE, max_attempts = 1000000)
+     ee_monitoring(task_vector1, quiet=FALSE, max_attempts = 1000000)
     
     #Copy file from Google Drive to R-environment
-     exported_stats <- ee_drive_to_local(task = task_vector5, dsn=paste0(dir_Output, "/", timestamp, "_", data_ID, output_affix, "_Locations_Data_Pixel_Snowmelt"))
+     exported_stats <- ee_drive_to_local(task = task_vector1, dsn=paste0(dir_Output, "/", timestamp, "_", data_ID, output_affix, "_Locations_Data_Pixel_Snowmelt"))
      df_locations_pixel_snowmelt <- read.csv(exported_stats)
      unlink(exported_stats)
 
