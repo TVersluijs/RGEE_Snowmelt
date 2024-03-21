@@ -772,21 +772,24 @@
 
      #(I): Google Drive (preferred option, slightly faster than using Asset folder)
 
+       #create a current timestamp to prevent identical names on Google Drive
+       current_timestamp1 <- gsub('\\.', '', format(Sys.time(), "%y%m%d%H%M%OS2"))
+      
        #Setup task
-        task_vector <- ee_table_to_drive(
+        task_vector1 <- ee_table_to_drive(
          collection= FC_merged,
-         description = paste0(timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_", Location_ID, "_Data_MeanBandvalues"),
+         description = paste0(current_timestamp1, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_", Location_ID, "_Data_MeanBandvalues"),
          folder="RGEE_tmp",
          fileFormat="CSV",
          selectors=c('LocationID', 'Date', 'NDSI', 'NDVI', 'NDMI')
          )
 
        #Run and monitor task
-        task_vector$start()
-        ee_monitoring(task_vector, quiet=T, max_attempts=1000000) #250s at 100m
+        task_vector1$start()
+        ee_monitoring(task_vector1, quiet=T, max_attempts=1000000) #250s at 100m
 
        #Import results
-        exported_stats <- ee_drive_to_local(task=task_vector, dsn=paste0(here(), "/Output/S2/04_Points_Snowmelt/DataLocations/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_", Location_ID, "_Data_MeanBandvalues_polygon"))
+        exported_stats <- ee_drive_to_local(task=task_vector1, dsn=paste0(here(), "/Output/S2/04_Points_Snowmelt/DataLocations/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_", Location_ID, "_Data_MeanBandvalues_polygon"))
         df_Locations_Bandvalues_new <- read.csv(exported_stats)
         unlink(exported_stats)
 
@@ -904,21 +907,24 @@
          #Export the feature collection as a .csv table 
          #We export the data instead of using aggregate_array() as the latter might fail due to computation timeouts.
          
+          #create a current timestamp to prevent identical names on Google Drive
+          current_timestamp2 <- gsub('\\.', '', format(Sys.time(), "%y%m%d%H%M%OS2"))
+          
            #Setup task
-            task_vector <- ee_table_to_drive(
+            task_vector2 <- ee_table_to_drive(
               collection= FC_merged,
-              description = paste0(timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_", Location_ID, "_NDSI", NDSI_threshold_char, "_Data_SnowFraction"),
+              description = paste0(current_timestamp2, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_", Location_ID, "_NDSI", NDSI_threshold_char, "_Data_SnowFraction"),
               folder="RGEE_tmp",
               fileFormat="CSV",
               selectors=c('SnowFraction', 'Date')
               )
          
            #Run and monitor task
-            task_vector$start() 
-            ee_monitoring(task_vector, quiet=T, max_attempts=1000000) #250s at 100m
+            task_vector2$start() 
+            ee_monitoring(task_vector2, quiet=T, max_attempts=1000000) #250s at 100m
          
            #Import results
-            exported_stats <- ee_drive_to_local(task=task_vector, dsn=paste0(here(), "/Output/S2/04_Points_Snowmelt/DataLocations/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_", Location_ID, "_NDSI", NDSI_threshold_char, "_Data_SnowFraction_polygon"))
+            exported_stats <- ee_drive_to_local(task=task_vector2, dsn=paste0(here(), "/Output/S2/04_Points_Snowmelt/DataLocations/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_", Location_ID, "_NDSI", NDSI_threshold_char, "_Data_SnowFraction_polygon"))
             df_Locations_SnowFraction_new <- read.csv(exported_stats)
             unlink(exported_stats)
     
@@ -1006,21 +1012,24 @@
 
         #(I.2): Transform feature collection to a dataframe:
 
+          #create a current timestamp to prevent identical names on Google Drive
+          current_timestamp3 <- gsub('\\.', '', format(Sys.time(), "%y%m%d%H%M%OS2"))
+           
           #We use ee_table_to_drive() to prevent memory limits
            a=Sys.time()
-           task_vector1 <- ee_table_to_drive(
+           task_vector3 <- ee_table_to_drive(
              collection = FC_merged,
-             description = paste0(timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Location_", Location_i, "_Data_Pixel_NDSI_bbox"),
+             description = paste0(current_timestamp3, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Location_", Location_i, "_Data_Pixel_NDSI_bbox"),
              fileFormat = "CSV",
              selectors = c('NDSI', 'Date', 'lat', 'lon')
              )
 
-           task_vector1$start()
+           task_vector3$start()
            cat("\n")
            print("  -Step 1: Transform each S2 image to a feature Collection of NDSI values for all pixels:")
-           ee_monitoring(task_vector1, quiet=TRUE, max_attempts = 100000)
+           ee_monitoring(task_vector3, quiet=TRUE, max_attempts = 100000)
 
-           exported_stats <- ee_drive_to_local(task = task_vector1, dsn=paste0(here(), "/Output/S2/04_Points_Snowmelt/DataLocations/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Location_", Location_i, "_Data_Pixel_NDSI_bbox"))
+           exported_stats <- ee_drive_to_local(task = task_vector3, dsn=paste0(here(), "/Output/S2/04_Points_Snowmelt/DataLocations/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Location_", Location_i, "_Data_Pixel_NDSI_bbox"))
            df_pixel_ndsi <- read.csv(exported_stats)
            b=Sys.time()
            #print(paste0("Computation finished in ",  round(as.numeric(difftime(b, a, units="mins")),2), " minutes"))
@@ -1106,19 +1115,13 @@
             df_pixel_snowmelt <- as.data.frame(do.call(rbind, do.call(c, df_pixel_snowmelt)))
             colnames(df_pixel_snowmelt)[colnames(df_pixel_snowmelt)=="x_threshold"] <- "doy_snowmelt"
             colnames(df_pixel_snowmelt)[colnames(df_pixel_snowmelt)=="y_threshold"] <- "NDSI_threshold"
-            write.csv(df_pixel_snowmelt, file=paste0(here(), "/Output/S2/04_Points_Snowmelt/DataLocations/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Location_", Location_i, "_Data_Pixel_Snowmelt_bbox.csv"), quote = FALSE, row.names=FALSE)
-            ##Read dataframe
+            #write.csv(df_pixel_snowmelt, file=paste0(here(), "/Output/S2/04_Points_Snowmelt/DataLocations/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Location_", Location_i, "_Data_Pixel_Snowmelt_bbox.csv"), quote = FALSE, row.names=FALSE)
             #df_pixel_snowmelt <- read.csv(file=paste0(here(), "/Output/S2/04_Points_Snowmelt/DataLocations/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Location_", Location_i, "_Data_Pixel_Snowmelt_bbox.csv"), header=TRUE)
 
-           #Store plots
+           #Store GAM plots per pixel within aoi (bounding box!) as a list
             if(pixel_gam_plots==TRUE){
              plot_pixel_snowmelt <- lapply(results, "[[", 2)
              plot_pixel_snowmelt <- do.call(c, plot_pixel_snowmelt)
-             plots_per_page = 25
-             plot_pixel_snowmelt <- split(plot_pixel_snowmelt, ceiling(seq_along(plot_pixel_snowmelt)/plots_per_page))
-             pdf(paste0(here(), "/Output/S2/04_Points_Snowmelt/DataLocations/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Location_", Location_i, "_Plot_Pixel_NDSI_Snowmelt_bbox.pdf"), width=20, height=16, onefile = TRUE)
-             for(i in seq(length(plot_pixel_snowmelt))) { do.call("grid.arrange", plot_pixel_snowmelt[[i]]) }
-             dev.off()
              }
 
            #The dataframe df_pixel_snowmelt now contains the date of snowmelt for each individual pixel_ID within the
@@ -1274,28 +1277,31 @@
 
              #(H): To speed-up further computations with this feature collection we as an intermediate step upload and re-download it
 
+               #create a current timestamp to prevent identical names on Google Drive
+                current_timestamp4 <- gsub('\\.', '', format(Sys.time(), "%y%m%d%H%M%OS2"))
+                
                #Delete FC_pixels_snowmelt_optimized if it already occured in the asset folder:
-                tryCatch({ee_manage_delete(paste0(path_asset, "/", timestamp, "_", data_ID, "_Location_", Location_i, "_FC_pixels_snowmelt_optimized"))},
+                tryCatch({ee_manage_delete(paste0(path_asset, "/", current_timestamp4, "_", data_ID, "_Location_", Location_i, "_FC_pixels_snowmelt_optimized"))},
                          error = function(cond){return("Path did not yet exist - no folder deleted")})
 
                #Upload to asset folder:
-                assetid2 <- paste0(path_asset, "/", timestamp, "_", data_ID, "_Location_", Location_i, "_FC_pixels_snowmelt_optimized")
-                task_vector2 <- ee_table_to_asset(
+                assetid2 <- paste0(path_asset, "/", current_timestamp4, "_", data_ID, "_Location_", Location_i, "_FC_pixels_snowmelt_optimized")
+                task_vector4 <- ee_table_to_asset(
                     collection = FC_Combined,
                     overwrite = FALSE,
                     assetId = assetid2
                     )
-                task_vector2$start()
+                task_vector4$start()
                 cat("\n")
                 print("  -Step 5: Optimize further calculations with this feature collection by uploading it to the asset folder:")
-                ee_monitoring(task_vector2, quiet=TRUE, max_attempts = 100000)
+                ee_monitoring(task_vector4, quiet=TRUE, max_attempts = 100000)
 
                #Check assets folder:
                 #ee_manage_quota()
                 #ee_manage_assetlist(path_asset)
 
                #Get feature collection from asset folder and create FC_pixels_snowmelt_optimized
-                #assetid2=paste0(path_asset, "/", timestamp, "_", data_ID, "_Location_", Location_i, "_FC_pixels_snowmelt_optimized")
+                #assetid2=paste0(path_asset, "/", current_timestamp4, "_", data_ID, "_Location_", Location_i, "_FC_pixels_snowmelt_optimized")
                 FC_pixels_snowmelt_optimized <- ee$FeatureCollection(assetid2)
                 #FC_pixels_snowmelt_optimized$first()$getInfo()
                 #FC_pixels_snowmelt_optimized$size()$getInfo()
@@ -1339,11 +1345,14 @@
                #(E): Export snowmelt image to Google Drive (takes c.a. 2 minutes):
                 if(export_pixel_image_to_drive==TRUE){
 
+                   #create a current timestamp to prevent identical names on Google Drive
+                   current_timestamp5 <- gsub('\\.', '', format(Sys.time(), "%y%m%d%H%M%OS2"))
+                   
                    #Create task to export the original doy_snowmelt image to Google Drive
-                    task_vector3 <- ee_image_to_drive(
+                    task_vector5 <- ee_image_to_drive(
                      fileFormat='GeoTIFF',
                      image=image_snowmelt,
-                     description=paste0(timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Location_", Location_i, "_NDSI", NDSI_threshold_char, '_Pixel_Image_DoySnowmelt'),
+                     description=paste0(current_timestamp5, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Location_", Location_i, "_NDSI", NDSI_threshold_char, '_Pixel_Image_DoySnowmelt'),
                      region=aoi,
                      #scale=ee$Number(resolution), #defaults to native resolution of image asset.
                      crs="EPSG:3857", #Coordinate reference system of projection of exported image
@@ -1352,11 +1361,11 @@
                      )
 
                    #Start and monitor export task:
-                    task_vector3$start()
+                    task_vector5$start()
                     cat("\n")
                     print("  -Step 6: Transform the featurecollection to a snowmelt image and export it to Google Drive:")
-                    ee_monitoring(task_vector3, quiet=TRUE, max_attempts = 1000000)
-                    ee_drive_to_local(task = task_vector3, dsn=paste0(here(), "/Output/S2/04_Points_Snowmelt/DataLocations/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Location_", Location_i, "_NDSI", NDSI_threshold_char, '_Pixel_Image_DoySnowmelt'))
+                    ee_monitoring(task_vector5, quiet=TRUE, max_attempts = 1000000)
+                    ee_drive_to_local(task = task_vector5, dsn=paste0(here(), "/Output/S2/04_Points_Snowmelt/DataLocations/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Location_", Location_i, "_NDSI", NDSI_threshold_char, '_Pixel_Image_DoySnowmelt'))
 
                  #(F): Export RGB image to Google Drive (takes c.a. 2 minutes):
 
@@ -1365,11 +1374,14 @@
                     #ee_print(image_snowmelt_RGB)
                     #image_snowmelt_RGB$projection()$getInfo()
 
+                   #create a current timestamp to prevent identical names on Google Drive
+                    current_timestamp6 <- gsub('\\.', '', format(Sys.time(), "%y%m%d%H%M%OS2"))
+                    
                    #Create task to export RGB image to Google Drive:
-                    task_vector4 <- ee_image_to_drive(
+                    task_vector6 <- ee_image_to_drive(
                       fileFormat='GeoTIFF',
                       image=image_snowmelt_RGB,
-                      description=paste0(timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Location_", Location_i, "_NDSI", NDSI_threshold_char, '_Pixel_Image_DoySnowmelt_RGB'),
+                      description=paste0(current_timestamp6, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Location_", Location_i, "_NDSI", NDSI_threshold_char, '_Pixel_Image_DoySnowmelt_RGB'),
                       region=aoi,
                       #scale=ee$Number(resolution), #defaults to native resolution of image asset.
                       crs="EPSG:3857", #Coordinate reference system of projection of exported image
@@ -1380,9 +1392,9 @@
                    #Start and monitor export task:
                     cat("\n")
                     print("  -Step 7: Transform snowmelt image to an RGB image and export it to Google Drive:")
-                    task_vector4$start()
-                    ee_monitoring(task_vector4, quiet=TRUE, max_attempts = 1000000)
-                    ee_drive_to_local(task = task_vector4, dsn=paste0(here(), "/Output/S2/04_Points_Snowmelt/DataLocations/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Location_", Location_i, "_NDSI", NDSI_threshold_char, '_Pixel_Image_DoySnowmelt_RGB'))
+                    task_vector6$start()
+                    ee_monitoring(task_vector6, quiet=TRUE, max_attempts = 1000000)
+                    ee_drive_to_local(task = task_vector6, dsn=paste0(here(), "/Output/S2/04_Points_Snowmelt/DataLocations/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Location_", Location_i, "_NDSI", NDSI_threshold_char, '_Pixel_Image_DoySnowmelt_RGB'))
 
                 }
   
@@ -1414,21 +1426,24 @@
   
                  #(D): Transform feature collection FC_snowmelt to a dataframe:
   
+                  #create a current timestamp to prevent identical names on Google Drive
+                  current_timestamp7 <- gsub('\\.', '', format(Sys.time(), "%y%m%d%H%M%OS2"))
+                  
                    #We use ee_table_to_drive() to prevent memory limits
                     a=Sys.time()
-                    task_vector5 <- ee_table_to_drive(
+                    task_vector7 <- ee_table_to_drive(
                       collection = FC_snowmelt,
-                      description = paste0(timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Location_", Location_i, "_NDSI", NDSI_threshold_char, "_Data_Pixel_Snowmelt_shapefile"),
+                      description = paste0(current_timestamp7, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Location_", Location_i, "_NDSI", NDSI_threshold_char, "_Data_Pixel_Snowmelt_shapefile"),
                       fileFormat = "CSV",
                       selectors = c('doy_snowmelt', 'lat', 'lon')
                       )
   
                    #Execute task
-                    task_vector5$start()
+                    task_vector7$start()
                     cat("\n")
                     print("  -Step 8: Extract the date of snowmelt from the snowmelt image for all pixels within aoi_Shapefile:")
-                    ee_monitoring(task_vector5, quiet=TRUE, max_attempts = 1000000)
-                    exported_stats <- ee_drive_to_local(task = task_vector5, dsn=paste0(here(), "/Output/S2/04_Points_Snowmelt/DataLocations/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Location_", Location_i, "_NDSI", NDSI_threshold_char, "_Data_Pixel_Snowmelt_shapefile"))
+                    ee_monitoring(task_vector7, quiet=TRUE, max_attempts = 1000000)
+                    exported_stats <- ee_drive_to_local(task = task_vector7, dsn=paste0(here(), "/Output/S2/04_Points_Snowmelt/DataLocations/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Location_", Location_i, "_NDSI", NDSI_threshold_char, "_Data_Pixel_Snowmelt_shapefile"))
                     df_pixel_snowmelt_shapefile <- read.csv(exported_stats)
                     unlink(exported_stats)
                     b=Sys.time()
@@ -1443,8 +1458,11 @@
                    #Only select columns "pixel_ID",  "doy_snowmelt" and "NDSI_threshold"
                     df_pixel_snowmelt_shapefile <- df_pixel_snowmelt_shapefile[,c("pixel_ID", "doy_snowmelt", "NDSI_threshold")]  
                     
-                 #(E): Save dataframe
-                   write.csv(df_pixel_snowmelt_shapefile, file=paste0(here(), "/Output/S2/04_Points_Snowmelt/DataLocations/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Location_", Location_i, "_NDSI", NDSI_threshold_char, "_Data_Pixel_Snowmelt_polygon.csv"), quote = FALSE, row.names=FALSE)
+                   #Store the pixelID of all pixels within aoi_Shapefile        
+                    pixelIDs_shapefile <- unique(df_pixel_snowmelt_shapefile$pixel_ID)   
+                    
+                 #(E): Save dataframe (is done for all NDSI-thresholds simultaneously further below)
+                   #write.csv(df_pixel_snowmelt_shapefile, file=paste0(here(), "/Output/S2/04_Points_Snowmelt/DataLocations/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Location_", Location_i, "_NDSI", NDSI_threshold_char, "_Data_Pixel_Snowmelt_polygon.csv"), quote = FALSE, row.names=FALSE)
   
            #(I.8): Calculate the fraction of snowcovered pixels within aoi_Shapefile per doy
   
@@ -1489,8 +1507,28 @@
                    # #Save dataframe for current location
                    # write.csv(df_Locations_Pixel_SnowFraction_new, paste0(here(), "/Output/S2/04_Points_Snowmelt/DataLocations/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Location_", Location_i, "_NDSI", NDSI_threshold_char, "_Data_Pixel_SnowFraction_polygon.csv"), row.names = FALSE)
 
-           }
-
+          }
+                
+        #Store the date of snowmelt for all pixels within aoi_Shapefile (i.e. buffer zone)
+        df_pixel_snowmelt_shapefile <- df_pixel_snowmelt[df_pixel_snowmelt$pixel_ID %in% pixelIDs_shapefile,]
+        df_pixel_snowmelt_shapefile <- df_pixel_snowmelt_shapefile[,-which(colnames(df_pixel_snowmelt_shapefile) %in% c("lon", "lat"))]
+        write.csv(df_pixel_snowmelt_shapefile, file=paste0(here(), "/Output/S2/04_Points_Snowmelt/DataLocations/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Location_", Location_i, "_Data_Pixel_Snowmelt_polygon.csv"), quote = FALSE, row.names=FALSE)
+        
+        #Store NDSI timeseries for all pixels within aoi shapefile (i.e. buffer zone)
+        df_pixel_ndsi_shapefile <- df_pixel_ndsi[df_pixel_ndsi$pixel_ID %in% pixelIDs_shapefile,]
+        write.csv(df_pixel_ndsi_shapefile, file=paste0(here(), "/Output/S2/04_Points_Snowmelt/DataLocations/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Location_", Location_i, "_Data_Pixel_NDSI_polygon.csv"), quote = FALSE, row.names=FALSE)
+        unlink(paste0(here(), "/Output/S2/04_Points_Snowmelt/DataLocations/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Location_", Location_i, "_Data_Pixel_NDSI_bbox.csv"))
+        
+        #Store plots of NDSI timeseries for all pixels within aoi_Shapefile (i.e. buffer zone)
+        if(pixel_gam_plots==TRUE){
+          plot_pixel_snowmelt_shapefile <- plot_pixel_snowmelt[which(pixelIDs %in% pixelIDs_shapefile)]
+          plots_per_page = 25
+          plot_pixel_snowmelt_shapefile <- split(plot_pixel_snowmelt_shapefile, ceiling(seq_along(plot_pixel_snowmelt_shapefile)/plots_per_page))
+          pdf(paste0(here(), "/Output/S2/04_Points_Snowmelt/DataLocations/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Location_", Location_i, "_Plot_Pixel_NDSI_Snowmelt_polygon.pdf"), width=20, height=16, onefile = TRUE)
+          for (i in seq(length(plot_pixel_snowmelt_shapefile))) { do.call("grid.arrange", plot_pixel_snowmelt_shapefile[[i]]) }
+          dev.off()
+        }        
+        
         }
   
   }
