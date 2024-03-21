@@ -768,21 +768,24 @@
         #Export the feature collection as a .csv table
         #We export the data instead of using aggregate_array() as the latter might fail due to computation timeouts.
         
+        #create a current timestamp to prevent identical names on Google Drive
+        current_timestamp1 <- gsub('\\.', '', format(Sys.time(), "%y%m%d%H%M%OS2"))
+        
         #Setup task
-        task_vector_2 <- ee_table_to_drive(
+        task_vector1 <- ee_table_to_drive(
           collection= FC_merged_meanbandvalues,
-          description = paste0(timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Data_MeanBandvalues"),
+          description = paste0(current_timestamp1, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Data_MeanBandvalues"),
           folder="RGEE_tmp",
           fileFormat="CSV",
           selectors=c('NDSI', 'NDVI', 'NDMI', 'Date', 'LocationID')
         )
         
         #Run and monitor task
-        task_vector_2$start()
-        ee_monitoring(task_vector_2, task_time=60, max_attempts=1000000) #250s at 100m
+        task_vector1$start()
+        ee_monitoring(task_vector1, task_time=60, max_attempts=1000000) #250s at 100m
         
         #Import results
-        exported_stats <- ee_drive_to_local(task=task_vector_2, dsn=paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Data_MeanBandvalues"))
+        exported_stats <- ee_drive_to_local(task=task_vector1, dsn=paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Data_MeanBandvalues"))
         Locations_Data_BandValues <- read.csv(exported_stats)
         unlink(exported_stats)
         
@@ -893,21 +896,24 @@
      #Export the feature collection as a .csv table
      #We export the data instead of using aggregate_array() as the latter might fail due to computation timeouts.
 
+       #create a current timestamp to prevent identical names on Google Drive
+        current_timestamp2 <- gsub('\\.', '', format(Sys.time(), "%y%m%d%H%M%OS2"))
+     
        #Setup task
-        task_vector <- ee_table_to_drive(
+        task_vector2 <- ee_table_to_drive(
           collection= FC_merged_SnowFraction,
-          description = paste0(timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Locations_Data_SnowFraction"),
+          description = paste0(current_timestamp2, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Locations_Data_SnowFraction"),
           folder="RGEE_tmp",
           fileFormat="CSV",
           selectors=c('SnowFraction', 'Date', 'LocationID')
           )
 
        #Run and monitor task
-        task_vector$start()
-        ee_monitoring(task_vector, task_time=60, max_attempts=1000000) #250s at 100m
+        task_vector2$start()
+        ee_monitoring(task_vector2, task_time=60, max_attempts=1000000) #250s at 100m
 
        #Import results
-        exported_stats <- ee_drive_to_local(task=task_vector, dsn=paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Locations_Data_SnowFraction"))
+        exported_stats <- ee_drive_to_local(task=task_vector2, dsn=paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Locations_Data_SnowFraction"))
         df_Locations_SnowFraction_new <- read.csv(exported_stats)
         unlink(exported_stats)
 
