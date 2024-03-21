@@ -716,10 +716,13 @@
       #Iterate over the ImageCollection 
       FC_merged_BandValues <- ee$FeatureCollection(s2_col_composite$select("NDSI", "NDVI", "NDMI")$iterate(Extract_BandValuesAtPolygon, FC_initial_BandValues))
       
+      #create a current timestamp to prevent identical names on Google Drive
+      current_timestamp1 <- gsub('\\.', '', format(Sys.time(), "%y%m%d%H%M%OS2"))
+      
       #Setup task
       task_vector1 <- ee_table_to_drive(
         collection= FC_merged_BandValues,
-        description = paste0(timestamp, "_", data_ID, "_Res", resolution, "_Data_MeanBandValues"),
+        description = paste0(current_timestamp1, "_", data_ID, "_Res", resolution, "_Data_MeanBandValues"),
         folder="RGEE_tmp",
         fileFormat="CSV",
         selectors=c("NDSI", "NDVI", "NDMI", 'Date')
@@ -813,10 +816,13 @@
           #Export the feature collection as a .csv table 
           #We export the data instead of using aggregate_array() as the latter might fail due to computation timeouts.
           
+          #create a current timestamp to prevent identical names on Google Drive
+          current_timestamp2 <- gsub('\\.', '', format(Sys.time(), "%y%m%d%H%M%OS2"))
+          
           #Setup task
           task_vector2 <- ee_table_to_drive(
             collection= FC_merged,
-            description = paste0(timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Data_SnowFraction"),
+            description = paste0(current_timestamp2, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Data_SnowFraction"),
             folder="RGEE_tmp",
             fileFormat="CSV",
             selectors=c('SnowFraction', 'Date')
