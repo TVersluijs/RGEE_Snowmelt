@@ -495,11 +495,14 @@
             
          #(B): Transform feature collection to a dataframe:
 
+           #create a current timestamp to prevent identical names on Google Drive
+            current_timestamp1 <- gsub('\\.', '', format(Sys.time(), "%y%m%d%H%M%OS2"))
+            
            #We use ee_table_to_drive() to prevent memory limits
             a=Sys.time()
             task_vector1 <- ee_table_to_drive(
               collection = FC_merged,
-              description = paste0(timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char,  "_Pixel_NDSI_bbox"),
+              description = paste0(current_timestamp1, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char,  "_Pixel_NDSI_bbox"),
               fileFormat = "CSV",
               selectors = c('NDSI', 'Date', 'lat', 'lon')
               )
@@ -752,12 +755,15 @@
               
             #(H): To speed-up further computations with this feature collection we as an intermediate step upload and re-download it
              
+              #create a current timestamp to prevent identical names on Google Drive
+               current_timestamp2 <- gsub('\\.', '', format(Sys.time(), "%y%m%d%H%M%OS2"))
+               
               #Delete FC_pixels_snowmelt_optimized if it already occured in the asset folder:
-               tryCatch({ee_manage_delete(paste0(path_asset, "/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_FC_pixels_snowmelt_optimized"))}, 
+               tryCatch({ee_manage_delete(paste0(path_asset, "/", current_timestamp2, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_FC_pixels_snowmelt_optimized"))}, 
                         error = function(cond){return("Path did not yet exist - no folder deleted")})
                
               #Upload to asset folder:
-               assetid2 <- paste0(path_asset, "/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_FC_pixels_snowmelt_optimized")
+               assetid2 <- paste0(path_asset, "/", current_timestamp2, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_FC_pixels_snowmelt_optimized")
                task_vector2 <- ee_table_to_asset(
                    collection = FC_Combined,
                    overwrite = FALSE,
@@ -775,7 +781,7 @@
                saveRDS(object=assetid2, file=paste0(here(), "/Output/MODIS/02_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Variable_AssetID.Rds"))
               
               #Get feature collection from asset folder and create FC_pixels_snowmelt_optimized
-               #assetid2=paste0(path_asset, "/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_FC_pixels_snowmelt_optimized")
+               #assetid2=paste0(path_asset, "/", current_timestamp2, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_FC_pixels_snowmelt_optimized")
                FC_pixels_snowmelt_optimized <- ee$FeatureCollection(assetid2) 
                #FC_pixels_snowmelt_optimized$first()$getInfo()
                #FC_pixels_snowmelt_optimized$size()$getInfo()
@@ -806,11 +812,14 @@
           
               #(E): Export original image to Google Drive (takes c.a. 2 minutes):
              
+                #create a current timestamp to prevent identical names on Google Drive
+                 current_timestamp3 <- gsub('\\.', '', format(Sys.time(), "%y%m%d%H%M%OS2"))
+               
                 #Create task to export the original doy_snowmelt image to Google Drive  
                  task_vector3 <- ee_image_to_drive(
                   fileFormat='GeoTIFF',
                   image=image_snowmelt,
-                  description=paste0(timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, '_Pixel_Image_DoySnowmelt'),
+                  description=paste0(current_timestamp3, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, '_Pixel_Image_DoySnowmelt'),
                   region=aoi,
                   #scale=ee$Number(resolution), #defaults to native resolution of image asset.
                   crs="EPSG:3857", #Coordinate reference system of projection of exported image
@@ -831,11 +840,14 @@
                  #ee_print(image_snowmelt_RGB)
                  #image_snowmelt_RGB$projection()$getInfo()
 
+                #create a current timestamp to prevent identical names on Google Drive
+                 current_timestamp4 <- gsub('\\.', '', format(Sys.time(), "%y%m%d%H%M%OS2"))
+                 
                 #Create task to export RGB image to Google Drive:
                  task_vector4 <- ee_image_to_drive(
                    fileFormat='GeoTIFF',
                    image=image_snowmelt_RGB,
-                   description=paste0(timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, '_Pixel_Image_DoySnowmelt_RGB'),
+                   description=paste0(current_timestamp4, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, '_Pixel_Image_DoySnowmelt_RGB'),
                    region=aoi,
                    #scale=ee$Number(resolution), #defaults to native resolution of image asset.
                    crs="EPSG:3857", #Coordinate reference system of projection of exported image
@@ -877,11 +889,14 @@
                  
               #(D): Transform feature collection FC_snowmelt to a dataframe:
                  
+                #create a current timestamp to prevent identical names on Google Drive
+                 current_timestamp5 <- gsub('\\.', '', format(Sys.time(), "%y%m%d%H%M%OS2"))
+               
                 #We use ee_table_to_drive() to prevent memory limits
                  a=Sys.time()
                  task_vector5 <- ee_table_to_drive(
                    collection = FC_snowmelt,
-                   description = paste0(timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_Snowmelt_polygon"),
+                   description = paste0(current_timestamp5, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_Snowmelt_polygon"),
                    fileFormat = "CSV",
                    selectors = c('doy_snowmelt', 'lat', 'lon')
                    )
