@@ -753,21 +753,24 @@
 
     #Transform feature collection with Sentinel-2 Band values for each sub area to a dataframe     
 
+      #create a current timestamp to prevent identical names on Google Drive
+       current_timestamp1 <- gsub('\\.', '', format(Sys.time(), "%y%m%d%H%M%OS2"))
+     
       #Setup task
-       task_vector <- ee_table_to_drive(
+       task_vector1 <- ee_table_to_drive(
          collection= FC_merged,
-         description = paste0(timestamp, "_", data_ID, "_Res", resolution, "_Data_MeanBandValues_SubAreas"),
+         description = paste0(current_timestamp1, "_", data_ID, "_Res", resolution, "_Data_MeanBandValues_SubAreas"),
          folder="RGEE_tmp",
          fileFormat="CSV",
          selectors=c('FSC_Gascoin2020', 'FSC_Aalstad2020','NDSI', 'NDVI', 'NDMI', 'Date', 'LocationID')
          )
        
       #Run and monitor task
-       task_vector$start() 
-       ee_monitoring(task_vector, task_time=60, max_attempts=1000000)
+       task_vector1$start() 
+       ee_monitoring(task_vector1, task_time=60, max_attempts=1000000)
        
       #Import results
-       exported_stats <- ee_drive_to_local(task=task_vector, dsn=paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Data_MeanBandValues_SubAreas"))
+       exported_stats <- ee_drive_to_local(task=task_vector1, dsn=paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Data_MeanBandValues_SubAreas"))
        df_SubAreas_BandValues <- read.csv(exported_stats)
        unlink(exported_stats)
        
@@ -903,21 +906,24 @@
 
            #We export the data instead of using aggregate_array() as the latter might fail due to computation timeouts.
 
+           #create a current timestamp to prevent identical names on Google Drive
+           current_timestamp2 <- gsub('\\.', '', format(Sys.time(), "%y%m%d%H%M%OS2"))
+           
            #Setup task
-           task_vector <- ee_table_to_drive(
+           task_vector2 <- ee_table_to_drive(
               collection= FC_merged_SnowFraction,
-              description = paste0(timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Data_SnowFraction_SubAreas"),
+              description = paste0(current_timestamp2, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Data_SnowFraction_SubAreas"),
               folder="RGEE_tmp",
               fileFormat="CSV",
               selectors=c('SNOW', 'Date', 'LocationID')
               )
 
            #Run and monitor task
-           task_vector$start()
-           ee_monitoring(task_vector, task_time=60, max_attempts=1000000)
+           task_vector2$start()
+           ee_monitoring(task_vector2, task_time=60, max_attempts=1000000)
 
            #Import results
-           exported_stats <- ee_drive_to_local(task=task_vector, dsn=paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Data_SnowFraction_SubAreas"))
+           exported_stats <- ee_drive_to_local(task=task_vector2, dsn=paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Data_SnowFraction_SubAreas"))
            df_SubAreas_SnowFraction_new <- read.csv(exported_stats)
            unlink(exported_stats)
 
