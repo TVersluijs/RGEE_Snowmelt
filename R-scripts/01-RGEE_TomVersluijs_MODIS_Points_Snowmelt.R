@@ -1100,7 +1100,7 @@
                 #ee_manage_assetlist(path_asset)
 
                #Get feature collection from asset folder and create FC_pixels_snowmelt_optimized
-                #assetid2=paste0(path_asset, "/", timestamp, "_", data_ID, "_Location_", Location_i, "_FC_pixels_snowmelt_optimized")
+                #assetid2=paste0(path_asset, "/", current_timestamp4, "_", data_ID, "_Location_", Location_i, "_FC_pixels_snowmelt_optimized")
                 FC_pixels_snowmelt_optimized <- ee$FeatureCollection(assetid2)
                 #FC_pixels_snowmelt_optimized$first()$getInfo()
                 #FC_pixels_snowmelt_optimized$size()$getInfo()
