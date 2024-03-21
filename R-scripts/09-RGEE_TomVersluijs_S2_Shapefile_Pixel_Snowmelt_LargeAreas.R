@@ -533,12 +533,15 @@
 
            #!IMPORTANT! THIS STEP TAKES C.A. 20 hours!
            #!IMPORTANT! MAKE SURE THERE IS SUFFICIENT SPACE ON YOUR GOOGLE DRIVE TO EXPORT THE TABLE (9.0GB for Taymyr)
-            
+          
+           #create a current timestamp to prevent identical names on Google Drive
+            current_timestamp1 <- gsub('\\.', '', format(Sys.time(), "%y%m%d%H%M%OS2"))  
+              
            #We use ee_table_to_drive() to prevent memory limits
             a=Sys.time()
             task_vector1 <- ee_table_to_drive(
               collection = FC_merged,
-              description = paste0(timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_NDSI_Shapefile"),
+              description = paste0(current_timestamp1, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_NDSI_Shapefile"),
               fileFormat = "CSV",
               selectors = c('NDSI', 'Date', 'lat', 'lon')
               )
@@ -940,11 +943,14 @@
 
             #(H): To speed-up further computations with this feature collection we as an intermediate step upload and re-download it
              
+              #create a current timestamp to prevent identical names on Google Drive
+               current_timestamp2 <- gsub('\\.', '', format(Sys.time(), "%y%m%d%H%M%OS2"))  
+               
               #Delete FC_pixels_snowmelt_optimized if it already occured in the asset folder:
-               #tryCatch(ee_manage_delete(paste0(path_asset, "/FC_pixels_snowmelt_optimized")), error=function(error_message) {message("path_asset does not yet exist")})
+               #tryCatch(ee_manage_delete(paste0(path_asset, "/", current_timestamp2, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_FC_pixels_snowmelt_optimized")), error=function(error_message) {message("path_asset does not yet exist")})
                
               #Upload to asset folder (This step takes 35 minutes):
-               assetid2 <- paste0(path_asset, "/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_FC_pixels_snowmelt_optimized")
+               assetid2 <- paste0(path_asset, "/", current_timestamp2, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_FC_pixels_snowmelt_optimized")
                  task_vector2 <- ee_table_to_asset(
                    collection = FC_Combined,
                    overwrite = TRUE,
@@ -961,7 +967,7 @@
                saveRDS(object=assetid2, file=paste0(here(), "/Output/S2/09_Shapefile_SubAreas_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Variable_AssetID.Rds"))     
                  
               #Get feature collection from asset folder and create FC_pixels_snowmelt_optimized
-               #assetid2=paste0(path_asset, "/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_FC_pixels_snowmelt_optimized")
+               #assetid2=paste0(path_asset, "/", current_timestamp2, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_FC_pixels_snowmelt_optimized")
                FC_pixels_snowmelt_optimized <- ee$FeatureCollection(assetid2) 
                #FC_pixels_snowmelt_optimized$first()$getInfo()
                #FC_pixels_snowmelt_optimized$size()$getInfo()
@@ -985,10 +991,13 @@
          
               #(D): Export original image to Google Drive (takes c.a. 2 minutes):
              
+                #create a current timestamp to prevent identical names on Google Drive
+                 current_timestamp3 <- gsub('\\.', '', format(Sys.time(), "%y%m%d%H%M%OS2"))  
+               
                 #Create task to export the original doy_snowmelt image to Google Drive  
                  task_vector3 <- ee_image_to_drive(
                   image=image_snowmelt,
-                  description= paste0(timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, '_Pixel_Image_DoySnowmelt'),
+                  description= paste0(current_timestamp3, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, '_Pixel_Image_DoySnowmelt'),
                   #scale= resolution,
                   region=aoi,
                   crs=crs,
@@ -1008,10 +1017,13 @@
                  image_snowmelt_RGB <- image_snowmelt$visualize(bands=c('doy_snowmelt'), min=start_date_doy, max=end_date_doy, palette=c('green', 'yellow', 'red'))
                  #ee_print(image_snowmelt_RGB)
                
+                #create a current timestamp to prevent identical names on Google Drive
+                 current_timestamp4 <- gsub('\\.', '', format(Sys.time(), "%y%m%d%H%M%OS2"))  
+                 
                 #Create task to export RGB image to Google Drive:  
                  task_vector4 <- ee_image_to_drive(
                    image=image_snowmelt_RGB,
-                   description= paste0(timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, '_Pixel_Image_DoySnowmelt_RGB'),
+                   description= paste0(current_timestamp4, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, '_Pixel_Image_DoySnowmelt_RGB'),
                    #scale= resolution,
                    region=aoi,
                    crs=crs,
