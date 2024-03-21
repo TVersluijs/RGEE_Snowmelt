@@ -295,10 +295,14 @@
        tryCatch({browseURL(MODIS_images_snowmelt_RGB$getVideoThumbURL(videoArgs)) }, error = function(cond){return("Too many pixels. Reduce dimensions.")})
       
      #(B): Transform the feature collection for region 'aoi' to a dataframe where each row contains a pixel_ID, year and date of snow melt:
+       
+       #create a current timestamp to prevent identical names on Google Drive
+       current_timestamp1 <- gsub('\\.', '', format(Sys.time(), "%y%m%d%H%M%OS2"))
+       
        a=Sys.time()
        task_vector1 <- ee_table_to_drive(
          collection = MODIS_FeatureCollection,
-         description = paste0(timestamp, "_", data_ID, "_Pixel_Snowmelt_MODIS_bbox"),
+         description = paste0(current_timestamp1, "_", data_ID, "_Pixel_Snowmelt_MODIS_bbox"),
          fileFormat = "CSV",
          selectors = c('doy_snowmelt', 'Year', 'lat', 'lon', 'pixel_ID')
          )
@@ -319,10 +323,14 @@
        MODIS_pixel_snowmelt <- MODIS_pixel_snowmelt[order(MODIS_pixel_snowmelt$pixel_ID, MODIS_pixel_snowmelt$Year),]
    
     #(C): Transform the feature collection for the region 'aoi_Shapefile' to a dataframe where each row contains a pixel_ID, year and date of snowmelt
+       
+       #create a current timestamp to prevent identical names on Google Drive
+       current_timestamp2 <- gsub('\\.', '', format(Sys.time(), "%y%m%d%H%M%OS2"))
+       
        a=Sys.time()
        task_vector2 <- ee_table_to_drive(
          collection = MODIS_FeatureCollection_clipped,
-         description = paste0(timestamp, "_", data_ID, "_Pixel_Snowmelt_MODIS_polygon"),
+         description = paste0(current_timestamp2, "_", data_ID, "_Pixel_Snowmelt_MODIS_polygon"),
          fileFormat = "CSV",
          selectors = c('doy_snowmelt', 'Year', 'lat', 'lon', 'pixel_ID')
          )
@@ -639,12 +647,15 @@
           
           #(H): To speed-up further computations with this feature collection we as an intermediate step upload and re-download it
           
+            #create a current timestamp to prevent identical names on Google Drive
+            current_timestamp3 <- gsub('\\.', '', format(Sys.time(), "%y%m%d%H%M%OS2"))
+            
             #Delete FC_pixels_ChangeInSnowmelt_optimized if it already occured in the asset folder:
-            tryCatch({ee_manage_delete(paste0(path_asset, "/", timestamp, "_", data_ID, "_FC_pixels_ChangeInSnowmelt_optimized"))}, 
+            tryCatch({ee_manage_delete(paste0(path_asset, "/", current_timestamp3, "_", data_ID, "_FC_pixels_ChangeInSnowmelt_optimized"))}, 
                       error = function(cond){return("Path did not yet exist - no folder deleted")})
           
             #Upload to asset folder:
-            assetid2 <- paste0(path_asset, "/", timestamp, "_", data_ID, "_FC_pixels_ChangeInSnowmelt_optimized")
+            assetid2 <- paste0(path_asset, "/", current_timestamp3, "_", data_ID, "_FC_pixels_ChangeInSnowmelt_optimized")
             task_vector3 <- ee_table_to_asset(
               collection = FC_Combined,
               overwrite = TRUE,
@@ -659,7 +670,7 @@
           #ee_manage_assetlist(path_asset)
           
           #Get feature collection from asset folder and create FC_pixels_ChangeInSnowmelt_optimized
-          #assetid2=paste0(path_asset, "/", timestamp, "_", data_ID, "_FC_pixels_ChangeInSnowmelt_optimized")
+          #assetid2=paste0(path_asset, "/", current_timestamp3, "_", data_ID, "_FC_pixels_ChangeInSnowmelt_optimized")
           FC_pixels_ChangeInSnowmelt_optimized <- ee$FeatureCollection(assetid2) 
           #FC_pixels_ChangeInSnowmelt_optimized$first()$getInfo()
           #FC_pixels_ChangeInSnowmelt_optimized$size()$getInfo()
@@ -689,10 +700,13 @@
           
           #(D): Export change in snowmelt image to Google Drive (takes c.a. 2 minutes):
           
+            #create a current timestamp to prevent identical names on Google Drive
+            current_timestamp4 <- gsub('\\.', '', format(Sys.time(), "%y%m%d%H%M%OS2"))
+          
             #Create task to export the original snowmelt_change image to Google Drive  
             task_vector4 <- ee_image_to_drive(
               image=image_snowmelt_slope,
-              description= paste0(timestamp, "_", data_ID, '_Pixel_Image_SnowmeltDoy_Slope'),
+              description= paste0(current_timestamp4, "_", data_ID, '_Pixel_Image_SnowmeltDoy_Slope'),
               #scale= resolution,
               region=aoi,
               crs="EPSG:3857",
@@ -713,10 +727,13 @@
             image_snowmelt_slope_RGB <- image_snowmelt_slope$visualize(bands=c('snowmelt_change'), min=-1, max=1, palette=c('green', 'yellow', 'red'))
             #ee_print(image_snowmelt_slope_RGB)
           
+            #create a current timestamp to prevent identical names on Google Drive
+            current_timestamp5 <- gsub('\\.', '', format(Sys.time(), "%y%m%d%H%M%OS2"))
+            
             #Create task to export RGB image to Google Drive:
             task_vector5 <- ee_image_to_drive(
               image=image_snowmelt_slope_RGB,
-              description= paste0(timestamp, "_", data_ID, '_Pixel_Image_SnowmeltDoy_Slope_RGB'),
+              description= paste0(current_timestamp5, "_", data_ID, '_Pixel_Image_SnowmeltDoy_Slope_RGB'),
               #scale= resolution,
               region=aoi,
               crs="EPSG:3857",
@@ -754,10 +771,13 @@
             
             #(D): Export change in snowmelt image to Google Drive (takes c.a. 2 minutes):
             
+              #create a current timestamp to prevent identical names on Google Drive
+              current_timestamp6 <- gsub('\\.', '', format(Sys.time(), "%y%m%d%H%M%OS2"))
+            
              #Create task to export the original snowmelt_change image to Google Drive  
               task_vector6 <- ee_image_to_drive(
                 image=image_snowmelt_intercept,
-                description= paste0(timestamp, "_", data_ID, '_Pixel_Image_SnowmeltDoy_Intercept'),
+                description= paste0(current_timestamp6, "_", data_ID, '_Pixel_Image_SnowmeltDoy_Intercept'),
                 #scale= resolution,
                 region=aoi,
                 crs="EPSG:3857",
@@ -778,10 +798,13 @@
               image_snowmelt_intercept_RGB <- image_snowmelt_intercept$visualize(bands=c('snowmelt_intercept'), min=start_date_doy+50, max=end_date_doy-50, palette=c('green', 'yellow', 'red'))
               #ee_print(image_snowmelt_intercept_RGB)
             
+             #create a current timestamp to prevent identical names on Google Drive
+              current_timestamp7 <- gsub('\\.', '', format(Sys.time(), "%y%m%d%H%M%OS2"))
+              
              #Create task to export RGB image to Google Drive:
               task_vector7 <- ee_image_to_drive(
                 image=image_snowmelt_intercept_RGB,
-                description= paste0(timestamp, "_", data_ID, '_Pixel_Image_SnowmeltDoy_Intercept_RGB'),
+                description= paste0(current_timestamp7, "_", data_ID, '_Pixel_Image_SnowmeltDoy_Intercept_RGB'),
                 #scale= resolution,
                 region=aoi,
                 crs="EPSG:3857",
