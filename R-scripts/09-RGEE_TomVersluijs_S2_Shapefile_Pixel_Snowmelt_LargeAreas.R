@@ -4,7 +4,8 @@
 #Snowmelt is calculated per pixel by fitting a GAM through the average NDSI data and extracting the moment this GAM crosses a 
 #user-specified NDSI threshold. This script requires that the shapefile of the study area is split-up into exactly four smaller 
 #shapefiles to prevent memory issues on the GEE-server. No composite image can be generated because this will result in computation 
-#errors.					
+#errors. After creating the snowmelt map, script "10-RGEE_TomVersluijs_S2_ExtractSnowFraction.R" can be used to extract timeseries 
+#of the fraction of snowcover for points/polygon(s) of interest from this map.
 
 #Copyright Tom Versluijs 2023-11-01. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
 

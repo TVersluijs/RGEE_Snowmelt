@@ -2,7 +2,9 @@
 
 #Extract MODIS satellite data and calculate the date of snowmelt for every 500mx500m pixel in an area of interest (shapefile).
 #Snowmelt is calculated per pixel by fitting a GAM through the average NDSI data and extracting the moment this GAM crosses 
-#a user specified NDSI threshold. This script requires a shapefile of the study area as input.
+#a user specified NDSI threshold. This script requires a shapefile of the study area as input. After creating the snowmelt
+#map, script "10-RGEE_TomVersluijs_S2_ExtractSnowFraction.R" can then be used to extract timeseries of the fraction of 
+#snowcover for points/polygon(s) of interest from this map.
 
 #Copyright Tom Versluijs 2023-11-01. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
 
