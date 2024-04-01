@@ -174,7 +174,9 @@ these pixel-specific snowfraction data and extract the moment when this model pa
 Extract MODIS satellite data and calculate the date of snowmelt for every 500mx500m pixel in an area of interest (shapefile). 
 Snowmelt is calculated per pixel by fitting a GAM through the average NDSI data and extracting the moment this GAM crosses a 
 user specified NDSI threshold. This script requires a shapefile of the study area as input. The user can specify whether clouds 
-and permanent waterbodies need to be masked from the analysis.
+and permanent waterbodies need to be masked from the analysis. After creating the snowmelt map, script "10-RGEE_TomVersluijs_S2_
+ExtractSnowFraction.R" can be used to extract timeseries of the fraction of snowcover for points/polygon(s) of interest from this 
+map.
 
 <p float="left">
   <img align="top" src="./_pictures/05A-Sentinel2_Zackenberg_Shapefile.png" width="49%" title="Shapefile area for Zackenberg (c.a. 50km2)" />
@@ -202,6 +204,18 @@ for each pixel (i.e. intercept of linear regression).
 </p>
 <br />
 <br />
+
+### *10-RGEE_TomVersluijs_ExtractSnowFraction.R
+Extract timeseries of the fraction of snowcover from a pixel-level snow melt map for a set of input locations. This corresponds 
+to the method 'pixel_gam' in the other scripts. Input locations can either be point locations with a corresponding buffer zone, 
+or a collection of polygons in a shapefile. This script depends on a snowmelt map generated using script "02-RGEE_TomVersluijs_
+MODIS_Shapefile_Pixel_Snowmelt.R". Please run that script before running script 10. 
+
+<p float="left">
+<img align="top" src="./_pictures/10A-MODIS_Zackenberg_Image_Snowmelt_Points.png" width="44%" title="Point locations on top of snowmelt map" /> 
+  <img align="top" src="./_pictures/10B-MODIS_Zackenberg_Points_PixelSnowfraction.png" width="55%" title="GAMS fitted through fraction of snow covered pixels for each point location" />
+</p>
+
 
 ## SENTINEL-2 SCRIPTS:
 
@@ -306,8 +320,7 @@ of the fraction of snowcover for points/polygons of interest from this map. The 
 TomVersluijs_S2_Points_Snowmelt.R'. However, in the latter script all points are analysed consecutively using a loop, which makes that 
 script significantly slower to run. That script does not rely on a shapefile and thus works for points spaced much further apart (i.e. 
 tracking data of migratory birds). The current script only works for small areas of c.a. 50-100 km2 (larger areas might result in 
-computation errors unless the spatial resolution of the analyses is decreased). In addition, the 'pixel_gam' method is implemented in 
-script "04", but not in the current script "07".
+computation errors unless the spatial resolution of the analyses is decreased).
 	
 <p float="left">
   <img align="top" src="./_pictures/07A-Sentinel2_Zackenberg_Shapefile_Points.png" width="49%" title="Five point locations with a buffer zone of 250m located within a shapefile area in Zackenberg" />
@@ -321,6 +334,8 @@ Use Sentinel-2 data to create pixel-level maps (20m resolution) of the date of s
 is calculated per pixel by fitting a GAM through the average NDSI data and extracting the moment this GAM crosses a user specified
 NDSI threshold. This script requires a single shapefile of the study area as input. The user can specify whether clouds and
 permanent water bodies need to be masked. No composite image can be generated because this will result in computation errors.
+After creating the snowmelt map, script "10-RGEE_TomVersluijs_S2_ExtractSnowFraction.R" can then be used to extract timeseries 
+of the fraction of snowcover for points/polygon(s) of interest from this map.
 
 <p float="left">
   <img align="top" src="./_pictures/05A-Sentinel2_Zackenberg_Shapefile.png" width="49%" title="Shapefile area for Zackenberg (c.a. 50km2)" />
@@ -333,9 +348,18 @@ permanent water bodies need to be masked. No composite image can be generated be
 Use Sentinel-2 data to create pixel-level maps (20m resolution) of the date of snowmelt for an area up to c.a. 200km2. Snowmelt
 is calculated per pixel by fitting a GAM through the average NDSI data and extracting the moment this GAM crosses a user specified
 NDSI threshold. This script requires that the shapefile of the study area is split-up into exactly four smaller shapefiles to prevent 
-memory issues on the GEE-server. No composite image can be generated because this will result in computation errors.	
+memory issues on the GEE-server. No composite image can be generated because this will result in computation errors. After creating 
+the snowmelt map, script "10-RGEE_TomVersluijs_S2_ExtractSnowFraction.R" can then be used to extract timeseries of the fraction of 
+snowcover for points/polygon(s) of interest from this map.	
 
 <p float="left">
   <img align="top" src="./_pictures/09A-Sentinel2_Taymir_Shapefile_Subareas.png" width="49%" title="Shapefile split up into 4 subareas for Taymir (c.a. 250km2)" />
   <img align="top" src="./_pictures/09B_Sentinel2_Taymir_Shapefile_Image_Snowmelt.png" width="49%" title="Image of the date of snowmelt at Taymir for all pixels within the shapefile (10m resolution)" />
-</p>																	
+</p>
+
+### *10-RGEE_TomVersluijs_ExtractSnowFraction.R
+Extract timeseries of the fraction of snowcover from a pixel-level snow melt map for a set of input locations. This corresponds 
+to the method 'pixel_gam' in the other scripts. Input locations can either be point locations with a corresponding buffer zone, 
+or a collection of polygons in a shapefile. This script depends on a snowmelt map generated using script "08-RGEE_TomVersluijs_
+S2_Shapefile_Pixel_Snowmelt.R". Please run that script before running script 10. 	
+												
