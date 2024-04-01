@@ -257,6 +257,11 @@
     start_date_doy <- as.numeric(strftime(start_date, format = "%j"))
     end_date_doy <- as.numeric(strftime(end_date, format = "%j"))      
       
+   #Save all parameters and their values in the environment to a text file 
+    file_conn <- file(paste0(here(), "/Output/S2/04_Points_Snowmelt/", timestamp, "_", data_ID, "_Parameters.txt"), "w")
+    for (obj in setdiff(ls(), lsf.str())) {cat(paste(obj, "=", get(obj)), file = file_conn) ; cat("\n", file = file_conn)}
+    close(file_conn)
+    
 ##################################################################################################################################
  
 #IV: Read dataframe with points of interest

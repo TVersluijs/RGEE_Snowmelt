@@ -80,14 +80,14 @@
       #Specify what NDSI threshold was used to generate the snow melt map 
        NDSI_threshold=0.4 #only a single value allowed 
        
-      #What coordinate reference system was used to generate the snow melt map
+      #What coordinate reference system was used to generate the snow melt map (in UTM)
        crs <- "EPSG:32627"
        
       #Specify the name of the study area
        area_name="ZAC"
        
       #For which year was the snow melt map generated
-       year_ID <- "2022"
+       year_ID <- "2023"
        
       #What were the min and max date ranges for which snow melt was calculated
        start_date <- paste0(year_ID, "-03-15") 
@@ -99,10 +99,10 @@
   #(b) Specify at which locations the fraction of snowmelt will be extracted from the snow melt map
        
       #Location type
-       Location_type="shapefile" #either "points" or "shapefile"
+       Location_type="points" #either "points" or "shapefile"
        
       #Name of file with Locations of interest:
-       input_locations <- "ZAC_TenEqualSizeVoronoiPolygons_EPSG4326.shp" #"TestLocations_Zackenberg.csv", #"ZAC_TenEqualSizeVoronoiPolygons_EPSG4326.shp", "ZAC_Outline_EPSG4326.shp"
+       input_locations <- "TestLocations_Zackenberg.csv" #"TestLocations_Zackenberg.csv", #"ZAC_TenEqualSizeVoronoiPolygons_EPSG4326.shp", "ZAC_Outline_EPSG4326.shp"
     
        #When Location_type="points":
          #-Make sure that 'input_locations' has the columns "LON_x", "LAT_y"
@@ -113,7 +113,7 @@
          #-The "xxxx.shp" file should be placed in the '/Input/Shapefiles' folder
        
       #Buffer radius around locations (in meters, only applicable when Location_type="points")
-       Buffer_radius_m=250
+       Buffer_radius_m=500
        
   #(c) Thresholds:
        
@@ -200,7 +200,11 @@
    #Check if buffer size is large enough relative to resolution
     if(Location_type=="points" & (Buffer_radius_m < 2 * resolution)){print("ERROR: Buffer size too small relative to specified resolution of image. Increase Buffer_radius_m for better estimates of fraction of snowcover.")}
       
-      
+   #Save all parameters and their values in the environment to a text file 
+    file_conn <- file(paste0(dir_Output, "/", timestamp, "_", data_ID, "_Parameters.txt"), "w")
+    for (obj in setdiff(ls(), lsf.str())) {cat(paste(obj, "=", get(obj)), file = file_conn) ; cat("\n", file = file_conn)}
+    close(file_conn)  
+
 ##################################################################################################################################
 
 #IV: Read dataframe with Locations of interest

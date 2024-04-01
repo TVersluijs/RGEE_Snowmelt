@@ -101,6 +101,11 @@
     #Create a timestamp variable
     timestamp <- format(Sys.time(), "%Y%m%d%H%M%S")
      
+    #Save all parameters and their values in the environment to a text file 
+    file_conn <- file(paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", timestamp, "_Parameters.txt"), "w")
+    for (obj in setdiff(ls(), lsf.str())) {cat(paste(obj, "=", get(obj)), file = file_conn) ; cat("\n", file = file_conn)}
+    close(file_conn)
+    
    #(5): Read study area shapefile and convert to a feature collection.
       root_fldr <- here()
       aoi_Shapefile <- st_read(paste0(root_fldr, "/Input/Shapefiles/", shapefile), quiet=T)

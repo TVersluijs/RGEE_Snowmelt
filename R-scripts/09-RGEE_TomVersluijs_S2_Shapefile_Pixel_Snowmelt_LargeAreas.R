@@ -173,7 +173,7 @@
      
 ##################################################################################################################################
        
-#III: Create a unique asset folder
+#III: Define some additional parameters (automated)
        
 ##################################################################################################################################
        
@@ -200,7 +200,11 @@
 	   
      #Create output folder
        if(dir.exists(paste0(here(), "/Output/S2/09_Shapefile_SubAreas_Pixel_Snowmelt"))==FALSE){dir.create(paste0(here(), "/Output/S2/09_Shapefile_SubAreas_Pixel_Snowmelt"), recursive = TRUE)}
-       
+     
+     #Save all parameters and their values in the environment to a text file 
+       file_conn <- file(paste0(here(), "/Output/S2/09_Shapefile_SubAreas_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Parameters.txt"), "w")
+       for (obj in setdiff(ls(), lsf.str())) {cat(paste(obj, "=", get(obj)), file = file_conn) ; cat("\n", file = file_conn)}
+       close(file_conn)  
        
 ##################################################################################################################################
        

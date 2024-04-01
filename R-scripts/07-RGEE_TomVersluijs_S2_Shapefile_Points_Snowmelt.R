@@ -231,6 +231,10 @@
     #Create output folder
     if(dir.exists(paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt"))==FALSE){dir.create(paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt"), recursive = TRUE)}
     
+    #Save all parameters and their values in the environment to a text file 
+    file_conn <- file(paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Parameters.txt"), "w")
+    for (obj in setdiff(ls(), lsf.str())) {cat(paste(obj, "=", get(obj)), file = file_conn) ; cat("\n", file = file_conn)}
+    close(file_conn)
     
 ##################################################################################################################################
 

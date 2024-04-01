@@ -79,21 +79,21 @@
    #(b) Area of interest
 
      #Specify name of study area (used as prefix in output files)
-     area_name="UTQ"
+     area_name="ZAC"
 
      #Name of Shapefile (located in '/Input/Shapefiles' folder)
      #Follow the guide "Manual_CreateShapefilePolygons.docx" when creating this shapefile.
-     shapefile <- "Utqiagvik2022_Outline_EPSG4326.shp"
+     shapefile <- "ZAC_Outline_EPSG4326.shp"
 
      #Coordinate reference system used for calculations
      #EPSG:4326 is recommended for areas spanning multiple UTM zones, but increased computation time (i.e. spherical coordinate system).
      #EPSG:326XX is results in reduced computation time for areas located within a single UTM zone (i.e. planar coordinate system).
-     crs <- "EPSG:32604"
+     crs <- "EPSG:32627"
 
    #(c) Dates
 
      #Specify the year of interest:
-     year_ID <- "2022"
+     year_ID <- "2023"
 
      #Date range of all images considered for analysis
      start_date <- paste0(year_ID, "-03-15") #choose date (well) before the first snowmelt occurs within the study site
@@ -170,7 +170,7 @@
           
 ##################################################################################################################################
          
-#III: Create a unique asset folder
+#III: Define some additional parameters (automated)
          
 ##################################################################################################################################
          
@@ -198,6 +198,11 @@
       #Create output folder
        if(dir.exists(paste0(here(), "/Output/S2/08_Shapefile_Pixel_Snowmelt"))==FALSE){dir.create(paste0(here(), "/Output/S2/08_Shapefile_Pixel_Snowmelt"), recursive = TRUE)}
        
+      #Save all parameters and their values in the environment to a text file 
+       file_conn <- file(paste0(here(), "/Output/S2/08_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Parameters.txt"), "w")
+       for (obj in setdiff(ls(), lsf.str())) {cat(paste(obj, "=", get(obj)), file = file_conn) ; cat("\n", file = file_conn)}
+       close(file_conn)
+              
 ##################################################################################################################################
          
 #IV: Read and display the unfiltered data
