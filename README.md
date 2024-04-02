@@ -76,20 +76,20 @@ is a better choice. Below, you can find a few queries to aid in picking the righ
 ### Which years do you want to analyse?
 * MODIS: 	 	
 	* years: 2000 - current
-	* scripts: 01 - 03
+	* scripts: 01 - 03 and 10
 
 * Sentinel-2: 	
 	* years: 2016 - current
-	* scripts: 04 - 09
+	* scripts: 04 - 10
 
 ### What is the required spatial resolution of your analysis?
 * MODIS: 	 	
 	* resolution: 500 meter			
-	* scripts: 01 - 03
+	* scripts: 01 - 03 and 10
 
 * Sentinel-2:  	
 	* resolution: 20 meter
-	* scripts: 04 - 09
+	* scripts: 04 - 10
 
 ### MODIS scripts: what kind of data do you want to analyse?
 * Date of snowmelt, and average NDSI, NDVI and NDMI at multiple point locations (with or without buffer)				
@@ -101,6 +101,8 @@ is a better choice. Below, you can find a few queries to aid in picking the righ
 * Change in date of snowmelt per pixel within a shapefile area 															
 	* Script 03
 
+* Extract timeseries of the fraction of snowcovered pixels at point- or polygon locations from a snowmelt image 															
+	* Script 10
 
 ### Sentinel-2 scripts: what kind of data do you want to analyse?
 * Date of snowmelt, and average NDSI, NDVI and NDMI at multiple point locations (with or without buffer)									
@@ -120,6 +122,9 @@ is a better choice. Below, you can find a few queries to aid in picking the righ
 	
 * Date of snowmelt for all pixels within a large shapefile (area < 250km2)												
 	* Script 09
+
+* Extract timeseries of the fraction of snowcovered pixels at point- or polygon locations from a snowmelt image 															
+	* Script 10	
 <br />
 <br />
 
