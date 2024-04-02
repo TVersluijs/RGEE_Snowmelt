@@ -72,7 +72,8 @@ f_detect_threshold_date_parallel <- function(subset, pixelIDs_split=pixelIDs_spl
                        
                        #Fit a GAM through the filtered pixel-specific y~x data (exclude outliers)
                        index <- which(df_tmp$outliers==FALSE)
-                       mod_gam <- mgcv::gam(y ~ s(x, k=min(gam_k, length(index)-1)), data=df_tmp[index,], method="REML")
+                       max_k_length <- length(unique(df_tmp[index,"x"]))
+                       mod_gam <- mgcv::gam(y ~ s(x, k=min(gam_k, max_k_length-1)), data=df_tmp[index,], method="REML")
                        
                        #Use the fitted GAM to make predictions of y based on a 1 day interval in x
                        newdata <- base::data.frame(x=seq(min(df_tmp$x), max(df_tmp$x), 1))

@@ -34,7 +34,8 @@
      data_range <- (max(data[,y]) - min(data[,y]))
     
     #Fit initial GAM through data
-     mod_gam <- mgcv::gam(data[,y] ~ s(data[,x], k=min(default_k, nrow(data)-1)), method="REML")
+     max_k_length <- length(unique(data[, x]))
+     mod_gam <- mgcv::gam(data[,y] ~ s(data[,x], k=min(default_k, max_k_length-1)), method="REML")
      data$gam_residuals <- base::round(mod_gam$residuals, 4)
      data$outliers = FALSE
     
@@ -46,7 +47,8 @@
        
        #Refit a gam to the reduced data
         index <- which(data$outliers==FALSE)
-        mod_gam <- mgcv::gam(data[index,y] ~ s(data[index,x], k=min(default_k, length(index)-1)), method="REML")
+        max_k_length <- length(unique(data[index, x]))
+        mod_gam <- mgcv::gam(data[index,y] ~ s(data[index, x], k=min(default_k, max_k_length-1)), method="REML")
         data$gam_residuals[index] <- base::round(mod_gam$residuals, 4)
        
        #Mark outliers where Residuals >= outlier_thresh_2 * data_range
