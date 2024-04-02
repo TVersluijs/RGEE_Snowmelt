@@ -134,12 +134,6 @@ is a better choice. Below, you can find a few queries to aid in picking the righ
 ### *00-RGEE_TomVersluijs_Installation.R
 Script to install RGEE by manually setting the Python path. This script is adapted from a tutorial by Ricardo Dal'Agnol da Silva.
 
-### *10-RGEE_TomVersluijs_ExtractSnowFraction.R
-Extract timeseries of the fraction of snowcover from a pixel-level snow melt map for a set of input locations. This corresponds 
-to the method 'pixel_gam' in the other scripts. Input locations can either be point locations with a corresponding buffer zone, 
-or a collection of polygons in a shapefile. This script depends on a snowmelt map generated for MODIS using script "02-RGEE_
-TomVersluijs_MODIS_Shapefile_Pixel_Snowmelt.R", or for Sentinel-2 using script "08-RGEE_TomVersluijs_S2_Shapefile_Pixel_
-Snowmelt.R". Please run either script before continuing with the analysis in this script.
 
 ## MODIS SCRIPTS:
 
@@ -209,12 +203,21 @@ for each pixel (i.e. intercept of linear regression).
 Extract timeseries of the fraction of snowcover from a pixel-level snow melt map for a set of input locations. This corresponds 
 to the method 'pixel_gam' in the other scripts. Input locations can either be point locations with a corresponding buffer zone, 
 or a collection of polygons in a shapefile. This script depends on a snowmelt map generated using script "02-RGEE_TomVersluijs_
-MODIS_Shapefile_Pixel_Snowmelt.R". Please run that script before running script 10. 
+MODIS_Shapefile_Pixel_Snowmelt.R". Please run that script before running script 10. The same script can also be used to extract
+these data from a Sentinel-2 snowmelt map.	
 
 <p float="left">
 <img align="top" src="./_pictures/10A-MODIS_Zackenberg_Image_Snowmelt_Points.png" width="44%" title="Point locations on top of snowmelt map" /> 
   <img align="top" src="./_pictures/10B-MODIS_Zackenberg_Points_PixelSnowfraction.png" width="55%" title="GAMS fitted through fraction of snow covered pixels for each point location" />
 </p>
+<p float="left">
+<img align="top" src="./_pictures/10C-MODIS_Zackenberg_Image_Snowmelt_Shapefile.png" width="44%" title="Shapefile polygons on top of snowmelt map" /> 
+  <img align="top" src="./_pictures/10D-MODIS_Zackenberg_Shapefile_PixelSnowfraction.png" width="55%" title="GAMS fitted through fraction of snow covered pixels for each shapefile polygon" />
+</p>
+<br />
+<br />
+
+
 
 
 ## SENTINEL-2 SCRIPTS:
@@ -361,10 +364,16 @@ snowcover for points/polygon(s) of interest from this map.
 Extract timeseries of the fraction of snowcover from a pixel-level snow melt map for a set of input locations. This corresponds 
 to the method 'pixel_gam' in the other scripts. Input locations can either be point locations with a corresponding buffer zone, 
 or a collection of polygons in a shapefile. This script depends on a snowmelt map generated using script "08-RGEE_TomVersluijs_
-S2_Shapefile_Pixel_Snowmelt.R". Please run that script before running script 10. 	
+S2_Shapefile_Pixel_Snowmelt.R". Please run that script before running script 10. The same script can also be used to extract
+these data from a MODIS snowmelt map.	
 
 <p float="left">
 <img align="top" src="./_pictures/10A-S2_Zackenberg_Image_Snowmelt_Points.png" width="44%" title="Point locations on top of snowmelt map" /> 
   <img align="top" src="./_pictures/10B-S2_Zackenberg_Points_PixelSnowfraction.png" width="55%" title="GAMS fitted through fraction of snow covered pixels for each point location" />
 </p>
+<img align="top" src="./_pictures/10C-S2_Zackenberg_Image_Snowmelt_Shapefile.png" width="44%" title="Shapefile polygons on top of snowmelt map" /> 
+  <img align="top" src="./_pictures/10D-S2_Zackenberg_Shapefile_PixelSnowfraction.png" width="55%" title="GAMS fitted through fraction of snow covered pixels for each shapefile polygon" />
+</p>
+<br />
+<br />
 												
