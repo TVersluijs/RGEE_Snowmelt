@@ -362,4 +362,9 @@ Extract timeseries of the fraction of snowcover from a pixel-level snow melt map
 to the method 'pixel_gam' in the other scripts. Input locations can either be point locations with a corresponding buffer zone, 
 or a collection of polygons in a shapefile. This script depends on a snowmelt map generated using script "08-RGEE_TomVersluijs_
 S2_Shapefile_Pixel_Snowmelt.R". Please run that script before running script 10. 	
+
+<p float="left">
+<img align="top" src="./_pictures/10A-S2_Zackenberg_Image_Snowmelt_Points.png" width="44%" title="Point locations on top of snowmelt map" /> 
+  <img align="top" src="./_pictures/10B-S2_Zackenberg_Points_PixelSnowfraction.png" width="55%" title="GAMS fitted through fraction of snow covered pixels for each point location" />
+</p>
 												
