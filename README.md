@@ -208,11 +208,11 @@ these data from a Sentinel-2 snowmelt map.
 
 <p float="left">
 <img align="top" src="./_pictures/10A-MODIS_Zackenberg_Image_Snowmelt_Points.png" width="44%" title="Point locations on top of snowmelt map" /> 
-  <img align="top" src="./_pictures/10B-MODIS_Zackenberg_Points_PixelSnowfraction.png" width="55%" title="GAMS fitted through fraction of snow covered pixels for each point location" />
+  <img align="top" src="./_pictures/10B-MODIS_Zackenberg_Points_PixelSnowfraction.png" width="54%" title="GAMS fitted through fraction of snow covered pixels for each point location" />
 </p>
 <p float="left">
 <img align="top" src="./_pictures/10C-MODIS_Zackenberg_Image_Snowmelt_Shapefile.png" width="44%" title="Shapefile polygons on top of snowmelt map" /> 
-  <img align="top" src="./_pictures/10D-MODIS_Zackenberg_Shapefile_PixelSnowfraction.png" width="55%" title="GAMS fitted through fraction of snow covered pixels for each shapefile polygon" />
+  <img align="top" src="./_pictures/10D-MODIS_Zackenberg_Shapefile_PixelSnowfraction.png" width="54%" title="GAMS fitted through fraction of snow covered pixels for each shapefile polygon" />
 </p>
 <br />
 <br />
@@ -369,10 +369,10 @@ these data from a MODIS snowmelt map.
 
 <p float="left">
 <img align="top" src="./_pictures/10A-S2_Zackenberg_Image_Snowmelt_Points.png" width="44%" title="Point locations on top of snowmelt map" /> 
-  <img align="top" src="./_pictures/10B-S2_Zackenberg_Points_PixelSnowfraction.png" width="55%" title="GAMS fitted through fraction of snow covered pixels for each point location" />
+  <img align="top" src="./_pictures/10B-S2_Zackenberg_Points_PixelSnowfraction.png" width="54%" title="GAMS fitted through fraction of snow covered pixels for each point location" />
 </p>
 <img align="top" src="./_pictures/10C-S2_Zackenberg_Image_Snowmelt_Shapefile.png" width="44%" title="Shapefile polygons on top of snowmelt map" /> 
-  <img align="top" src="./_pictures/10D-S2_Zackenberg_Shapefile_PixelSnowfraction.png" width="55%" title="GAMS fitted through fraction of snow covered pixels for each shapefile polygon" />
+  <img align="top" src="./_pictures/10D-S2_Zackenberg_Shapefile_PixelSnowfraction.png" width="54%" title="GAMS fitted through fraction of snow covered pixels for each shapefile polygon" />
 </p>
 <br />
 <br />
