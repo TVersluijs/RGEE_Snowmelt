@@ -495,7 +495,7 @@
        #We use ee_table_to_drive() to prevent memory limits
         task_vector0 <- ee_table_to_drive(
           collection = MODIS_clouds_filtered,
-          description = paste0(current_timestamp0, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char,  "_Pixel_Counts_polygon"),
+          description = paste0(current_timestamp0, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char,  "_Data_Pixel_Counts_polygon"),
           fileFormat = "CSV",
           selectors = c('doy', 'unmasked', 'total')
           )
@@ -506,7 +506,7 @@
         ee_monitoring(task_vector0, quiet=T, max_attempts=1000000)
        
        #Export results to local folder
-        exported_stats <- ee_drive_to_local(task = task_vector0, dsn=paste0(here(), "/Output/MODIS/02_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_Counts_polygon"))
+        exported_stats <- ee_drive_to_local(task = task_vector0, dsn=paste0(here(), "/Output/MODIS/02_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Data_Pixel_Counts_polygon"))
         df_pixelcount <- read.csv(exported_stats)
         unlink(exported_stats)
      
@@ -521,7 +521,7 @@
                                    total=max(df_pixelcount$total))
       df_pixelcount <- rbind(df_pixelcount, df_doy_missing)
       df_pixelcount <- df_pixelcount[order(df_pixelcount$doy),]
-      write.csv(df_pixelcount, file=paste0(here(), "/Output/MODIS/02_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_Counts_polygon.csv"), quote=FALSE, row.names=FALSE)
+      write.csv(df_pixelcount, file=paste0(here(), "/Output/MODIS/02_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Data_Pixel_Counts_polygon.csv"), quote=FALSE, row.names=FALSE)
       
      #(E): Create barplot with the pixel counts per day of year within aoi_Shapefile
       df_pixelcount$masked <- df_pixelcount$total - df_pixelcount$unmasked
@@ -978,7 +978,7 @@
                  a=Sys.time()
                  task_vector5 <- ee_table_to_drive(
                    collection = FC_snowmelt,
-                   description = paste0(current_timestamp5, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_Snowmelt_polygon"),
+                   description = paste0(current_timestamp5, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Data_Pixel_Snowmelt_polygon"),
                    fileFormat = "CSV",
                    selectors = c('doy_snowmelt', 'lat', 'lon')
                    )
@@ -987,7 +987,7 @@
                  task_vector5$start()
                  print("Transform image_snowmelt to a feature Collection of doy_snowmelt values for all pixels:")
                  ee_monitoring(task_vector5, max_attempts = 1000000)
-                 exported_stats <- ee_drive_to_local(task = task_vector5, dsn=paste0("Output/MODIS/02_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_Snowmelt_polygon"))
+                 exported_stats <- ee_drive_to_local(task = task_vector5, dsn=paste0("Output/MODIS/02_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Data_Pixel_Snowmelt_polygon"))
                  df_pixel_snowmelt_shapefile <- read.csv(exported_stats)
                  b=Sys.time()
                  print(paste0("Computation finished in ",  round(as.numeric(difftime(b, a, units="mins")),2), " minutes"))
@@ -1002,11 +1002,11 @@
                  pixelIDs_shapefile <- unique(df_pixel_snowmelt_shapefile$pixel_ID) 
                  
               #(E): Save dataframe with the date of snowmelt for all pixels within aoi_Shapefile (i.e. buffer zone)
-                write.csv(df_pixel_snowmelt_shapefile, file=paste0(here(), "/Output/MODIS/02_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_Snowmelt_polygon.csv"), quote = FALSE, row.names=FALSE)
+                write.csv(df_pixel_snowmelt_shapefile, file=paste0(here(), "/Output/MODIS/02_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Data_Pixel_Snowmelt_polygon.csv"), quote = FALSE, row.names=FALSE)
                  
               #(F): Store NDSI timeseries for all pixels within aoi Shapefile (i.e. buffer zone)
                 df_pixel_ndsi_shapefile <- df_pixel_ndsi[df_pixel_ndsi$pixel_ID %in% pixelIDs_shapefile,]
-                write.csv(df_pixel_ndsi_shapefile, file=paste0(here(), "/Output/MODIS/02_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_NDSI_polygon.csv"), quote = FALSE, row.names=FALSE)
+                write.csv(df_pixel_ndsi_shapefile, file=paste0(here(), "/Output/MODIS/02_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Data_Pixel_NDSI_polygon.csv"), quote = FALSE, row.names=FALSE)
                 unlink(paste0(here(), "/Output/MODIS/02_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_NDSI_bbox.csv"))
                 
               #(G): Store plots of NDSI timeseries for all pixels within aoi_Shapefile (i.e. buffer zone)

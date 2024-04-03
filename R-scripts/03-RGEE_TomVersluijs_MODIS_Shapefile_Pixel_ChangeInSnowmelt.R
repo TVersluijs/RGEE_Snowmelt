@@ -343,7 +343,7 @@
        task_vector2$start()
        ee_monitoring(task_vector2, max_attempts = 1000000)
        
-       exported_stats <- ee_drive_to_local(task = task_vector2, dsn=paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", timestamp, "_", data_ID, "_Pixel_Snowmelt_polygon"))
+       exported_stats <- ee_drive_to_local(task = task_vector2, dsn=paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", timestamp, "_", data_ID, "_Data_Pixel_Snowmelt_polygon"))
        MODIS_pixel_snowmelt_clipped <- read.csv(exported_stats)
        b=Sys.time()
        print(paste0("Computation finished in ",  round(as.numeric(difftime(b, a, units="mins")),2), " minutes"))
@@ -486,7 +486,7 @@
           #in timing of snowmelt. In this case we're specifically interested in all pixels within aoi_Shapefile (and not all pixels within the
           #region 'aoi'). We thus first define which pixels of the current selection fall within aoi_Shapefile and store this as an index variable.
           index <- which(df_pixel_ChangeInSnowmelt$pixel_ID %in% unique(MODIS_pixel_snowmelt_clipped$pixel_ID))
-          write.csv(df_pixel_ChangeInSnowmelt[index,], file=paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", timestamp, "_", data_ID, "_Pixel_ChangeInSnowmelt_polygon.csv"), quote = FALSE, row.names=FALSE)
+          write.csv(df_pixel_ChangeInSnowmelt[index,], file=paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", timestamp, "_", data_ID, "_Data_Pixel_ChangeInSnowmelt_polygon.csv"), quote = FALSE, row.names=FALSE)
           
           #Calculate the change in timing of snowmelt within aoi_Shapefile
           hist(na.omit(df_pixel_ChangeInSnowmelt$snowmelt_change[index]), nclass = 30)
@@ -503,7 +503,7 @@
           #Plot the GAM fits with 25 plots per pdf page
           plots_per_page = 25
           plot_pixel_snowmelt <- split(plot_pixel_snowmelt, ceiling(seq_along(plot_pixel_snowmelt)/plots_per_page))
-          pdf(paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", timestamp, "_", data_ID, "_Pixel_ChangeInSnowmelt_polygon.pdf"), width=20, height=16, onefile = TRUE)
+          pdf(paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", timestamp, "_", data_ID, "_Plot_Pixel_ChangeInSnowmelt_polygon.pdf"), width=20, height=16, onefile = TRUE)
           for (i in seq(length(plot_pixel_snowmelt))) { do.call("grid.arrange", plot_pixel_snowmelt[[i]]) }
           dev.off()
           

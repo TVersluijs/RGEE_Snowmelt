@@ -517,7 +517,7 @@
        #We use ee_table_to_drive() to prevent memory limits
         task_vector0 <- ee_table_to_drive(
           collection = s2_clouds_filtered,
-          description = paste0(current_timestamp0, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char,  "_Pixel_Counts_polygon"),
+          description = paste0(current_timestamp0, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char,  "_Data_Pixel_Counts_polygon"),
           fileFormat = "CSV",
           selectors = c('doy', 'unmasked', 'total')
           )
@@ -528,7 +528,7 @@
         ee_monitoring(task_vector0, quiet=T, max_attempts=1000000)
 
        #Export results to local folder
-        exported_stats <- ee_drive_to_local(task = task_vector0, dsn=paste0(here(), "/Output/S2/08_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_Counts_polygon"))
+        exported_stats <- ee_drive_to_local(task = task_vector0, dsn=paste0(here(), "/Output/S2/08_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Data_Pixel_Counts_polygon"))
         df_pixelcount <- read.csv(exported_stats)
         unlink(exported_stats)
 
@@ -543,7 +543,7 @@
                                    total=max(df_pixelcount$total))
       df_pixelcount <- rbind(df_pixelcount, df_doy_missing)
       df_pixelcount <- df_pixelcount[order(df_pixelcount$doy),]
-      write.csv(df_pixelcount, file=paste0(here(), "/Output/S2/08_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_Counts_polygon.csv"), quote=FALSE, row.names=FALSE)
+      write.csv(df_pixelcount, file=paste0(here(), "/Output/S2/08_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Data_Pixel_Counts_polygon.csv"), quote=FALSE, row.names=FALSE)
 
      #(E): Create barplot with the pixel counts per day of year within aoi_Shapefile
       df_pixelcount$masked <- df_pixelcount$total - df_pixelcount$unmasked
@@ -617,7 +617,7 @@
         a=Sys.time()
         task_vector1 <- ee_table_to_drive(
           collection = FC_merged,
-          description = paste0(current_timestamp1, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_NDSI_Shapefile"),
+          description = paste0(current_timestamp1, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Data_Pixel_NDSI_Shapefile"),
           fileFormat = "CSV",
           selectors = c('NDSI', 'Date', 'lat', 'lon')
           )
@@ -627,13 +627,13 @@
         #ee$data$getTaskList()
         #ee$data$cancelTask()
         
-        exported_stats <- ee_drive_to_local(task = task_vector1, dsn=paste0(here(), "/Output/S2/08_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_NDSI_Shapefile"))
+        exported_stats <- ee_drive_to_local(task = task_vector1, dsn=paste0(here(), "/Output/S2/08_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Data_Pixel_NDSI_Shapefile"))
         df_pixel_ndsi <- read.csv(exported_stats)
         b=Sys.time()
         print(paste0("Computation finished in ",  round(as.numeric(difftime(b, a, units="mins")),2), " minutes"))
 
        # #Load dataframe (takes ca 2 minutes):
-       #  df_pixel_ndsi <- read.csv(paste0(here(), "/Output/S2/08_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_NDSI_Shapefile.csv"))
+       #  df_pixel_ndsi <- read.csv(paste0(here(), "/Output/S2/08_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Data_Pixel_NDSI_Shapefile.csv"))
 
        #Add day of year
         df_pixel_ndsi$doy <- as.numeric(format(as.POSIXct(df_pixel_ndsi$Date, format = "%Y-%m-%d %H:%M:%S"), "%j"))
@@ -706,7 +706,7 @@
           df_pixel_snowmelt <- lapply(results, "[[", 1)
           df_pixel_snowmelt <- as.data.frame(do.call(rbind, do.call(c, df_pixel_snowmelt)))
           colnames(df_pixel_snowmelt)[colnames(df_pixel_snowmelt)=="x_threshold"] <- "doy_snowmelt"
-          write.csv(df_pixel_snowmelt, file=paste0(here(), "/Output/S2/08_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_Snowmelt_Shapefile.csv"), quote = FALSE, row.names=FALSE)
+          write.csv(df_pixel_snowmelt, file=paste0(here(), "/Output/S2/08_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Data_Pixel_Snowmelt_Shapefile.csv"), quote = FALSE, row.names=FALSE)
           
           # #Store plots per pixel
           # plot_pixel_snowmelt <- lapply(results, "[[", 2)
@@ -722,7 +722,7 @@
        #to c.a. 5 hours!
 
        # #Read dataframe
-       #  df_pixel_snowmelt <- read.csv(file=paste0(here(), "/Output/S2/08_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_Snowmelt_Shapefile.csv"), header=TRUE)
+       #  df_pixel_snowmelt <- read.csv(file=paste0(here(), "/Output/S2/08_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Data_Pixel_Snowmelt_Shapefile.csv"), header=TRUE)
        #  df_pixel_snowmelt now contains the date of snowmelt for each pixel within the area depicted by aoi_Shapefile.  
         
        #Clean up the cluster after finishing the parallel runs
@@ -976,7 +976,7 @@
              ee_drive_to_local(task = task_vector4, dsn=paste0(here(), "/Output/S2/08_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_Image_DoySnowmelt_RGB"))  
              
     #(24): Save workspace 
-     save.image(paste0(here(), "/Output/S2/08_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Backup_Workspace_PixelDoySnowmelt.RData"))
+     save.image(paste0(here(), "/Output/S2/08_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Workspace_Backup_PixelDoySnowmelt.RData"))
 
 
 ###########################################################################################################################################################################

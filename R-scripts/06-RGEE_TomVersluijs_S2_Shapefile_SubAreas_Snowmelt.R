@@ -746,7 +746,7 @@
        #We use ee_table_to_drive() to prevent memory limits
         task_vector0 <- ee_table_to_drive(
           collection = s2_col_composite,
-          description = paste0(current_timestamp0, "_", data_ID, "_Res", resolution, "_Pixel_Counts_polygon"),
+          description = paste0(current_timestamp0, "_", data_ID, "_Res", resolution, "_SubAreas_Data_Pixel_Counts_polygon"),
           fileFormat = "CSV",
           selectors = c('doy', 'unmasked', 'total')
           )
@@ -757,7 +757,7 @@
         ee_monitoring(task_vector0, task_time=60, max_attempts=1000000)
 
        #Export results to local folder
-        exported_stats <- ee_drive_to_local(task = task_vector0, dsn=paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Pixel_Counts_polygon"))
+        exported_stats <- ee_drive_to_local(task = task_vector0, dsn=paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_Data_Pixel_Counts_polygon"))
         df_pixelcount <- read.csv(exported_stats)
         unlink(exported_stats)
 
@@ -772,7 +772,7 @@
                                    total=max(df_pixelcount$total))
       df_pixelcount <- rbind(df_pixelcount, df_doy_missing)
       df_pixelcount <- df_pixelcount[order(df_pixelcount$doy),]
-      write.csv(df_pixelcount, file=paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Pixel_Counts_polygon.csv"), quote=FALSE, row.names=FALSE)
+      write.csv(df_pixelcount, file=paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_Data_Pixel_Counts_polygon.csv"), quote=FALSE, row.names=FALSE)
 
      #(E): Create barplot with the pixel counts per day of year within aoi_Shapefile
       df_pixelcount$masked <- df_pixelcount$total - df_pixelcount$unmasked
@@ -787,7 +787,7 @@
        theme_classic()
 
      #(F): Save barplot
-      pdf(paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Plot_Pixel_Counts_polygon.pdf"), width=12, height=8)
+      pdf(paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_Plot_Pixel_Counts_polygon.pdf"), width=12, height=8)
       print(p_pixelcounts)
       dev.off()
       
