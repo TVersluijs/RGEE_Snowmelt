@@ -173,6 +173,11 @@
     #Specify whether plots of the GAM NDSI fit per pixel should be generated as a pdf file (only applicable when method="pixel_gam")
     pixel_gam_plots=TRUE
     
+  #(h): Counts of unmasked pixels
+    
+    #Should counts of the number of unmasked pixels per doy within the shapefile area be conducted (increases computation time)
+    pixel_counts=TRUE
+    
 
 ##################################################################################################################################
          
@@ -546,6 +551,8 @@
 
  #(G): Count the total number of unmasked pixels and the total number of pixels per doy within aoi_Shapefile
      
+     if(pixel_counts==TRUE){
+     
      #Add pixel counts within the area of interest to each separate image by mapping the pixel count functions over the image collection
       MODIS_clouds_filtered <- MODIS_clouds_filtered$
         #Count number of unmasked pixels within aoi_Shapefile
@@ -605,6 +612,8 @@
       pdf(paste0(here(), "/Output/MODIS/01_Points_Snowmelt/DataLocations/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_", Location_ID, "_Plot_Pixel_Counts_polygon.pdf"), width=12, height=8)
       print(p_pixelcounts)
       dev.off()
+      
+     }
      
  #(H): Extract MODIS mean band values (NDSI, NDVI, NDMI) within the buffer zone of 'Location' for all images in the image collection
 

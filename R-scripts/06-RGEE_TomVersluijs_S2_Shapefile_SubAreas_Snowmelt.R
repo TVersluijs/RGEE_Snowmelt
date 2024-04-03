@@ -189,6 +189,12 @@
      gam_k=25 #Number of knots when making model predictions (default=25). 
      #Larger values result in a more precise GAM-fit, but might result in overfitting.
 
+   #(i): Counts of unmasked pixels
+     
+     #Should counts of the number of unmasked pixels per doy within the shapefile area be conducted (increases computation time)
+     pixel_counts=TRUE
+     
+     
 ##################################################################################################################################
 
 #III: Define some additional parameters (automated)
@@ -723,7 +729,8 @@
 ##################################################################################################################################
 
   #Count the total number of unmasked pixels and the total number of pixels per doy within aoi_Shapefile
-
+   if(pixel_counts==TRUE){
+      
      #(A): Add pixel counts within the area of interest to each separate image by mapping the pixel count functions over the image collection
       s2_col_composite <- s2_col_composite$
         #Count number of unmasked pixels within aoi_Shapefile
@@ -784,7 +791,8 @@
       print(p_pixelcounts)
       dev.off()
       
-       
+    }
+
 ##################################################################################################################################
      
 #VIII: Extract Average FSC, NDSI, NDVI, and NDMI per SubArea      
