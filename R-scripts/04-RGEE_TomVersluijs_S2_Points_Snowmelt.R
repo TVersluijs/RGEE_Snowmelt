@@ -34,7 +34,7 @@
 #circumvents this issue because no shapefile is required as input. The downside of the current script is that it might take 
 #significantly longer to run than script '2-RGEE_TomVersluijs_Points.R'.
 
-#Copyright Tom Versluijs 2023-11-01. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
+#Copyright Tom Versluijs 2024-04-03. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
 
 #Before running this script make sure to install RGEE according to the instructions in script "00-RGEE_TomVersluijs_Installation.R". 
 #Note that a GoogleDrive is required. Important: make sure to run this script from within the "RGEE_Snowmelt.Rproj" project file.
@@ -59,7 +59,7 @@
        #renv::restore() #revert to last version of R-packages used to successfully run this script (optional).
        utils::install.packages("pacman")
        library(pacman)
-       p_load(sf, rgee, ggplot2, mgcv, googledrive, dplyr, foreach, parallel, doSNOW, gridExtra)
+       p_load(sf, rgee, ggplot2, mgcv, googledrive, dplyr, tidyr, foreach, parallel, doSNOW, gridExtra)
 
       #(2): Define ggplot2 plotting theme
        theme_tom <- function(){
@@ -740,7 +740,69 @@
     # tryCatch({browseURL(s2_col_composite$getVideoThumbURL(videoArgs)) }, error = function(cond){return("Too many pixels. Reduce dimensions.")})
     # #Note that missing pixels are actually not recorded by the satellite and are NOT caused by coding errors    
 
-  #(G): Extract Sentinel-2 mean band values (NDSI, NDVI, NDMI) within the buffer zone of 'Location' for all images in the image collection
+ #(G): Count the total number of unmasked pixels and the total number of pixels per doy within aoi_Shapefile
+     
+    #Add pixel counts within the area of interest to each separate image by mapping the pixel count functions over the image collection
+     s2_col_composite <- s2_col_composite$
+       #Count number of unmasked pixels within aoi_Shapefile
+       map(AddPixelCount)$
+       #Add NULL to those images in which pixel count could not be calculated
+       map(AddNULLPixelCount)
+     
+    #Extract pixel_counts of all images in image collection for aoi_Shapefile
+     
+      #create a current timestamp to prevent identical names on Google Drive
+       current_timestamp0 <- gsub('\\.', '', format(Sys.time(), "%y%m%d%H%M%OS2"))
+       
+      #We use ee_table_to_drive() to prevent memory limits
+       task_vector0 <- ee_table_to_drive(
+         collection = s2_col_composite,
+         description = paste0(current_timestamp0, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_", Location_ID, "_Data_Pixel_Counts_polygon"),
+         fileFormat = "CSV",
+         selectors = c('doy', 'unmasked', 'total')
+         )
+       
+      #Monitor the task
+       task_vector0$start()
+       print("Count the number of unmasked pixels within the shapefile per doy:")
+       ee_monitoring(task_vector0, quiet=T, max_attempts=1000000)
+       
+      #Export results to local folder
+       exported_stats <- ee_drive_to_local(task = task_vector0, dsn=paste0(here(), "/Output/S2/04_Points_Snowmelt/DataLocations/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_", Location_ID, "_Data_Pixel_Counts_polygon"))
+       df_pixelcount <- read.csv(exported_stats)
+       unlink(exported_stats)
+     
+    #Replace -9999 values by NA (for debugging)
+     df_pixelcount$unmasked[df_pixelcount$unmasked < -9000] <- NA
+     df_pixelcount$total[df_pixelcount$total < -9000] <- NA
+     df_pixelcount$doy[df_pixelcount$doy < -9000] <- NA
+     
+    #Add missing dates with 0 unmasked pixels to the dataframe
+     df_doy_missing <- data.frame(doy=seq(start_date_doy, end_date_doy)[!(seq(start_date_doy, end_date_doy) %in% df_pixelcount$doy)],
+                                  unmasked=0,
+                                  total=max(df_pixelcount$total))
+     df_pixelcount <- rbind(df_pixelcount, df_doy_missing)
+     df_pixelcount <- df_pixelcount[order(df_pixelcount$doy),]
+     write.csv(df_pixelcount, file=paste0(here(), "/Output/S2/04_Points_Snowmelt/DataLocations/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_", Location_ID, "_Data_Pixel_Counts_polygon.csv"), quote=FALSE, row.names=FALSE)
+     
+    #Create barplot with the pixel counts per day of year within aoi_Shapefile
+     df_pixelcount$masked <- df_pixelcount$total - df_pixelcount$unmasked
+     df_pixelcount <- df_pixelcount[,-which(colnames(df_pixelcount) %in% "total")]
+     df_pixelcount <- tidyr::pivot_longer(df_pixelcount, cols=c(unmasked, masked), names_to = "pixels")
+     p_pixelcounts <- ggplot()+
+        geom_bar(data=df_pixelcount, aes(x=doy, y=value, fill=pixels), stat="identity",colour="black", position="stack", width=1)+
+        #geom_rect(aes(xmin=min(df_pixelcount$doy)-1, xmax=max(df_pixelcount$doy)+1, ymin=0, ymax=max(df_pixelcount$value)), alpha=0.5, fill="white")+
+        scale_fill_manual(values = c("black", "#FFA52C"))+
+        xlab("Time (day of year)")+
+        ylab("Pixel count")+
+        theme_classic()
+     
+    #Save barplot
+     pdf(paste0(here(), "/Output/S2/04_Points_Snowmelt/DataLocations/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_", Location_ID, "_Plot_Pixel_Counts_polygon.pdf"), width=12, height=8)
+     print(p_pixelcounts)
+     dev.off()
+     
+  #(H): Extract Sentinel-2 mean band values (NDSI, NDVI, NDMI) within the buffer zone of 'Location' for all images in the image collection
 
     if("avg_NDSI" %in% method){
 
@@ -847,7 +909,7 @@
 
      }
    
-  #(H): Extract the fraction of snow covered pixels within the buffer zone of 'Location' for all images in the image collection
+  #(I): Extract the fraction of snow covered pixels within the buffer zone of 'Location' for all images in the image collection
     
     if("snowfraction" %in% method){ 
      
@@ -867,7 +929,7 @@
         #Store NDSI_threshold as a character (used for naming of outputs)
         NDSI_threshold_char <- gsub("\\.", "_", as.character(NDSI_threshold))
       
-        #(H.1): Add a binary snow cover band to each image and calculate the fraction of snow covered pixels within the buffer zone (aoi_Shapefile)
+        #(I.1): Add a binary snow cover band to each image and calculate the fraction of snow covered pixels within the buffer zone (aoi_Shapefile)
          
          #Map Snow computation functions over the mosaicked image collection
          s2_col_composite_snow <- s2_col_composite$
@@ -885,7 +947,7 @@
            #  Map$addLayer(img_snow$select('SNOW'))+
            #  Map$addLayer(img_snow$select('NDSI')), list(min=-1, max = 1, palette = c('lightblue', 'darkblue')))
     
-        #(H.2): Extract fraction of snowcover within the buffer zone for each image in the image collection   
+        #(I.2): Extract fraction of snowcover within the buffer zone for each image in the image collection   
          
          #Create an empty feature collection:
           FC_initial <- ee$FeatureCollection(ee$Feature(NULL))
@@ -967,11 +1029,11 @@
 
     }
  
-  #(I): Calculate the date of snowmelt for every pixel within aoi_Shapefile by fitting a GAM through the pixel-specific NDSI data
+  #(J): Calculate the date of snowmelt for every pixel within aoi_Shapefile by fitting a GAM through the pixel-specific NDSI data
 
     if("pixel_gam" %in% method){
 
-        #(I.1): Transform each S2 image to a feature Collection of NDSI values for all pixels within aoi (i.e. bounding box!)
+        #(J.1): Transform each S2 image to a feature Collection of NDSI values for all pixels within aoi (i.e. bounding box!)
 
           #Print message
           cat("\n")
@@ -1015,7 +1077,7 @@
 
            #Note that at this point all pixels within 'aoi' are included (not only those in 'aoi_Shapefile'!)
 
-        #(I.2): Transform feature collection to a dataframe:
+        #(J.2): Transform feature collection to a dataframe:
 
           #create a current timestamp to prevent identical names on Google Drive
           current_timestamp3 <- gsub('\\.', '', format(Sys.time(), "%y%m%d%H%M%OS2"))
@@ -1048,7 +1110,7 @@
           #Make sure each latitude/longitude combination gets its own pixel_ID (takes ca 1 minute):
            df_pixel_ndsi$pixel_ID <- paste0(format(round(df_pixel_ndsi$lat, 5), nsmall = 5), "_", format(round(df_pixel_ndsi$lon, 5), nsmall = 5))
 
-        #(I.3): Calculate the date of snowmelt for each pixel in the dataframe (i.e. within area 'aoi')
+        #(J.3): Calculate the date of snowmelt for each pixel in the dataframe (i.e. within area 'aoi')
 
            #Loop through all pixel_ID's, select dataframe for that pixel containing NDSI values
            #as measured in all images in the image collection, fit gam through the NDSI ~ doy data,
@@ -1134,7 +1196,7 @@
            #collection and then transform this feature collection to an image. We can then clip this image by aoi_Shapefile
            #to get only those pixels within the buffer zone of each point (and not only in the bounding box).
 
-        #(I.4): Transform df_pixel_snowmelt to a feature collection with random geometry
+        #(J.4): Transform df_pixel_snowmelt to a feature collection with random geometry
 
             #Generate some random longitude and latitude values as this is required for an sf object:
              df_pixel_snowmelt$lon <- runif(nrow(df_pixel_snowmelt), 0, 74)
@@ -1193,7 +1255,7 @@
              #  ee_manage_quota()
              #  ee_manage_assetlist(path_asset)
 
-        #(I.5): Add geometry (latitude and longitude) of each pixel_ID to FC_pixels_snowmelt
+        #(J.5): Add geometry (latitude and longitude) of each pixel_ID to FC_pixels_snowmelt
 
             #The feature collection that we want to construct should contain 'pixel_ID' and 'doy_snowmelt' as properties and should contain
             #the original geometry corresponding to each pixel_ID. So far, FC_pixels_snowmelt contains a separate feature for each pixel, where
@@ -1321,7 +1383,7 @@
           #Store NDSI_threshold as a character (used for naming of outputs)
           NDSI_threshold_char <- gsub("\\.", "_", as.character(NDSI_threshold))        
           
-          #(I.6): Transform the Feature collection FC_pixels_snowmelt_optimized to an image (with doy_snowmelt as an image band)
+          #(J.6): Transform the Feature collection FC_pixels_snowmelt_optimized to an image (with doy_snowmelt as an image band)
   
                #(A): Reduce feature collection FC_pixels_snowmelt_optimized to an Image with a 500m resolution:
                 image_snowmelt <- FC_pixels_snowmelt_optimized$
@@ -1403,7 +1465,7 @@
 
                 }
   
-           #(I.7): Extract the date of snowmelt for all pixels within image_snowmelt (i.e. clipped by aoi_Shapefile)
+           #(J.7): Extract the date of snowmelt for all pixels within image_snowmelt (i.e. clipped by aoi_Shapefile)
   
                  #(A): Extract the date of snowmelt at each pixel within image_snowmelt and store each pixel value as a separate feature.
                  #The resulting output is a feature collection of all features (pixels) for the current image
@@ -1469,7 +1531,7 @@
                  #(E): Save dataframe (is done for all NDSI-thresholds simultaneously further below)
                    #write.csv(df_pixel_snowmelt_shapefile, file=paste0(here(), "/Output/S2/04_Points_Snowmelt/DataLocations/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Location_", Location_i, "_NDSI", NDSI_threshold_char, "_Data_Pixel_Snowmelt_polygon.csv"), quote = FALSE, row.names=FALSE)
   
-           #(I.8): Calculate the fraction of snowcovered pixels within aoi_Shapefile per doy
+           #(J.8): Calculate the fraction of snowcovered pixels within aoi_Shapefile per doy
   
                   #Print progress:
                    cat("\n")
