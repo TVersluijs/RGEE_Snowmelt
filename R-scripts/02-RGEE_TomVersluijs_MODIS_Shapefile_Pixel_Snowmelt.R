@@ -497,7 +497,7 @@
        #Monitor the task
         task_vector0$start()
         print("Count the number of unmasked pixels within the shapefile per doy:")
-        ee_monitoring(task_vector0, max_attempts = 1000000)
+        ee_monitoring(task_vector0, quiet=T, max_attempts=1000000)
        
        #Export results to local folder
         exported_stats <- ee_drive_to_local(task = task_vector0, dsn=paste0(here(), "/Output/MODIS/02_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_Counts_polygon"))
