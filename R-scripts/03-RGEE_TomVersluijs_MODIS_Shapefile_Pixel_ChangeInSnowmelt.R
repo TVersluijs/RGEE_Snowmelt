@@ -69,7 +69,7 @@
    #(b) Area of interest
 
      #Specify name of study area
-     area_name <- "ZAC"
+     area_name <- "ZAC" #max length three characters
 
      #Name of Shapefile used to create MODIS annual snowmelt maps
      #Follow the guide "Manual_CreateShapefilePolygons.docx" when creating this shapefile.
@@ -148,6 +148,7 @@
           
            #Define a data_ID
             year_ID <- as.character(i)
+            if(nchar(area_name)>3){area_name <- substr(area_name, start = 1, stop = 3)}
             data_ID <- paste0(area_name, substr(year_ID,(nchar(year_ID)+1)-2,nchar(year_ID)), "_MODIS")
             data_ID <- paste0(data_ID, "_", MODIS_cloud_masking_algorithm)
 

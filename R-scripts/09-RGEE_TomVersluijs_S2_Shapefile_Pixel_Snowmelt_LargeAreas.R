@@ -78,7 +78,7 @@
    #(b) Area of interest
 
      #Specify name of study area (used as prefix in output files)
-     area_name="TAY"
+     area_name="TAY" #max length three characters
 
      #Name of Shapefiles (located in '/Input/Shapefiles' folder)
 	   #Follow the guide "Manual_CreateShapefilePolygons.docx" when creating this shapefile.
@@ -185,6 +185,7 @@
      #(5) Create a unique data_ID and asset folder for storing the generated datafiles
        
        #Create a unique data_ID
+       if(nchar(area_name)>3){area_name <- substr(area_name, start = 1, stop = 3)}
        data_ID <- paste0(area_name, substr(year_ID,(nchar(year_ID)+1)-2,nchar(year_ID)), "_S2")
        
        #Create a timestamp variable

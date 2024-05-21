@@ -102,7 +102,7 @@
    #(b) Area of interest
 
      #Specify name of study area (used as prefix in output files)
-     area_name="ZAC"
+     area_name="ZAC" #max length three characters
 
      #Coordinate reference system used for calculations
      #EPSG:4326 is recommended for areas spanning multiple UTM zones, but increased computation time (i.e. spherical coordinate system).
@@ -235,6 +235,7 @@
   #Automatically define some additional parameters 
         
    #Create a unique data_ID
+    if(nchar(area_name)>3){area_name <- substr(area_name, start = 1, stop = 3)}
     data_ID <- paste0(area_name, substr(year_ID,(nchar(year_ID)+1)-2,nchar(year_ID)), "_S2")           
   
    #Create a timestamp variable

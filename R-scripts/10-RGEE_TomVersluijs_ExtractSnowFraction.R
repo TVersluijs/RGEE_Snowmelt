@@ -84,7 +84,7 @@
        crs <- "EPSG:32627"
        
       #Specify the name of the study area
-       area_name="ZAC"
+       area_name="ZAC" #max length three characters
        
       #For which year was the snow melt map generated
        year_ID <- "2023"
@@ -150,6 +150,7 @@
      dir_SnowmeltImage <- paste0(here(), "/Output/MODIS/02_Shapefile_Pixel_Snowmelt/")
      
      #Create a unique data_ID:
+     if(nchar(area_name)>3){area_name <- substr(area_name, start = 1, stop = 3)}
      data_ID <- paste0(area_name, substr(year_ID,(nchar(year_ID)+1)-2,nchar(year_ID)), "_MODIS")
      data_ID <- paste0(data_ID, "_", MODIS_cloud_masking_algorithm)
      
@@ -164,6 +165,7 @@
      dir_SnowmeltImage <- paste0(here(), "/Output/S2/08_Shapefile_Pixel_Snowmelt/")
      
      #Create a unique data_ID:
+     if(nchar(area_name)>3){area_name <- substr(area_name, start = 1, stop = 3)}
      data_ID <- paste0(area_name, substr(year_ID,(nchar(year_ID)+1)-2,nchar(year_ID)), "_S2")
      
      #Specify and create output folder
