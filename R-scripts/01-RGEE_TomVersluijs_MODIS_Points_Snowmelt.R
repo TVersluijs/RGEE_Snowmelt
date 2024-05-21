@@ -103,8 +103,7 @@
 
     #Name of file with Locations of interest
     input_locations <- "TestLocations.csv"
-    #Make sure it has the columns "LON_x", "LAT_y" and "DateTime"
-    #DateTime should be in format 'dd/mm/yyyy hh:mm:ss'
+    #Make sure it contains the coordinates in decimal degrees in the columns "LON_x" and "LAT_y"
 
     #Buffer radius around each point location (in meters)
     Buffer_radius_m=5000

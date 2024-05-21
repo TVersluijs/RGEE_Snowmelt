@@ -108,9 +108,8 @@
 
     #Name of file with point locations located in Input folder
     input_locations <- "TestLocations_Zackenberg.csv"
-    #Make sure it has the columns "LON_x", "LAT_y" and "DateTime"
-    #DateTime should be in format 'dd/mm/yyyy hh:mm:ss'
-
+    #Make sure it contains the coordinates in decimal degrees in the columns "LON_x" and "LAT_y"
+   
     #Buffer radius around each point location (in meters)
     Buffer_radius_m=250
 
@@ -343,8 +342,8 @@
       Map$addLayer(ndwi_s2,list(min=0, max=1, palette=c('000000', '0dffff', '0524ff', 'ffffff')), 'NDWI')
       
     #(9): Define a featurecollection of points for which Sentinel-2 data needs to be extracted
-      ZAC_Paths <- read.csv(paste0("Input/", input_locations), header=T)[,c("LON_x", "LAT_y", "DateTime")]
-      colnames(ZAC_Paths) <- c("LON_x", "LAT_y", "DateTime")
+      ZAC_Paths <- read.csv(paste0("Input/", input_locations), header=T)[,c("LON_x", "LAT_y")]
+      colnames(ZAC_Paths) <- c("LON_x", "LAT_y")
       
       #Add a unique LocationID to every unique lat/lon combination
       Locations_sf <- unique(ZAC_Paths[,c("LON_x", "LAT_y")])
