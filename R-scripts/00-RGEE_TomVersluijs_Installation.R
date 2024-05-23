@@ -66,8 +66,8 @@
   # Install the gcloud CLI: follow the instructions of the web page link below. Pick all the default install options (i.e. 
   #install for local user only). https://cloud.google.com/sdk/docs/install
 
-  # Can check that gcloud works within the rgee python environment : 
-  #     Run python.exe found in folder 'rgee_environment_dir'
+  # Check that gcloud works within the rgee python environment : 
+  #     Run python.exe found in folder specified in the variable 'rgee_environment_dir' (see line 57)
   #     In the python console :
   #         import ee
   #         ee.Authenticate()
@@ -76,7 +76,7 @@
   #
   # RESTART THE R SESSION AFTER INSTALLING GCLOUD BEFORE RUNNING THE NEXT LINES
 
-  #Check if gcloud is found in windows
+  #Check if gcloud is found in windows (run code in R). This step can be skipped when running on a MAC.
   system("gcloud --version")
  
 ######################################################################################################################################
@@ -92,7 +92,7 @@
   ## Older versions do not show the GEE images in Viewer correctly.
   # Link: https://www.rstudio.com/products/rstudio/download/
 
-  ## RTools: needed to build some packages in R from source
+  ## RTools: used to build some packages in R from source (might not be essential to run RGEE)
   # Link: https://cran.r-project.org/bin/windows/Rtools/
   ## after installing the Rtools, make sure to run this command line below inside RStudio:
   # writeLines('PATH="${RTOOLS42_HOME}\\usr\\bin;${PATH}"', con = "~/.Renviron")
@@ -183,26 +183,29 @@
 
 ######################################################################################################################################
   
+  #Note: in case errors are encountered in the steps below it is advisable to restart R and rerun these steps.
+  
   #Check folder where credentials have been stored (C:\Users\tomve\.config\earthengine)
   rgee::ee_get_earthengine_path()
 
   #Check summary of python configuration
   reticulate::py_config()
 
-  #Checks python and earthengine-api installation (might still result in an error, but as long as ee_Initialize is ok)
+  #Checks python and earthengine-api installation (this might result in an error, but this is no problem as long as ee_Initialize is ok)
   rgee::ee_check_python()
   rgee::ee_check_python_packages()
   rgee::ee_check_credentials()
   rgee::ee_check_gcloud()
-  #potential gcloud error might be due to misspecification of path in which is checked for gcloud
+  #the last check might result in a gcloud error. This is due to the misspecification of the path in which is checked for gcloud in this
+  #function. This error can thus be ignored.
 
-  #Make sure an .Renviron file is generated in ~//Documents with the following information (without hashtag)
+  #Check that an .Renviron file is generated in ~//Documents with the following information (without hashtag)
    #PATH="${RTOOLS42_HOME}\usr\bin;${PATH}"
    #EARTHENGINE_INIT_MESSAGE="True"
    #EARTHENGINE_PYTHON="C:\Users\tomve\miniconda3\envs\rgee_py"
    #EARTHENGINE_ENV="rgee_py"
   
-  #Make sure a environments.txt file is generated in C:\Users\tomve\.conda with the following information (without hashtag)
+  #Check that an 'environments.txt' file is generated in C:\Users\tomve\.conda with the following information (without hashtag)
    #C:\Users\tomve\miniconda3\envs\rgee_py
   
   #Make sure an earthengine folder is present at 'C:\Users\tomve\.config' containing the same files as found in the folder
