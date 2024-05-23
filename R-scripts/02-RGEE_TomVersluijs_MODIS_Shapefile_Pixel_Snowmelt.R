@@ -437,7 +437,7 @@
       #(A): print message   
         print("Water masking = TRUE")
       
-      #(B): Extract permanent waterbodies from the ESA WorldCover map
+      #(B): Extract permanent waterbodies from a 250m resolution Terra Land Water Mask dataset
     
         #Load auxilliary function
         compute_Water_MODIS=compute_Water_MODIS #sourced

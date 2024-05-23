@@ -10,7 +10,7 @@
 ####################################################################################################################################
 
 
-#(I): Detect water pixels using the MODIS Terra land water mask
+#(I): Detect water pixels using the MODIS Terra land water mask (250m resolution)
  compute_Water_MODIS <- function(){
    
    #Load MODIS Terra land water mask

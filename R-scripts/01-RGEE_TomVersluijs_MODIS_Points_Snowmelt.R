@@ -154,7 +154,7 @@
 
   #(f): Water masking
 
-    #Should permanent waterbodies be masked from the analysis using a 10m resolution ESA dataset (default=TRUE).
+    #Should permanent waterbodies be masked from the analysis using a 250m resolution Terra Land Water Mask dataset (default=TRUE).
     mask_water=TRUE
 
   #(g): GAM sequential outlier filtering
@@ -507,9 +507,9 @@
        #(A): print message
          print("Water masking = TRUE")
 
-       #(B): Extract permanent waterbodies from the ESA WorldCover map
+       #(B): Extract permanent waterbodies from the Terra Land Water Mask map (250m resolution)
 
-         #Load auxilliary function
+         #Load auxiliary function
          compute_Water_MODIS=compute_Water_MODIS #sourced
 
          #Extract pixels corresponding to permanent waterbodies
@@ -522,7 +522,7 @@
          # Map$addLayer(MODIS_clouds_filtered$filterDate(paste0(year_ID, "-08-04"), end_date)$first(), list(bands=c("sur_refl_b01", "sur_refl_b04", "sur_refl_b03"), min=100, max=8000, gamma=c(1.9, 1.7, 1.7)), 'TRUE COLOR')+
          # Map$addLayer(water_mask,list(min=0, max = 1, palette = c('ffffff', '000000')), 'Water_mask')
 
-         #Load auxilliary function to mask water-pixels
+         #Load auxiliary function to mask water-pixels
          Add_WaterMask_MODIS=Add_WaterMask_MODIS #sourced
 
          #Apply the final watermask:
