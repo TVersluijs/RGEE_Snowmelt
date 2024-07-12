@@ -2,22 +2,22 @@
 
 #Use Sentinel-2 data to extract time series of (I) the average fractional snowcover (FSC), (II) the average NDVI, NDMI and NDSI,
 #and (III) the fraction of snowcover, for all sub areas located within a shapefile. These sub areas can be specified by creating a
-#multipolygon in e.g. QGIS (see manual). The fractional snowcover (FSC) is calculated based on two methods: following Gascoin et 
+#multipolygon in e.g. QGIS (see manual). The fractional snowcover (FSC, I) is calculated based on two methods: following Gascoin et 
 #al 2020, and Aalstad et al 2020. This FSC is a within-pixel estimate of the fraction of snowcover, which is then averaged over
-#all pixels per subarea. The fraction of snowcover is instead estimated by calculating the fraction of pixels per subarea with an 
-#NDSI value larger than the user specified NDSI-threshold for each timestep. This corresponds to the method='snowfraction' in 
+#all pixels per subarea. The fraction of snowcover (III) is instead estimated by calculating the fraction of pixels per subarea with  
+#an NDSI value larger than the user specified NDSI-threshold for each timestep. This corresponds to the method='snowfraction' in 
 #other scripts. The user can specify whether clouds and permanent waterbodies need to be masked, and whether a composite image 
 #per day of year needs to be generated (merging multiple satellite photos for that day). The current script requires a shapefile 
-#of subareas within the study area as input. It only works for small areas of c.a. 50 km2 (larger areas might result in 
-#computation errors unless the spatial resolution of the analyses is decreased).
+#of a single polygon, or a multi-polygon (i.e. subareas) as input. It only works for small areas of c.a. 50 km2 (larger areas might 
+#result in computation errors unless the spatial resolution of the analyses is decreased).
 
 #Note that in this script (06), snowmelt is not calculated based on pixel-level snowmelt data (i.e. 'pixel_gam' method is not 
-#implemented). This approach is instead implemented in script "08-RGEE_TomVersluijs_S2_Shapefile_Pixel_Snowmelt.R" and involves 
-#fitting of GAMS through NDSI data per pixel and extracting the moment this GAM passes a user-defined NDSI-threshold. This results 
-#in a pixel-level map of the date of snowmelt. Script "10-RGEE_TomVersluijs_S2_ExtractSnowFraction.R" can then be used to extract 
-#timeseries of the fraction of snowcover for points/polygons of interest from this map.
+#implemented). This approach is instead implemented for a single polygon in script "08-RGEE_TomVersluijs_S2_Shapefile_Pixel_
+#Snowmelt.R" and involves fitting of GAMS through NDSI data per pixel and extracting the moment this GAM passes a user-defined 
+#NDSI-threshold. This results in a pixel-level map of the date of snowmelt. Script "10-RGEE_TomVersluijs_S2_ExtractSnowFraction.R" 
+#can then be used to extract timeseries of the fraction of snowcover for points/polygons of interest from this map.
 
-#Copyright Tom Versluijs 2024-04-03. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
+#Copyright Tom Versluijs 2024-07-12. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
 
 #Before running this script make sure to install RGEE according to the instructions in script "00-RGEE_TomVersluijs_Installation.R". 
 #Note that a GoogleDrive is required. Important: make sure to run this script from within the "RGEE_Snowmelt.Rproj" project file.
@@ -66,7 +66,7 @@
       
 ##################################################################################################################################  
        
- #Manually specify parameters of interest
+ #(5): Manually specify parameters of interest
 
    #(a): Sentinel-2 satellite
 
@@ -99,7 +99,7 @@
 
      #Date range of all images considered for analysis
      start_date <- paste0(year_ID, "-03-15") #choose date (well) before the first snowmelt occurs within the study site
-     end_date <- paste0(year_ID, "-09-15") #choose date (well) after last date of tracking
+     end_date <- paste0(year_ID, "-09-15") #choose date (well) after last snowmelt occurs within the study site
 
    #(d) Snow detection
 
@@ -131,7 +131,7 @@
      #Define radius of cloud erosion and dilation (in meters)
      #First, all cloudy pixels without cloudy pixels within radius cld_erosion will be removed.
      #Second, all remaining pixels will be dilated by radius cld_buffer. Make sure that cld_buffer
-     #is larger than cld_erosion. Larger values result in a more course cloud-filtering process.
+     #is larger than cld_erosion. Larger values result in a more coarse cloud-filtering process.
      cld_erosion=250 #250 for conservative cloud estimation
      cld_buffer=270 #270 for conservative cloud estimation
 
@@ -197,7 +197,7 @@
 
 ##################################################################################################################################
      
-   #(5): Automatically define some additional parameters 
+   #(6): Automatically define some additional parameters 
      
      #Create a unique data_ID
      if(nchar(area_name)>3){area_name <- substr(area_name, start = 1, stop = 3)}
@@ -226,11 +226,11 @@
        
 ##################################################################################################################################
         
-#III: Read and display the unfiltered data
+#IV: Read and display the unfiltered data
         
 ##################################################################################################################################
 
-    #(6): Load shapefile (i.e. a single polygon or a multipolygon)
+    #(7): Load shapefile (i.e. a single polygon or a multipolygon)
      
        #Read and plot the shapefile
        root_fldr <- here()
@@ -247,7 +247,7 @@
        aoi_SubAreas <- ee$FeatureCollection(aoi_SubAreas)
        #Note that the feature$property "LocationID" has a unique number (0-9) for each of the subareas within the study area 
        
-       #Collapse all polygons (if any) into a single polygon to get the outline of the study area
+       #Collapse all polygons (if any) into a single polygon and calculate the (convex hull) outline of the study area
        aoi_SubAreas_merged <- ee$FeatureCollection(aoi_SubAreas$geometry()$dissolve())
        aoi_Shapefile <- ee$FeatureCollection(aoi_SubAreas_merged$geometry()$convexHull())
        
@@ -307,7 +307,7 @@
      
    #(9): Plot an RGB, NDSI and NDVI image for a single extracted satellite image (for debugging)   
          
-      # #Select first images for initial plot:
+      # #Select a single image for initial plot:
       #  image <- s2_col$filterDate(paste0(year_ID, "-07-15"), end_date)$first()
       # 
       # #Normalized difference snow index:
@@ -367,7 +367,7 @@
         
 ##################################################################################################################################
         
-#IV: Filter and mask clouds within the image collection
+#V: Filter and mask clouds within the image collection
         
 ##################################################################################################################################
         
@@ -394,7 +394,7 @@
         #Add 'seconds since 1st of january' as a new band to each image to make sure that each pixel in the composite image can be traced back to the original image.
         map(add_Time)
       
-      # #Check if CloudFraction property has been added to each image
+      # #Check if CloudFraction property has been added to each image (for debugging)
       # s2_col$first()$propertyNames()$getInfo()
       
       # #Visual check of cloud mask (for debugging)
@@ -432,16 +432,10 @@
       #   stat_smooth(method='lm', formula=y~x)+
       #   theme_tom()
       #   #Thus, this indicates that our local cloud measure does not necessarily correspond to that as measured on the whole tile as
-      #   #explained above.
+      #   #explained above (which is expected as my measure is more representative of cloudcover within the study area).
     
     #(13): Exclude all images from the image collection that have a CloudFraction value > max_cloud_fraction, and mask all cloud pixels within the remaining images
   
-      #In the analysis for the whole study area we exclude images with more than 20% snowcover within our shapefile
-      #area. However, now we're interested in individual pixels. So even when 90% of the shapefile area is 
-      #snowcovered, the pixels we're interested in might be located in the 10% cloud free area. We thus only filter
-      #images with a 100% cloudcover (cloudFraction=1.0). We apply a cloud mask to mask out cloudy pixels within each 
-      #image.
- 
       #Mask cloudy pixels within each image: 
       s2_clouds_filtered <- s2_col$
         #Only remove images that are fully cloud-covered
@@ -449,7 +443,7 @@
         #Apply cloudmask for individual pixels
         map(Add_CloudMask)
       
-      # #Create timelapse video of the cloud filtered/masked RGB images
+      # #Create timelapse video of the cloud filtered/masked RGB images (for debugging)
       # videoArgs <- list(dimensions=350, region=aoi_Shapefile,framesPerSecond=5, crs='EPSG:3857', bands=c("B4", "B3", "B2"), min=100, max=10000, gamma=c(1.9, 1.7, 1.7))
       # tryCatch({browseURL(s2_clouds_filtered$getVideoThumbURL(videoArgs))}, error = function(cond){return("Too many pixels. Reduce dimensions.")})
 
@@ -469,7 +463,7 @@
       
 ##################################################################################################################################
 
-#V: Mask permanent waterbodies (ponds, lakes, rivers, sea) within the image collection
+#VI: Mask permanent waterbodies (ponds, lakes, rivers, sea) within the image collection
 
 ##################################################################################################################################
 
@@ -541,7 +535,7 @@
         
 ##################################################################################################################################
 
-#VI: Create a composite image for each day by mosaicking all images from that day
+#VII: Create a composite image for each day by mosaicking all images from that day
 
 ##################################################################################################################################
 
@@ -711,7 +705,7 @@
      
 ##################################################################################################################################
 
-#VII: Count the total number of unmasked pixels per doy within aoi_Shapefile
+#VIII: Count the total number of unmasked pixels per doy within aoi_Shapefile
 
 ##################################################################################################################################
 
@@ -779,10 +773,71 @@
       dev.off()
       
     }
+      
+##################################################################################################################################
+
+#IX: Create timelapse videos of the RGB bands, and the NDSI-, NDVI-, NDMI- and NDMI-bands (Cloud and Water masked)
 
 ##################################################################################################################################
+
+  #Note that these GIFs generally result in memory errors with areas larger than 100km2. Adjust dimensions to get 
+  #higher resolution GIFS.
+  
+  # #(19): Create a timeseries GIF of RGB images
+  #     videoArgs <- list(dimensions=100, region=aoi,framesPerSecond=5, crs='EPSG:3857', bands=c("B4", "B3", "B2"), min=0, max=10000, gamma=c(1.9, 1.7, 1.7))
+  #     tryCatch({browseURL(s2_col_composite$getVideoThumbURL(videoArgs))}, error = function(cond){return("Too many pixels. Reduce dimensions.")})
+  #     #Note that missing pixels are actually not recorded by the satellite and are NOT caused by coding errors
+  # 
+  # #(20): Create a timeseries GIF of NDSI images
+  # 
+  #    #Map a visualization function over the image collection. This function converts each image to an RGB image (i.e. a red, green and blue
+  #    #colour band with min and max values of 0 and 255 respectively). In the function it can be specified which data band needs to be converted,
+  #    #what min and max values of the original band should correspond to 0 and 255 in the RGB image, and which colour pallete should be used.
+  #    palette=c('black', '0dffff', '0524ff', 'ffffff')
+  #    visFun_NDSI <-  function(img) {
+  #      return(img$visualize(bands='NDSI', min=-1, max=1.5, palette=palette)$
+  #               copyProperties(img, img$propertyNames()))}
+  #    S2_snow_masked_RGB <- s2_col_composite$map(visFun_NDSI)
+  # 
+  #    #Create a timelapse video of NDSI band
+  #    videoArgs <- list(dimensions=100, region=aoi, framesPerSecond=5, crs='EPSG:3857', bands=c('vis-red', 'vis-green', 'vis-blue'), min=0, max=255)
+  #    tryCatch({browseURL(S2_snow_masked_RGB$getVideoThumbURL(videoArgs))}, error = function(cond){return("Too many pixels. Reduce dimensions.")})
+  # 
+  #  #(21): Create a timeseries GIF of NDVI images
+  #    palette <- c("#cccccc", "#f46d43", "#fdae61", "#fee08b", "#d9ef8b", "#a6d96a", "#66bd63", "#1a9850")
+  #    visFun_NDVI <-  function(img) {
+  #      return(img$visualize(bands='NDVI', min=-0.25, max=1, palette=palette)$
+  #               copyProperties(img, img$propertyNames()))}
+  #    S2_ndvi_masked_RGB <- s2_col_composite$map(visFun_NDVI)
+  # 
+  #    #Create a timelapse video of NDSI band
+  #    videoArgs <- list(dimensions=510, region=aoi, framesPerSecond=5, crs='EPSG:3857', bands=c('vis-red', 'vis-green', 'vis-blue'), min=0, max=255)
+  #    tryCatch({browseURL(S2_ndvi_masked_RGB$getVideoThumbURL(videoArgs))}, error = function(cond){return("Too many pixels. Reduce dimensions.")})
+  # 
+  #  #(22): Create a timeseries GIF of NDMI images
+  #    palette <- c("#d73027", "#f46d43", "#fdae61", "#fee08b", "#d9ef8b", "#a6d96a", "#66bd63", "#1a9850", "#6ad99e", "#387ad9", "#003dd6")
+  #    visFun_NDMI <-  function(img) {
+  #      return(img$visualize(bands='NDMI', min=-0.75, max=1, palette=palette)$copyProperties(img, img$propertyNames()))}
+  #    S2_ndmi_masked_RGB <- s2_col_composite$map(visFun_NDMI)
+  # 
+  #    #Create a timelapse video of NDMI band
+  #    videoArgs <- list(dimensions=510, region=aoi, framesPerSecond=5, crs='EPSG:3857', bands=c('vis-red', 'vis-green', 'vis-blue'), min=0, max=255)
+  #    tryCatch({browseURL(S2_ndmi_masked_RGB$getVideoThumbURL(videoArgs))}, error = function(cond){return("Too many pixels. Reduce dimensions.")})
+  # 
+  #  #(23): Create a timeseries GIF of NDWI images
+  #    palette <- c('000000', '0dffff', '0524ff', 'ffffff')
+  #    visFun_NDWI <-  function(img) {
+  #      return(img$visualize(bands='NDWI', min=-0.5, max=1, palette=palette)$copyProperties(img, img$propertyNames()))}
+  #    S2_ndwi_masked_RGB <- s2_col_composite$map(visFun_NDWI)
+  # 
+  #    #Create a timelapse video of NDWI band
+  #    videoArgs <- list(dimensions=510, region=aoi, framesPerSecond=5, crs='EPSG:3857', bands=c('vis-red', 'vis-green', 'vis-blue'), min=0, max=255)
+  #    tryCatch({browseURL(S2_ndwi_masked_RGB$getVideoThumbURL(videoArgs))}, error = function(cond){return("Too many pixels. Reduce dimensions.")})
+  
+      
+##################################################################################################################################
      
-#VIII: Extract Average FSC, NDSI, NDVI, and NDMI per SubArea      
+#X: Extract Average FSC, NDSI, NDVI, and NDMI per SubArea      
       
 ##################################################################################################################################
 
@@ -818,7 +873,7 @@
     #has been defined.
      Extract_BandValuesAtSubAreas = Extract_BandValuesAtSubAreas #sourced
     
-    #Iterate over the ImageCollection 
+    #Iterate this function over all images in the ImageCollection 
      FC_merged <- ee$FeatureCollection(s2_col_composite$select("FSC_Gascoin2020", "FSC_Aalstad2020", "NDSI", "NDVI", "NDMI")$iterate(Extract_BandValuesAtSubAreas, FC_initial))
      #FC_merged$getInfo() #for debugging
      #FC_merged$first()$getInfo() #for debugging
@@ -873,7 +928,7 @@
       
 ##################################################################################################################################
 
-#IX: Extract the fraction of pixels with NDSI > NDSI_threshold over time per SubArea      
+#XI: Extract the fraction of pixels with NDSI > NDSI_threshold over time per SubArea      
 
 ##################################################################################################################################
   
@@ -968,7 +1023,7 @@
 
               }
            
-           #Iterate over the ImageCollection
+           #Iterate this function over all images in the ImageCollection
            FC_merged_SnowFraction <- ee$FeatureCollection(s2_snow_masked$select("SNOW", "NDSI")$iterate(Extract_SnowFractionAtSubAreas, FC_initial_SnowFraction))
            #Note that for some reason, including a second band next to SNOW is required for the code to function.
            #FC_merged_SnowFraction$getInfo() #for debugging
@@ -1020,10 +1075,10 @@
            df_SubAreas_SnowFraction <- rbind(df_SubAreas_SnowFraction, df_SubAreas_SnowFraction_new)
 
            # #For debugging
-           #  ggplot() + geom_point(data=df_SubAreas_SnowFraction, aes(x=doy, y=SnowFraction)) + theme_classic()
+           #  ggplot() + geom_point(data=df_SubAreas_SnowFraction, aes(x=doy, y=SnowFraction, col=NDSI_threshold)) + theme_classic()
 
            # #Save dataframe for current NDSI_threshold
-           #  write.csv(df_SubAreas_SnowFraction_new, paste0("Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, _Resolution", resolution, "_NDSI", NDSI_threshold_char, "_Data_SnowFraction_SubAreas.csv"), row.names = FALSE)
+           #  write.csv(df_SubAreas_SnowFraction_new, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Resolution", resolution, "_NDSI", NDSI_threshold_char, "_Data_SnowFraction_SubAreas.csv"), row.names = FALSE)
 
          }
   
@@ -1036,7 +1091,7 @@
       
 ##################################################################################################################################
 
-#X: Fit GAMS through the Average NDSI, NDVI, NDMI and SnowFraction data per SubArea      
+#XII: Fit GAMS through the Average NDSI, NDVI, NDMI and SnowFraction data per SubArea      
 
 ##################################################################################################################################
 
