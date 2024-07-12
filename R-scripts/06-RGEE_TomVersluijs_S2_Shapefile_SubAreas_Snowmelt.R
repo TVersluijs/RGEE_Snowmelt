@@ -81,20 +81,16 @@
    #(b) Area of interest
 
      #Specify name of study area (used as prefix in output files)
-     area_name="UTQ" #max length three characters
+     area_name="ZAC" #max length three characters
 
-     #Name of Shapefile with outline encompassing al sub areas (located in '/Input/Shapefiles' folder)
-	   #Follow the guide "Manual_CreateShapefilePolygons.docx" when creating this shapefile.
-     shapefile <- "Utqiagvik2022_Outline_EPSG4326.shp"
-
-     #Name of Shapefile containing a separate polygon for each sub area (located in '/Input/Shapefiles' folder)
-	   #Follow the guide "Manual_CreateShapefilePolygons.docx" when creating this shapefile.
-     shapefile_subareas <- "Utqiagvik2022_Nests_EPSG4326.shp"
+     #Name of Shapefile containing either a single polygon, or a multi-polygon (located in '/Input/Shapefiles' folder)
+	   #Follow the guide "Manual_CreateShapefilePolygons.pdf" when creating this shapefile.
+     shapefile <- "ZAC_Test_EPSG4326.shp"
 
      #Coordinate reference system used for calculations
      #EPSG:4326 is recommended for areas spanning multiple UTM zones, but increased computation time (i.e. spherical coordinate system).
      #EPSG:326XX is results in reduced computation time for areas located within a single UTM zone (i.e. planar coordinate system).
-     crs <- "EPSG:32604"
+     crs <- "EPSG:32627"
 
    #(c) Dates
 
@@ -111,7 +107,7 @@
      NDSI_threshold_vector = 0.4
      
      #Define the snowcover fraction for which the date of its occurrence will be calculated (specify multiple using c())
-     Snowfraction_threshold_vector = seq(0.25, 0.75, 0.05)
+     Snowfraction_threshold_vector = 0.5
      
      #Define the preferred method for the analysis of snowmelt
      method=c("avg_NDSI", "snowfraction") #either "avg_NDSI", "snowfraction", or a combination using c()
@@ -174,7 +170,7 @@
    #(g): Composite image
        
        #Specify whether a composite image will be generated for all images (i.e. tiles) per unique doy (default=TRUE). Note that setting this
-       #to TRUE might result in an increase in computation time.
+       #to TRUE will result in a significant increase in computation time.
        create_composite=TRUE
        
    #(h): GAM sequential outlier filtering
@@ -234,25 +230,41 @@
         
 ##################################################################################################################################
 
-     #(6): Read study area shapefile and convert to a feature collection.
+    #(6): Load shapefile (i.e. a single polygon or a multipolygon)
+     
+       #Read and plot the shapefile
        root_fldr <- here()
-       aoi_Shapefile <- st_read(paste0(root_fldr, "/Input/Shapefiles/", shapefile), quiet=T)
-       aoi_Shapefile <- st_transform(aoi_Shapefile, crs="EPSG:4326")
-       aoi_Shapefile <- sf_as_ee(aoi_Shapefile)
-       aoi_Shapefile <- ee$FeatureCollection(aoi_Shapefile)
-       #This feature collection can be used to clip the satellite imagery to the study area
-          
-       #Calculate bounding box for aoi_Shapefile
-       aoi <- aoi_Shapefile$geometry()$bounds()
+       aoi_SubAreas <- st_read(paste0(root_fldr, "/Input/Shapefiles/", shapefile), quiet=T)
+       p1 <- ggplot() + 
+         geom_sf(data = aoi_SubAreas, fill=sf.colors(nrow(aoi_SubAreas)), col = "black")+
+         theme_tom()+
+         geom_sf_label(data = aoi_SubAreas, aes(label=LocationID), colour="black")
+       ggsave(plot=p1, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_SubAreas.pdf"), width=10, height=8)
+       
+       #Convert the shapefile to an earthengine feature collection:  
+       aoi_SubAreas <- st_transform(aoi_SubAreas, crs="EPSG:4326")
+       aoi_SubAreas <- sf_as_ee(aoi_SubAreas)
+       aoi_SubAreas <- ee$FeatureCollection(aoi_SubAreas)
+       #Note that the feature$property "LocationID" has a unique number (0-9) for each of the subareas within the study area 
+       
+       #Collapse all polygons (if any) into a single polygon to get the outline of the study area
+       aoi_SubAreas_merged <- ee$FeatureCollection(aoi_SubAreas$geometry()$dissolve())
+       aoi_Shapefile <- ee$FeatureCollection(aoi_SubAreas_merged$geometry()$convexHull())
+       
+         # #Inspect merged polygon (for debugging)
+         # Map$centerObject(aoi_SubAreas)
+         # Map$addLayer(aoi_SubAreas,  list(color="blue"), 'Original Polygons')+
+         #   Map$addLayer(aoi_SubAreas_merged,  list(color="red"), 'Merged Polygon')+
+         #   Map$addLayer(aoi_Shapefile,  list(color="green"), 'Shapefile outline')
        
        #Calculate central point
        coordinates_point <- aoi_Shapefile$geometry()$centroid()
        
-       #Plot shapefile and bounding box (for debugging)
+       #Plot the shapefile and bounding box (for debugging)
        Map$setCenter(coordinates_point$getInfo()$coordinates[1], coordinates_point$getInfo()$coordinates[2], 6)
-       Map$addLayer(aoi_Shapefile)+
-         Map$addLayer(ee$FeatureCollection(aoi)$style(color='red', fillColor='00000000'))+
-         Map$addLayer(coordinates_point, list(color="blue"))
+       Map$addLayer(aoi_SubAreas, list(color="grey"), name='Polygons')+
+         Map$addLayer(aoi_Shapefile, list(color="black"), name='Study area')+
+         Map$addLayer(coordinates_point, list(color="blue"), name='Central point')
        
        #Calculate the size of the study area in km2:
        img <- ee$Image$pixelArea()$divide(1000000)
@@ -264,18 +276,18 @@
          maxPixels= 1E13)
        paste0('Size of study area calculated using the pixel area method: ', round(ee$Number(area2$get('area'))$getInfo(),3), ' km2')
      
-    #(7) Extract satellite data including cloud probability band:
+    #(8) Extract satellite data including cloud probability band:
       
       #Extract Sentinel-2 Surface Reflectance data for a given area and date range:
        s2_col <- ee$ImageCollection(paste0('COPERNICUS/', s2_dataset))
        s2_col <- s2_col$
-         filterBounds(aoi)$ #For areas that do not span multiple tiles, change aoi to coordinates_point to greatly speed-up code.
+         filterBounds(aoi_Shapefile)$ #For areas that do not span multiple tiles, change aoi_Shapefile to coordinates_point to greatly speed-up code.
          filterDate(start_date, end_date)
 
       #Load cloud information from S2_CLOUD_PROBABILITY
        s2_cloudless_col <-ee$ImageCollection('COPERNICUS/S2_CLOUD_PROBABILITY')
        s2_cloudless_col <- s2_cloudless_col$
-         filterBounds(aoi)$ #For areas that do not span multiple tiles, change aoi to coordinates_point to greatly speed-up code.
+         filterBounds(aoi_Shapefile)$ #For areas that do not span multiple tiles, change aoi_Shapefile to coordinates_point to greatly speed-up code.
          filterDate(start_date, end_date) 
        
       #Store sentinel-2 projection (of band "probability")
@@ -293,7 +305,7 @@
       #Clip all images to the area depicted by 'aoi_Shapefile'
        s2_col <- s2_col$map(function(img){return(img$clipToCollection(aoi_Shapefile))}) 
      
-   #(8): Plot an RGB, NDSI and NDVI image for a single extracted satellite image (for debugging)   
+   #(9): Plot an RGB, NDSI and NDVI image for a single extracted satellite image (for debugging)   
          
       # #Select first images for initial plot:
       #  image <- s2_col$filterDate(paste0(year_ID, "-07-15"), end_date)$first()
@@ -319,32 +331,6 @@
       #  Map$addLayer(ndsi_s2,list(min=-1, max=1.5, palette=c('black', '0dffff', '0524ff', 'ffffff')), 'NDSI')+
       #  Map$addLayer(ndvi_s2,list(min=-1, max=1, palette=c('#FF0000','#00FF00')), 'NDVI')+
       #  Map$addLayer(ndwi_s2,list(min=0, max=1, palette=c('000000', '0dffff', '0524ff', 'ffffff')), 'NDWI')
-      
-    #(9): Load shapefile with SubAreas (i.e. multipolygon)
-      
-      #Read shapefiles
-       root_fldr <- here()
-       aoi_SubAreas <- st_read(paste0(root_fldr, "/Input/Shapefiles/", shapefile_subareas), quiet=T)
-      
-      #Plot the shapefile polygons:
-       p1 <- ggplot() + 
-         geom_sf(data = aoi_SubAreas, fill=sf.colors(nrow(aoi_SubAreas)), col = "black")+
-         theme_tom()+
-         geom_sf_label(data = aoi_SubAreas, aes(label=LocationID), colour="black")
-       
-         ggsave(plot=p1, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_SubAreas.pdf"), width=10, height=8)
-      
-      #Convert shapefile to an earthengine feature collection:  
-       aoi_SubAreas <- st_transform(aoi_SubAreas, crs="EPSG:4326")
-       aoi_SubAreas <- sf_as_ee(aoi_SubAreas)
-       aoi_SubAreas <- ee$FeatureCollection(aoi_SubAreas)
-       #Note that the feature$property "LocationID" has a unique number (0-9) for each of the subareas within the study area 
-      
-      #Plot featurecollection
-       image <- s2_col$first()
-       Map$setCenter(coordinates_point$getInfo()$coordinates[1], coordinates_point$getInfo()$coordinates[2], 10)
-       Map$addLayer(image,list(bands=c("B4", "B3", "B2"), min=0, max=10000, gamma=c(1.9, 1.7, 1.7)), 'TRUE COLOR')+
-       Map$addLayer(aoi_SubAreas, list(color="red"), 'SubAreas')  
       
     #(10) Add NDSI and NDVI to the clipped image collection
 
@@ -375,7 +361,7 @@
       # s2_col$size()$getInfo()
       # 
       # #Create a timelapse video of RGB band
-      # videoArgs <- list(dimensions=380, region=aoi,framesPerSecond=5, crs='EPSG:3857', bands=c("B4", "B3", "B2"), min=0, max=10000, gamma=c(1.9, 1.7, 1.7))
+      # videoArgs <- list(dimensions=380, region=aoi_Shapefile,framesPerSecond=5, crs='EPSG:3857', bands=c("B4", "B3", "B2"), min=0, max=10000, gamma=c(1.9, 1.7, 1.7))
       # tryCatch({browseURL(s2_col$getVideoThumbURL(videoArgs))}, error = function(cond){return("Too many pixels. Reduce dimensions.")})
         
         
@@ -433,7 +419,7 @@
       # #Extract cloud fraction of all images in image collection for the shapefile area
       # cloud_aoi <- unlist(s2_col$aggregate_array('CloudFraction')$getInfo())
       # 
-      # #Extract cloud fraction of all images in image collection for the complete tile to which our aoi belongs
+      # #Extract cloud fraction of all images in image collection for the complete tile to which our area of interest belongs
       # cloud_tile <- unlist(s2_col$aggregate_array('CLOUDY_PIXEL_PERCENTAGE')$getInfo())
       # 
       # #Replace -9999 values by NA
@@ -464,7 +450,7 @@
         map(Add_CloudMask)
       
       # #Create timelapse video of the cloud filtered/masked RGB images
-      # videoArgs <- list(dimensions=350, region=aoi,framesPerSecond=5, crs='EPSG:3857', bands=c("B4", "B3", "B2"), min=100, max=10000, gamma=c(1.9, 1.7, 1.7))
+      # videoArgs <- list(dimensions=350, region=aoi_Shapefile,framesPerSecond=5, crs='EPSG:3857', bands=c("B4", "B3", "B2"), min=100, max=10000, gamma=c(1.9, 1.7, 1.7))
       # tryCatch({browseURL(s2_clouds_filtered$getVideoThumbURL(videoArgs))}, error = function(cond){return("Too many pixels. Reduce dimensions.")})
 
       }
@@ -542,7 +528,7 @@
       s2_clouds_filtered <- s2_clouds_filtered$map(Add_WaterMask)
           
       # #Create a timeseries GIF of RGB images of the water and cloud filtered image collection (for debugging)
-      # videoArgs <- list(dimensions=200, region=aoi,framesPerSecond=5, crs='EPSG:3857', bands=c("B4", "B3", "B2"), min=0, max=10000, gamma=c(1.9, 1.7, 1.7))
+      # videoArgs <- list(dimensions=200, region=aoi_Shapefile,framesPerSecond=5, crs='EPSG:3857', bands=c("B4", "B3", "B2"), min=0, max=10000, gamma=c(1.9, 1.7, 1.7))
       # tryCatch({browseURL(s2_clouds_filtered$getVideoThumbURL(videoArgs))}, error = function(cond){return("Too many pixels. Reduce dimensions.")})
           
     }
@@ -572,7 +558,7 @@
 
    #F.1: Make a composite image for a single date (doy) and calculate fraction of snowcover - USED FOR DEBUGGING ONLY
     {
-    # #Pick a date and check whether there are multiple tiles spanning the aoi
+    # #Pick a date and check whether there are multiple tiles spanning the area of interest
     # doy=176
     # s2_img <- s2_clouds_filtered$filterMetadata('year', 'equals', as.numeric(year_ID))$filterMetadata('doy', 'equals', doy)
     # s2_img <- s2_img$select(c('B4', 'B3', 'B2', 'NDSI', 'clouds_inv'))
@@ -586,7 +572,7 @@
     # # Map$setCenter(coordinates_point$getInfo()$coordinates[1], coordinates_point$getInfo()$coordinates[2], 6)
     # # Map$addLayers(s2_img, list(bands=c("B4", "B3", "B2"), min=100, max=10000, gamma=c(1.9, 1.7, 1.7)), 'S2_Original')+
     # # #Map$addLayers(s2_img, list(bands=c("seconds"), min=15053255, max=15053280), opacity=0.75, 'image_ID')
-    # # Map$addLayer(aoi)
+    # # Map$addLayer(aoi_Shapefile)
     #
     # #Create a composite image for this day
     # s2_composite <- ee$Image(s2_img$
@@ -594,7 +580,7 @@
     #                            qualityMosaic('clouds_inv')$
     #                            #Copy timestamp properties of first image to mosaic image
     #                            copyProperties(s2_img$first(), c('system:id', 'system:time_start')))#$reproject(crs=crs, crsTransform=NULL, scale=resolution)
-    # s2_composite <- s2_composite$clip(aoi)
+    # s2_composite <- s2_composite$clip(aoi_Shapefile)
     # #s2_composite$select('NDSI')$projection()$getInfo()
     # #Note that there is no need to reproject as this is done automatically when plotting the data, or when extracting other output.
     #
@@ -630,7 +616,7 @@
     #   #  Map$addLayer(s2_composite,list(bands=c("B4", "B3", "B2"), min=0, max=10000, gamma=c(1.9, 1.7, 1.7)), 'TRUE COLOR')+
     #   #  Map$addLayer(s2_composite$select('SNOW'))
     #
-    #   #Calculate the fraction of pixels within aoi that are marked as snow
+    #   #Calculate the fraction of pixels within aoi_Shapefile that are marked as snow
     #   SnowFraction = snow$reduceRegion(
     #     reducer = ee$Reducer$mean(),
     #     geometry = aoi_Shapefile,
