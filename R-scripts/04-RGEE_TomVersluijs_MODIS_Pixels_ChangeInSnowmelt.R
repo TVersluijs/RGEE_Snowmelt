@@ -1,6 +1,6 @@
 ##################################################################################################################################
 
-#This script requires the snow melt maps generated using script "02-RGEE_TomVersluijs_MODIS_Shapefile_Pixel_Snowmelt.R" as input.
+#This script requires the snow melt maps generated using script "01-RGEE_TomVersluijs_MODIS_Pixels_Snowmelt.R" as input.
 #It imports the pixel-level maps for all analyzed years and transforms them into an image with the change in the timing of 
 #snowmelt over the years for each pixel (i.e. slope of linear regression) and another image with the average timing of snowmelt 
 #over the years for each pixel (i.e. intercept of linear regression).
@@ -96,13 +96,13 @@
 #################################################################################################################
    
     #Create output folder
-    if(dir.exists(paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt"))==FALSE){dir.create(paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt"), recursive = TRUE)}
+    if(dir.exists(paste0(here(), "/Output/MODIS/04_Pixels_ChangeInSnowmelt"))==FALSE){dir.create(paste0(here(), "/Output/MODIS/04_Pixels_ChangeInSnowmelt"), recursive = TRUE)}
      
     #Create a timestamp variable
     timestamp <- format(Sys.time(), "%Y%m%d%H%M%S")
      
     #Save all parameters and their values in the environment to a text file 
-    file_conn <- file(paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", timestamp, "_Parameters.txt"), "w")
+    file_conn <- file(paste0(here(), "/Output/MODIS/04_Pixels_ChangeInSnowmelt/", timestamp, "_Parameters.txt"), "w")
     for (obj in setdiff(ls(), lsf.str())) {cat(paste(obj, "=", get(obj)), file = file_conn) ; cat("\n", file = file_conn)}
     close(file_conn)
     
@@ -316,7 +316,7 @@
        task_vector1$start()
        ee_monitoring(task_vector1, max_attempts = 1000000)
       
-       exported_stats <- ee_drive_to_local(task = task_vector1, dsn=paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", timestamp, "_", data_ID, "_Pixel_Snowmelt_bbox"))
+       exported_stats <- ee_drive_to_local(task = task_vector1, dsn=paste0(here(), "/Output/MODIS/04_Pixels_ChangeInSnowmelt/", timestamp, "_", data_ID, "_Pixel_Snowmelt_bbox"))
        MODIS_pixel_snowmelt <- read.csv(exported_stats)
        unlink(exported_stats)
        b=Sys.time()
@@ -344,7 +344,7 @@
        task_vector2$start()
        ee_monitoring(task_vector2, max_attempts = 1000000)
        
-       exported_stats <- ee_drive_to_local(task = task_vector2, dsn=paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", timestamp, "_", data_ID, "_Data_Pixel_Snowmelt_polygon"))
+       exported_stats <- ee_drive_to_local(task = task_vector2, dsn=paste0(here(), "/Output/MODIS/04_Pixels_ChangeInSnowmelt/", timestamp, "_", data_ID, "_Data_Pixel_Snowmelt_polygon"))
        MODIS_pixel_snowmelt_clipped <- read.csv(exported_stats)
        b=Sys.time()
        print(paste0("Computation finished in ",  round(as.numeric(difftime(b, a, units="mins")),2), " minutes"))
@@ -474,8 +474,8 @@
           df_pixel_ChangeInSnowmelt <- as.data.frame(do.call(rbind, do.call(c, df_pixel_ChangeInSnowmelt)))
           colnames(df_pixel_ChangeInSnowmelt)[colnames(df_pixel_ChangeInSnowmelt)=="y_change"] <- "snowmelt_change"
           colnames(df_pixel_ChangeInSnowmelt)[colnames(df_pixel_ChangeInSnowmelt)=="y_intercept"] <- "snowmelt_intercept"
-          #write.csv(df_pixel_ChangeInSnowmelt, file=paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", timestamp, "_", data_ID, "_Pixel_ChangeInSnowmelt_bbox.csv"), quote = FALSE, row.names=FALSE)
-          #df_pixel_ChangeInSnowmelt <- read.csv(file=paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", timestamp, "_", data_ID, "_Pixel_ChangeInSnowmelt.csv"), header=TRUE) 
+          #write.csv(df_pixel_ChangeInSnowmelt, file=paste0(here(), "/Output/MODIS/04_Pixels_ChangeInSnowmelt/", timestamp, "_", data_ID, "_Pixel_ChangeInSnowmelt_bbox.csv"), quote = FALSE, row.names=FALSE)
+          #df_pixel_ChangeInSnowmelt <- read.csv(file=paste0(here(), "/Output/MODIS/04_Pixels_ChangeInSnowmelt/", timestamp, "_", data_ID, "_Pixel_ChangeInSnowmelt.csv"), header=TRUE) 
           
           #The dataframe df_pixel_ChangeInSnowmelt contains the change in the date of snowmelt for each individual pixel_ID within the
           #region 'aoi'. To be able to plot these data we need to transform this dataframe to a feature collection and then transform this 
@@ -487,7 +487,7 @@
           #in timing of snowmelt. In this case we're specifically interested in all pixels within aoi_Shapefile (and not all pixels within the
           #region 'aoi'). We thus first define which pixels of the current selection fall within aoi_Shapefile and store this as an index variable.
           index <- which(df_pixel_ChangeInSnowmelt$pixel_ID %in% unique(MODIS_pixel_snowmelt_clipped$pixel_ID))
-          write.csv(df_pixel_ChangeInSnowmelt[index,], file=paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", timestamp, "_", data_ID, "_Data_Pixel_ChangeInSnowmelt_polygon.csv"), quote = FALSE, row.names=FALSE)
+          write.csv(df_pixel_ChangeInSnowmelt[index,], file=paste0(here(), "/Output/MODIS/04_Pixels_ChangeInSnowmelt/", timestamp, "_", data_ID, "_Data_Pixel_ChangeInSnowmelt_polygon.csv"), quote = FALSE, row.names=FALSE)
           
           #Calculate the change in timing of snowmelt within aoi_Shapefile
           hist(na.omit(df_pixel_ChangeInSnowmelt$snowmelt_change[index]), nclass = 30)
@@ -504,7 +504,7 @@
           #Plot the GAM fits with 25 plots per pdf page
           plots_per_page = 25
           plot_pixel_snowmelt <- split(plot_pixel_snowmelt, ceiling(seq_along(plot_pixel_snowmelt)/plots_per_page))
-          pdf(paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", timestamp, "_", data_ID, "_Plot_Pixel_ChangeInSnowmelt_polygon.pdf"), width=20, height=16, onefile = TRUE)
+          pdf(paste0(here(), "/Output/MODIS/04_Pixels_ChangeInSnowmelt/", timestamp, "_", data_ID, "_Plot_Pixel_ChangeInSnowmelt_polygon.pdf"), width=20, height=16, onefile = TRUE)
           for (i in seq(length(plot_pixel_snowmelt))) { do.call("grid.arrange", plot_pixel_snowmelt[[i]]) }
           dev.off()
           
@@ -725,7 +725,7 @@
             task_vector4$start()
             print("Export original image to Google Drive:")
             ee_monitoring(task_vector4, max_attempts = 1000000)
-            ee_drive_to_local(task = task_vector4, dsn=paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", timestamp, "_", data_ID, '_Pixel_Image_SnowmeltDoy_Slope'))
+            ee_drive_to_local(task = task_vector4, dsn=paste0(here(), "/Output/MODIS/04_Pixels_ChangeInSnowmelt/", timestamp, "_", data_ID, '_Pixel_Image_SnowmeltDoy_Slope'))
             
           #(E): Export RGB image to Google Drive (takes c.a. 2 minutes):
           
@@ -752,7 +752,7 @@
             print("Export RGB image to Google Drive:")
             task_vector5$start()
             ee_monitoring(task_vector5, max_attempts = 1000000)
-            ee_drive_to_local(task = task_vector5, dsn=paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", timestamp, "_", data_ID, '_Pixel_Image_SnowmeltDoy_Slope_RGB'))
+            ee_drive_to_local(task = task_vector5, dsn=paste0(here(), "/Output/MODIS/04_Pixels_ChangeInSnowmelt/", timestamp, "_", data_ID, '_Pixel_Image_SnowmeltDoy_Slope_RGB'))
             
        #(9.2): Transform the Feature collection FC_pixels_ChangeInSnowmelt_optimized to an image (with snowmelt_intercept as an image band)
             
@@ -796,7 +796,7 @@
               task_vector6$start()
               print("Export original image to Google Drive:")
               ee_monitoring(task_vector6, max_attempts = 1000000)
-              ee_drive_to_local(task = task_vector6, dsn=paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", timestamp, "_", data_ID, '_Pixel_Image_SnowmeltDoy_Intercept'))
+              ee_drive_to_local(task = task_vector6, dsn=paste0(here(), "/Output/MODIS/04_Pixels_ChangeInSnowmelt/", timestamp, "_", data_ID, '_Pixel_Image_SnowmeltDoy_Intercept'))
               
             #(E): Export RGB image to Google Drive (takes c.a. 2 minutes):
             
@@ -823,10 +823,10 @@
               print("Export RGB image to Google Drive:")
               task_vector7$start()
               ee_monitoring(task_vector7, max_attempts = 1000000)
-              ee_drive_to_local(task=task_vector7, dsn=paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", timestamp, "_", data_ID, '_Pixel_Image_SnowmeltDoy_Intercept_RGB'))
+              ee_drive_to_local(task=task_vector7, dsn=paste0(here(), "/Output/MODIS/04_Pixels_ChangeInSnowmelt/", timestamp, "_", data_ID, '_Pixel_Image_SnowmeltDoy_Intercept_RGB'))
               
             #Save workspace
-            #save.image(paste0(here(), "/Output/MODIS/03_Shapefile_Pixel_ChangeInSnowmelt/", timestamp, "_", data_ID, "_Backup_Workspace_PixelChangeInSnowmeltDoy.RData"))        
+            #save.image(paste0(here(), "/Output/MODIS/04_Pixels_ChangeInSnowmelt/", timestamp, "_", data_ID, "_Backup_Workspace_PixelChangeInSnowmeltDoy.RData"))        
             
                
 ##################################################################################################################################################

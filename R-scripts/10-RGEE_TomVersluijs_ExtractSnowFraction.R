@@ -4,8 +4,8 @@
 #to the method 'pixel_gam' in the other scripts. Input locations can either be point locations with a corresponding buffer zone, 
 #or a collection of polygons in a shapefile.
 
-#This script depends on a snowmelt map generated for MODIS using script "02-RGEE_TomVersluijs_#MODIS_Shapefile_Pixel_Snowmelt.R", 
-#or for Sentinel-2 using script "08-RGEE_TomVersluijs_S2_Shapefile_Pixel_Snowmelt.R". Please run either script before continuing 
+#This script depends on a snowmelt map generated for MODIS using script "01-RGEE_TomVersluijs_MODIS_Pixel_Snowmelt.R", 
+#or for Sentinel-2 using script "05-RGEE_TomVersluijs_S2_Pixel_Snowmelt.R". Please run either script before continuing 
 #with the analysis below.
 
 #Copyright Tom Versluijs 2024-04-03. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
@@ -67,7 +67,7 @@
 
    #(a): Snowmelt map
      
-      #NOTE: Check script 02, or script 08 for the correct parameter settings and values!
+      #NOTE: Check script 01, or script 05 for the correct parameter settings and values!
        
       #Which satellite was used to generate the snow melt map
        satellite="Sentinel2" #either "MODIS" or "Sentinel2"
@@ -147,7 +147,7 @@
    if(satellite=="MODIS"){
      
      #Specify the folder where the snowmelt image is stored:
-     dir_SnowmeltImage <- paste0(here(), "/Output/MODIS/02_Shapefile_Pixel_Snowmelt/")
+     dir_SnowmeltImage <- paste0(here(), "/Output/MODIS/01_Pixel_Snowmelt/")
      
      #Create a unique data_ID:
      if(nchar(area_name)>3){area_name <- substr(area_name, start = 1, stop = 3)}
@@ -162,7 +162,7 @@
    if(satellite=="Sentinel2"){
      
      #Specify the folder where the snowmelt image is stored:
-     dir_SnowmeltImage <- paste0(here(), "/Output/S2/08_Shapefile_Pixel_Snowmelt/")
+     dir_SnowmeltImage <- paste0(here(), "/Output/S2/05_Pixel_Snowmelt/")
      
      #Create a unique data_ID:
      if(nchar(area_name)>3){area_name <- substr(area_name, start = 1, stop = 3)}
@@ -189,7 +189,7 @@
      #Specify asset path for 'data_ID'
       path_asset <- paste0(ee_get_assethome(), "/", data_ID)
      
-     #Load the name of the assetid .Rds file from the output of script 02 (MODIS) or script 08 (Sentinel2)
+     #Load the name of the assetid .Rds file from the output of script 01 (MODIS) or script 05 (Sentinel2)
       assetid_file <- list.files(path=dir_SnowmeltImage, full.names=F, recursive = T, pattern = paste0(data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Variable_AssetID.Rds"))
       #list.files(path=dir_SnowmeltImage, full.names=F, recursive = T, pattern = paste0("_Variable_AssetID.Rds"))
      
