@@ -1,23 +1,23 @@
 ##################################################################################################################################
 
 #Use Sentinel-2 data to extract time series of (I) the average fractional snowcover (FSC), (II) the average NDVI, NDMI and NDSI,
-#and (III) the fraction of snowcover, for all sub areas located within a shapefile. These sub areas can be specified by creating a
+#and (III) the fraction of snowcover, for all polygons located within a shapefile. These polygons can be specified by creating a
 #multipolygon in e.g. QGIS (see manual). The fractional snowcover (FSC, I) is calculated based on two methods: following Gascoin et 
 #al 2020, and Aalstad et al 2020. This FSC is a within-pixel estimate of the fraction of snowcover, which is then averaged over
-#all pixels per subarea. The fraction of snowcover (III) is instead estimated by calculating the fraction of pixels per subarea with  
+#all pixels per polygon. The fraction of snowcover (III) is instead estimated by calculating the fraction of pixels per polygon with  
 #an NDSI value larger than the user specified NDSI-threshold for each timestep. This corresponds to the method='snowfraction' in 
 #other scripts. The user can specify whether clouds and permanent waterbodies need to be masked, and whether a composite image 
 #per day of year needs to be generated (merging multiple satellite photos for that day). The current script requires a shapefile 
-#of a single polygon, or a multi-polygon (i.e. subareas) as input. It only works for small areas of c.a. 50 km2 (larger areas might 
-#result in computation errors unless the spatial resolution of the analyses is decreased).
+#of a single polygon, or a multi-polygon as input. It only works for small areas of c.a. 50 km2 (larger areas might result in
+#computation errors unless the spatial resolution of the analyses is decreased).
 
-#Note that in this script (06), snowmelt is not calculated based on pixel-level snowmelt data (i.e. 'pixel_gam' method is not 
+#Note that in this script (05), snowmelt is not calculated based on pixel-level snowmelt data (i.e. 'pixel_gam' method is not 
 #implemented). This approach is instead implemented for a single polygon in script "08-RGEE_TomVersluijs_S2_Shapefile_Pixel_
 #Snowmelt.R" and involves fitting of GAMS through NDSI data per pixel and extracting the moment this GAM passes a user-defined 
 #NDSI-threshold. This results in a pixel-level map of the date of snowmelt. Script "10-RGEE_TomVersluijs_S2_ExtractSnowFraction.R" 
 #can then be used to extract timeseries of the fraction of snowcover for points/polygons of interest from this map.
 
-#Copyright Tom Versluijs 2024-07-12. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
+#Copyright Tom Versluijs 2024-07-15. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
 
 #Before running this script make sure to install RGEE according to the instructions in script "00-RGEE_TomVersluijs_Installation.R". 
 #Note that a GoogleDrive is required. Important: make sure to run this script from within the "RGEE_Snowmelt.Rproj" project file.
@@ -111,9 +111,9 @@
      
      #Define the preferred method for the analysis of snowmelt
      method=c("avg_NDSI", "snowfraction") #either "avg_NDSI", "snowfraction", or a combination using c()
-     #(1) "avg_NDSI":     Calculates the average FSC, NDSI, NDVI and NDMI values within each subarea over time and extracts the moment 
+     #(1) "avg_NDSI":     Calculates the average FSC, NDSI, NDVI and NDMI values within each polygon over time and extracts the moment 
      #                    when the NDSI value is equal to 'NDSI_threshold'.
-     #(2) "snowfraction": Counts the fraction of pixels within each subarea with NDSI > 'NDSI_threshold' over time and extracts the moment 
+     #(2) "snowfraction": Counts the fraction of pixels within each polygon with NDSI > 'NDSI_threshold' over time and extracts the moment 
      #                    when this fraction is equal to 'Snowfraction_threshold'.
      
    #(e): Cloud masking
@@ -217,10 +217,10 @@
      if(mask_water==TRUE & (mask_water_type=="water_mask_Manual" | mask_water_type=="both")){mask_clouds=TRUE}      
      
      #Create output folder
-     if(dir.exists(paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt"))==FALSE){dir.create(paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt"), recursive = TRUE)}
+     if(dir.exists(paste0(here(), "/Output/S2/05_Polygons_Snowmelt"))==FALSE){dir.create(paste0(here(), "/Output/S2/05_Polygons_Snowmelt"), recursive = TRUE)}
      
      #Save all parameters and their values in the environment to a text file 
-     file_conn <- file(paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Parameters.txt"), "w")
+     file_conn <- file(paste0(here(), "/Output/S2/05_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Parameters.txt"), "w")
      for (obj in setdiff(ls(), lsf.str())) {cat(paste(obj, "=", get(obj)), file = file_conn) ; cat("\n", file = file_conn)}
      close(file_conn)
        
@@ -234,35 +234,35 @@
      
        #Read and plot the shapefile
        root_fldr <- here()
-       aoi_SubAreas <- st_read(paste0(root_fldr, "/Input/Shapefiles/", shapefile), quiet=T)
+       aoi_Polygons <- st_read(paste0(root_fldr, "/Input/Shapefiles/", shapefile), quiet=T)
        p1 <- ggplot() + 
-         geom_sf(data = aoi_SubAreas, fill=sf.colors(nrow(aoi_SubAreas)), col = "black")+
+         geom_sf(data = aoi_Polygons, fill=sf.colors(nrow(aoi_Polygons)), col = "black")+
          theme_tom()+
-         geom_sf_label(data = aoi_SubAreas, aes(label=LocationID), colour="black")
-       ggsave(plot=p1, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_SubAreas.pdf"), width=10, height=8)
+         geom_sf_label(data = aoi_Polygons, aes(label=LocationID), colour="black")
+       ggsave(plot=p1, paste0(here(), "/Output/S2/05_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Polygons.pdf"), width=10, height=8)
        
        #Convert the shapefile to an earthengine feature collection:  
-       aoi_SubAreas <- st_transform(aoi_SubAreas, crs="EPSG:4326")
-       aoi_SubAreas <- sf_as_ee(aoi_SubAreas)
-       aoi_SubAreas <- ee$FeatureCollection(aoi_SubAreas)
-       #Note that the feature$property "LocationID" has a unique number (0-9) for each of the subareas within the study area 
+       aoi_Polygons <- st_transform(aoi_Polygons, crs="EPSG:4326")
+       aoi_Polygons <- sf_as_ee(aoi_Polygons)
+       aoi_Polygons <- ee$FeatureCollection(aoi_Polygons)
+       #Note that the feature$property "LocationID" has a unique number for each polygon
        
        #Collapse all polygons (if any) into a single polygon and calculate the (convex hull) outline of the study area
-       aoi_SubAreas_merged <- ee$FeatureCollection(aoi_SubAreas$geometry()$dissolve())
-       aoi_Shapefile <- ee$FeatureCollection(aoi_SubAreas_merged$geometry()$convexHull())
+       aoi_Polygons_merged <- ee$FeatureCollection(aoi_Polygons$geometry()$dissolve())
+       aoi_Shapefile <- ee$FeatureCollection(aoi_Polygons_merged$geometry()$convexHull())
        
          # #Inspect merged polygon (for debugging)
-         # Map$centerObject(aoi_SubAreas)
-         # Map$addLayer(aoi_SubAreas,  list(color="blue"), 'Original Polygons')+
-         #   Map$addLayer(aoi_SubAreas_merged,  list(color="red"), 'Merged Polygon')+
+         # Map$centerObject(aoi_Polygons)
+         # Map$addLayer(aoi_Polygons,  list(color="blue"), 'Original Polygons')+
+         #   Map$addLayer(aoi_Polygons_merged,  list(color="red"), 'Merged Polygon')+
          #   Map$addLayer(aoi_Shapefile,  list(color="green"), 'Shapefile outline')
        
        #Calculate central point
        coordinates_point <- aoi_Shapefile$geometry()$centroid()
        
-       #Plot the shapefile and bounding box (for debugging)
+       #Plot the shapefiles and the central point of the study area
        Map$setCenter(coordinates_point$getInfo()$coordinates[1], coordinates_point$getInfo()$coordinates[2], 6)
-       Map$addLayer(aoi_SubAreas, list(color="grey"), name='Polygons')+
+       Map$addLayer(aoi_Polygons, list(color="grey"), name='Polygons')+
          Map$addLayer(aoi_Shapefile, list(color="black"), name='Study area')+
          Map$addLayer(coordinates_point, list(color="blue"), name='Central point')
        
@@ -379,13 +379,13 @@
     #print message   
      print("Cloud masking = TRUE") 
          
-    #(12) Add cloud information within the shapefile area to the image collection: 
+    #(12) Add cloud information within aoi_Shapefile to the image collection: 
  
-      #Add the cloud fraction within the shapefile area to each separate image by mapping the cloud functions over the image collection
+      #Add the cloud fraction within aoi_Shapefile to each separate image by mapping the cloud functions over the image collection
       s2_col <- s2_col$
         #Determine which pixels are clouds using the cloud_probability property
         map(compute_Clouds_cldprb)$
-        #Add the fraction of cloud-covered pixels within the shapefile area as image property
+        #Add the fraction of cloud-covered pixels within aoi_Shapefile as image property
         map(Add_CloudFraction)$
         #Add NULL to those images in which cloudfraction could not be calculated
         map(Add_NULL_CloudFraction)$
@@ -408,7 +408,7 @@
       #   Map$addLayer(image, list(bands='clouds', min=0, max=1, opacity=0.5, palette=c('000000', 'orange')), 'clouds buffered')
       # #Map$addLayer(image, list(bands='clouds_inv', min=0, max=1, opacity=1), 'clouds_inv')
       
-      #We have now calculated the fraction of cloud covered pixels within our shapefile area for each image in the image collection.
+      #We have now calculated the fraction of cloud covered pixels within aoi_Shapefile for each image in the image collection.
       #However, Sentinel-2 satellite data is recorded as different tiles, these tiles are generally much bigger than a single study site.
       #Each Sentinel-2 tile also contains a native measure of cloud cover. This is the property 'CLOUDY_PIXEL_PERCENTAGE'. This property
       #thus refers to the percentage of cloud cover within the whole tile. We have now calculated a more appropriate measure for our
@@ -416,10 +416,10 @@
       #between both measures can for example arise when the shapefile area was covered by clouds while most of the larger region (tile)
       #was not or vice versa.
       
-      # #Extract cloud fraction of all images in image collection for the shapefile area
+      # #Extract cloud fraction of all images in image collection for aoi_Shapefile
       # cloud_aoi <- unlist(s2_col$aggregate_array('CloudFraction')$getInfo())
       # 
-      # #Extract cloud fraction of all images in image collection for the complete tile to which our area of interest belongs
+      # #Extract cloud fraction of all images in image collection for the complete tile to which aoi_Shapefile belongs
       # cloud_tile <- unlist(s2_col$aggregate_array('CLOUDY_PIXEL_PERCENTAGE')$getInfo())
       # 
       # #Replace -9999 values by NA
@@ -712,7 +712,7 @@
   #Count the total number of unmasked pixels and the total number of pixels per doy within aoi_Shapefile
    if(pixel_counts==TRUE){
       
-     #(A): Add pixel counts within the area of interest to each separate image by mapping the pixel count functions over the image collection
+     #(A): Add pixel counts within aoi_Shapefile to each separate image by mapping the pixel count functions over the image collection
       s2_col_composite <- s2_col_composite$
         #Count number of unmasked pixels within aoi_Shapefile
         map(AddPixelCount)$
@@ -727,7 +727,7 @@
        #We use ee_table_to_drive() to prevent memory limits
         task_vector0 <- ee_table_to_drive(
           collection = s2_col_composite,
-          description = paste0(current_timestamp0, "_", data_ID, "_Res", resolution, "_SubAreas_Data_Pixel_Counts_polygon"),
+          description = paste0(current_timestamp0, "_", data_ID, "_Res", resolution, "_Polygons_Data_Pixel_Counts_polygon"),
           fileFormat = "CSV",
           selectors = c('doy', 'unmasked', 'total')
           )
@@ -738,7 +738,7 @@
         ee_monitoring(task_vector0, task_time=60, max_attempts=1000000)
 
        #Export results to local folder
-        exported_stats <- ee_drive_to_local(task = task_vector0, dsn=paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_Data_Pixel_Counts_polygon"))
+        exported_stats <- ee_drive_to_local(task = task_vector0, dsn=paste0(here(), "/Output/S2/05_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Data_Pixel_Counts_polygon"))
         df_pixelcount <- read.csv(exported_stats)
         unlink(exported_stats)
 
@@ -753,7 +753,7 @@
                                    total=max(df_pixelcount$total))
       df_pixelcount <- rbind(df_pixelcount, df_doy_missing)
       df_pixelcount <- df_pixelcount[order(df_pixelcount$doy),]
-      write.csv(df_pixelcount, file=paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_Data_Pixel_Counts_polygon.csv"), quote=FALSE, row.names=FALSE)
+      write.csv(df_pixelcount, file=paste0(here(), "/Output/S2/05_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Data_Pixel_Counts_polygon.csv"), quote=FALSE, row.names=FALSE)
 
      #(E): Create barplot with the pixel counts per day of year within aoi_Shapefile
       df_pixelcount$masked <- df_pixelcount$total - df_pixelcount$unmasked
@@ -768,7 +768,7 @@
        theme_classic()
 
      #(F): Save barplot
-      pdf(paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_Plot_Pixel_Counts_polygon.pdf"), width=12, height=8)
+      pdf(paste0(here(), "/Output/S2/05_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Plot_Pixel_Counts_polygon.pdf"), width=12, height=8)
       print(p_pixelcounts)
       dev.off()
       
@@ -837,27 +837,27 @@
       
 ##################################################################################################################################
      
-#X: Extract Average FSC, NDSI, NDVI, and NDMI per SubArea      
+#X: Extract Average FSC, NDSI, NDVI, and NDMI per Polygon      
       
 ##################################################################################################################################
 
- #Extract Sentinel-2 band values (FSC, NDSI, NDVI, and NDMI) for each sub area within the study area over time
+ #Extract Sentinel-2 band values (FSC, NDSI, NDVI, and NDMI) for each polygon over time
   if("avg_NDSI" %in% method){
     
     #Print message
     cat("\n")
     print("--------------------------------------------------------------------------------------------------------------------------")
-    print(paste0("METHOD: 'avg_NDSI' - CALCULATING THE AVERAGE FSC, NDSI, NDVI AND NDMI per SubArea"))
+    print(paste0("METHOD: 'avg_NDSI' - CALCULATING THE AVERAGE FSC, NDSI, NDVI AND NDMI per Polygon"))
     print("--------------------------------------------------------------------------------------------------------------------------")
     
     #Create an iteration function that we will use to iterate through all images of the image collection. For each image, the
-    #value of certain bands is extracted for each feature (i.e. SubArea) within the feature collection aoi_SubAreas. The 
-    #resulting band values (and the datetime of the image) are added as a property to each feature (i.e. SubArea). This results
+    #value of certain bands is extracted for each feature (i.e. Polygon) within the feature collection aoi_Polygons. The 
+    #resulting band values (and the datetime of the image) are added as a property to each feature (i.e. Polygon). This results
     #in an updated feature collection specific for the current image. This feature collection is then appended to a list
     #of feature collections from previous image iterations. After iterating through n-images, the result is thus a feature
     #collection list of length n * the number of features within the feature collection.
     
-    #Thus, at each iteration we extract band values of interest for all SubAreas within the current image, store this as a  
+    #Thus, at each iteration we extract band values of interest for all Polygons within the current image, store this as a  
     #feature collection and add this to an expanding list of feature collections from previous iterations.   
     
     #Store default Sentinel-2 image projection 
@@ -871,14 +871,14 @@
     #(in this case the current iteration image) and the second element takes the output value from the iteration that preceeded it. The latter
     #is not possible for the first iteration, that's why an initial object (empty feature collection) to start the iteration with 
     #has been defined.
-     Extract_BandValuesAtSubAreas = Extract_BandValuesAtSubAreas #sourced
+     Extract_BandValuesAtPolygons = Extract_BandValuesAtPolygons #sourced
     
     #Iterate this function over all images in the ImageCollection 
-     FC_merged <- ee$FeatureCollection(s2_col_composite$select("FSC_Gascoin2020", "FSC_Aalstad2020", "NDSI", "NDVI", "NDMI")$iterate(Extract_BandValuesAtSubAreas, FC_initial))
+     FC_merged <- ee$FeatureCollection(s2_col_composite$select("FSC_Gascoin2020", "FSC_Aalstad2020", "NDSI", "NDVI", "NDMI")$iterate(Extract_BandValuesAtPolygons, FC_initial))
      #FC_merged$getInfo() #for debugging
      #FC_merged$first()$getInfo() #for debugging
 
-    #Transform feature collection with Sentinel-2 Band values for each sub area to a dataframe     
+    #Transform feature collection with Sentinel-2 Band values for each polygon to a dataframe     
 
       #create a current timestamp to prevent identical names on Google Drive
        current_timestamp1 <- gsub('\\.', '', format(Sys.time(), "%y%m%d%H%M%OS2"))
@@ -886,7 +886,7 @@
       #Setup task
        task_vector1 <- ee_table_to_drive(
          collection= FC_merged,
-         description = paste0(current_timestamp1, "_", data_ID, "_Res", resolution, "_Data_MeanBandValues_SubAreas"),
+         description = paste0(current_timestamp1, "_", data_ID, "_Res", resolution, "_Data_MeanBandValues_Polygons"),
          folder="RGEE_tmp",
          fileFormat="CSV",
          selectors=c('FSC_Gascoin2020', 'FSC_Aalstad2020','NDSI', 'NDVI', 'NDMI', 'Date', 'LocationID')
@@ -897,58 +897,58 @@
        ee_monitoring(task_vector1, task_time=60, max_attempts=1000000)
        
       #Import results
-       exported_stats <- ee_drive_to_local(task=task_vector1, dsn=paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Data_MeanBandValues_SubAreas"))
-       df_SubAreas_BandValues <- read.csv(exported_stats)
+       exported_stats <- ee_drive_to_local(task=task_vector1, dsn=paste0(here(), "/Output/S2/05_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Data_MeanBandValues_Polygons"))
+       df_Polygons_BandValues <- read.csv(exported_stats)
        unlink(exported_stats)
        
       #Restructure dataframe
-       df_SubAreas_BandValues$doy <- as.numeric(strftime(df_SubAreas_BandValues$Date, format = "%j"))
-       colnames(df_SubAreas_BandValues) <- c('FSC_Gascoin2020', 'FSC_Aalstad2020', 'NDSI', 'NDVI', 'NDMI', 'Date', 'SubArea', 'doy')         
-       df_SubAreas_BandValues <- df_SubAreas_BandValues[ ,c('FSC_Gascoin2020', 'FSC_Aalstad2020', 'NDSI', 'NDVI', 'NDMI', 'Date', 'doy', 'SubArea')]
+       df_Polygons_BandValues$doy <- as.numeric(strftime(df_Polygons_BandValues$Date, format = "%j"))
+       colnames(df_Polygons_BandValues) <- c('FSC_Gascoin2020', 'FSC_Aalstad2020', 'NDSI', 'NDVI', 'NDMI', 'Date', 'Polygon', 'doy')         
+       df_Polygons_BandValues <- df_Polygons_BandValues[ ,c('FSC_Gascoin2020', 'FSC_Aalstad2020', 'NDSI', 'NDVI', 'NDMI', 'Date', 'doy', 'Polygon')]
 
       #Change -9999 to NA
-       df_SubAreas_BandValues$FSC_Gascoin2020[df_SubAreas_BandValues$FSC_Gascoin2020 < -9000] <- NA
-       df_SubAreas_BandValues$FSC_Aalstad2020[df_SubAreas_BandValues$FSC_Aalstad2020 < -9000] <- NA
-       df_SubAreas_BandValues$NDSI[df_SubAreas_BandValues$NDSI < -9000] <- NA
-       df_SubAreas_BandValues$NDVI[df_SubAreas_BandValues$NDVI < -9000] <- NA
-       df_SubAreas_BandValues$NDMI[df_SubAreas_BandValues$NDMI < -9000] <- NA
-       df_SubAreas_BandValues$doy[df_SubAreas_BandValues$doy < -9000] <- NA
-       df_SubAreas_BandValues$SubArea[df_SubAreas_BandValues$SubArea < -9000] <- NA
+       df_Polygons_BandValues$FSC_Gascoin2020[df_Polygons_BandValues$FSC_Gascoin2020 < -9000] <- NA
+       df_Polygons_BandValues$FSC_Aalstad2020[df_Polygons_BandValues$FSC_Aalstad2020 < -9000] <- NA
+       df_Polygons_BandValues$NDSI[df_Polygons_BandValues$NDSI < -9000] <- NA
+       df_Polygons_BandValues$NDVI[df_Polygons_BandValues$NDVI < -9000] <- NA
+       df_Polygons_BandValues$NDMI[df_Polygons_BandValues$NDMI < -9000] <- NA
+       df_Polygons_BandValues$doy[df_Polygons_BandValues$doy < -9000] <- NA
+       df_Polygons_BandValues$Polygon[df_Polygons_BandValues$Polygon < -9000] <- NA
 
-      #Sort dataframe by SubArea and doy
-       index <- with(df_SubAreas_BandValues, order(SubArea, doy))
-       df_SubAreas_BandValues <- df_SubAreas_BandValues[index,]
+      #Sort dataframe by Polygon and doy
+       index <- with(df_Polygons_BandValues, order(Polygon, doy))
+       df_Polygons_BandValues <- df_Polygons_BandValues[index,]
       
-      #Store dataframe with average bandValues and Snowfraction for all subareas
-       write.csv(df_SubAreas_BandValues, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_Data_MeanBandValues.csv"), row.names = FALSE)
-       #df_SubAreas_BandValues <- read.csv(paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_Data_MeanBandValues.csv"), header=T)
+      #Store dataframe with average bandValues and Snowfraction for all polygons
+       write.csv(df_Polygons_BandValues, paste0(here(), "/Output/S2/05_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Data_MeanBandValues.csv"), row.names = FALSE)
+       #df_Polygons_BandValues <- read.csv(paste0(here(), "/Output/S2/05_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Data_MeanBandValues.csv"), header=T)
 
   }
 
       
 ##################################################################################################################################
 
-#XI: Extract the fraction of pixels with NDSI > NDSI_threshold over time per SubArea      
+#XI: Extract the fraction of pixels with NDSI > NDSI_threshold over time per Polygon      
 
 ##################################################################################################################################
   
- #Extract the fraction of pixels with NDSI > NDSI_threshold over time per SubArea for all values of NDSI_threshold_vector
+ #Extract the fraction of pixels with NDSI > NDSI_threshold over time per Polygon for all values of NDSI_threshold_vector
   if("snowfraction" %in% method){
     
     #Print message
     cat("\n")
     print("--------------------------------------------------------------------------------------------------------------------------")
-    print(paste0("METHOD: 'snowfraction' - CALCULATING THE FRACTION OF PIXELS WITH NDSI > NDSI_threshold PER LOCATIONID"))
+    print(paste0("METHOD: 'snowfraction' - CALCULATING THE FRACTION OF PIXELS WITH NDSI > NDSI_threshold PER POLYGON"))
     print("--------------------------------------------------------------------------------------------------------------------------")
   
     #Specify the NDSI threshold(s) at which an area is perceived as snow-free
     NDSI_threshold_vector = NDSI_threshold_vector
   
-    #Create an empty dataframe for storing output per SubArea
-    df_SubAreas_SnowFraction <- data.frame(SnowFraction=numeric(),
+    #Create an empty dataframe for storing output per Polygon
+    df_Polygons_SnowFraction <- data.frame(SnowFraction=numeric(),
                                            Date=character(),
                                            doy=numeric(),
-                                           SubArea=character(),
+                                           Polygon=character(),
                                            NDSI_threshold=character())
   
     #Run the analysis for each level of NDSI_threshold_vector
@@ -972,16 +972,16 @@
            #  Map$addLayer(image,list(bands=c("B4", "B3", "B2"), min=0, max=10000, gamma=c(1.9, 1.7, 1.7)), 'TRUE COLOR')+
            #  Map$addLayer(image$select('SNOW'))
 
-       #Extract Sentinel-2 Snow Fraction for each sub area within the study area over time
+       #Extract Sentinel-2 Snow Fraction for each polygon over time
 
            #Create an iteration function that we will use to iterate through all images of the image collection. For each image, the
-           #value of certain bands is extracted for each feature (i.e. SubArea) within the feature collection aoi_SubAreas. The
-           #resulting band values (and the datetime of the image) are added as a property to each feature (i.e. SubArea). This results
+           #value of certain bands is extracted for each feature (i.e. Polygon) within the feature collection aoi_Polygons. The
+           #resulting band values (and the datetime of the image) are added as a property to each feature (i.e. Polygon). This results
            #in an updated feature collection specific for the current image. This feature collection is then appended to a list
            #of feature collections from previous image iterations. After iterating through n-images, the result is thus a feature
            #collection list of length n * the number of features within the feature collection.
 
-           #Thus, at each iteration we extract band values of interest for all SubAreas within the current image, store this as a
+           #Thus, at each iteration we extract band values of interest for all Polygons within the current image, store this as a
            #feature collection and add this to an expanding list of feature collections from previous iterations.
 
            #Store default Sentinel-2 image projection
@@ -995,11 +995,11 @@
            #(in this case the current iteration image) and the second element takes the output value from the iteration that preceeded it. The latter
            #is not possible for the first iteration, that's why an initial object (empty feature collection) to start the iteration with
            #has been defined.
-           Extract_SnowFractionAtSubAreas = function(img, FC_initial_SnowFraction){
+           Extract_SnowFractionAtPolygons = function(img, FC_initial_SnowFraction){
                 
                 #Take the mean of the binary SNOW band to get the fraction of snow covered pixels for each image. ReduceRegions does not include masked pixels (i.e. pixels
                 #defined as cloud or water) when calculating these means.
-                FC_image <- img$reduceRegions(collection=aoi_SubAreas,
+                FC_image <- img$reduceRegions(collection=aoi_Polygons,
                                               reducer=ee$Reducer$mean(), #$setOutputs(list('NDSI'))
                                               scale=resolution,
                                               crs=crs,
@@ -1024,12 +1024,12 @@
               }
            
            #Iterate this function over all images in the ImageCollection
-           FC_merged_SnowFraction <- ee$FeatureCollection(s2_snow_masked$select("SNOW", "NDSI")$iterate(Extract_SnowFractionAtSubAreas, FC_initial_SnowFraction))
+           FC_merged_SnowFraction <- ee$FeatureCollection(s2_snow_masked$select("SNOW", "NDSI")$iterate(Extract_SnowFractionAtPolygons, FC_initial_SnowFraction))
            #Note that for some reason, including a second band next to SNOW is required for the code to function.
            #FC_merged_SnowFraction$getInfo() #for debugging
            #FC_merged_SnowFraction$first()$getInfo() #for debugging
 
-       #Transform feature collection with Sentinel-2 Band values for each sub area to a dataframe
+       #Transform feature collection with Sentinel-2 Band values for each polygon to a dataframe
 
            #We export the data instead of using aggregate_array() as the latter might fail due to computation timeouts.
 
@@ -1039,7 +1039,7 @@
            #Setup task
            task_vector2 <- ee_table_to_drive(
               collection= FC_merged_SnowFraction,
-              description = paste0(current_timestamp2, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Data_SnowFraction_SubAreas"),
+              description = paste0(current_timestamp2, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Data_SnowFraction_Polygons"),
               folder="RGEE_tmp",
               fileFormat="CSV",
               selectors=c('SNOW', 'Date', 'LocationID')
@@ -1050,54 +1050,54 @@
            ee_monitoring(task_vector2, task_time=60, max_attempts=1000000)
 
            #Import results
-           exported_stats <- ee_drive_to_local(task=task_vector2, dsn=paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Data_SnowFraction_SubAreas"))
-           df_SubAreas_SnowFraction_new <- read.csv(exported_stats)
+           exported_stats <- ee_drive_to_local(task=task_vector2, dsn=paste0(here(), "/Output/S2/05_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Data_SnowFraction_Polygons"))
+           df_Polygons_SnowFraction_new <- read.csv(exported_stats)
            unlink(exported_stats)
 
            #Restructure dataframe
-           df_SubAreas_SnowFraction_new$doy <- as.numeric(strftime(df_SubAreas_SnowFraction_new$Date, format = "%j"))
-           colnames(df_SubAreas_SnowFraction_new) <- c('SnowFraction', 'Date', 'SubArea', 'doy')
-           df_SubAreas_SnowFraction_new <- df_SubAreas_SnowFraction_new[ ,c('SnowFraction', 'Date', 'doy', 'SubArea')]
+           df_Polygons_SnowFraction_new$doy <- as.numeric(strftime(df_Polygons_SnowFraction_new$Date, format = "%j"))
+           colnames(df_Polygons_SnowFraction_new) <- c('SnowFraction', 'Date', 'Polygon', 'doy')
+           df_Polygons_SnowFraction_new <- df_Polygons_SnowFraction_new[ ,c('SnowFraction', 'Date', 'doy', 'Polygon')]
 
            #Change -9999 to NA
-           df_SubAreas_SnowFraction_new$SnowFraction[df_SubAreas_SnowFraction_new$SnowFraction < -9000] <- NA
-           df_SubAreas_SnowFraction_new$doy[df_SubAreas_SnowFraction_new$doy < -9000] <- NA
-           df_SubAreas_SnowFraction_new$SubArea[df_SubAreas_SnowFraction_new$SubArea < -9000] <- NA
+           df_Polygons_SnowFraction_new$SnowFraction[df_Polygons_SnowFraction_new$SnowFraction < -9000] <- NA
+           df_Polygons_SnowFraction_new$doy[df_Polygons_SnowFraction_new$doy < -9000] <- NA
+           df_Polygons_SnowFraction_new$Polygon[df_Polygons_SnowFraction_new$Polygon < -9000] <- NA
 
-           #Sort dataframe by SubArea and doy
-           index <- with(df_SubAreas_SnowFraction_new, order(SubArea, doy))
-           df_SubAreas_SnowFraction_new <- df_SubAreas_SnowFraction_new[index,]
+           #Sort dataframe by Polygon and doy
+           index <- with(df_Polygons_SnowFraction_new, order(Polygon, doy))
+           df_Polygons_SnowFraction_new <- df_Polygons_SnowFraction_new[index,]
 
            #Add NDSI_threshold as a new column
-           df_SubAreas_SnowFraction_new$NDSI_threshold <- as.factor(NDSI_threshold)
+           df_Polygons_SnowFraction_new$NDSI_threshold <- as.factor(NDSI_threshold)
 
            #Add dataframe for current NDSI_threshold to dataframe from previous iterations:
-           df_SubAreas_SnowFraction <- rbind(df_SubAreas_SnowFraction, df_SubAreas_SnowFraction_new)
+           df_Polygons_SnowFraction <- rbind(df_Polygons_SnowFraction, df_Polygons_SnowFraction_new)
 
            # #For debugging
-           #  ggplot() + geom_point(data=df_SubAreas_SnowFraction, aes(x=doy, y=SnowFraction, col=NDSI_threshold)) + theme_classic()
+           #  ggplot() + geom_point(data=df_Polygons_SnowFraction, aes(x=doy, y=SnowFraction, col=NDSI_threshold)) + theme_classic()
 
            # #Save dataframe for current NDSI_threshold
-           #  write.csv(df_SubAreas_SnowFraction_new, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Resolution", resolution, "_NDSI", NDSI_threshold_char, "_Data_SnowFraction_SubAreas.csv"), row.names = FALSE)
+           #  write.csv(df_Polygons_SnowFraction_new, paste0(here(), "/Output/S2/05_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Resolution", resolution, "_NDSI", NDSI_threshold_char, "_Data_SnowFraction_Polygons.csv"), row.names = FALSE)
 
          }
   
-    #Store dataframe with Snowfraction data for all subareas for all levels of NDSI_threshold
-    write.csv(df_SubAreas_SnowFraction, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_Data_SnowFraction.csv"), row.names = FALSE)
-    #df_SubAreas_SnowFraction <- read.csv(paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_Data_SnowFraction.csv"), header=T)
+    #Store dataframe with Snowfraction data for all polygons for all levels of NDSI_threshold
+    write.csv(df_Polygons_SnowFraction, paste0(here(), "/Output/S2/05_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Data_SnowFraction.csv"), row.names = FALSE)
+    #df_Polygons_SnowFraction <- read.csv(paste0(here(), "/Output/S2/05_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Data_SnowFraction.csv"), header=T)
    
   }
 
       
 ##################################################################################################################################
 
-#XII: Fit GAMS through the Average NDSI, NDVI, NDMI and SnowFraction data per SubArea      
+#XII: Fit GAMS through the Average NDSI, NDVI, NDMI and SnowFraction data per Polygon      
 
 ##################################################################################################################################
 
    #(23): Fit GAMS 
       
-      #We fit a Generalized Additive Model (GAM) through the data within each sub-area. We do this using a sequential
+      #We fit a Generalized Additive Model (GAM) through the data within each polygon. We do this using a sequential
       #process. We first fit a GAM through the data, calculating model predictions and residuals. We then exclude all 
       #rows from the dataframe where the residual >= (0.25 * the range of the data). We then re-fit a GAM to this reduced 
       #dataset, make predictions and calculate residuals. We then exclude all rows from the reduced dataframe where the
@@ -1114,109 +1114,109 @@
          outlier_thresh_2=outlier_thresh_2
          outlier_removal=outlier_removal
          
-        #Specify at which NDSI value, the SubArea is considered snow-free
+        #Specify at which NDSI value, the Polygon is considered snow-free
          NDSI_threshold_vector = NDSI_threshold_vector
          
 ########################################################################################################################################################################################
 
-  #(I): SNOWFRACTION - Fit a Generalized Additive Model (GAM) through the snow fraction data within each sub-area  
+  #(I): SNOWFRACTION - Fit a Generalized Additive Model (GAM) through the snow fraction data within each polygon  
     if("snowfraction" %in% method){  
      
       #Print message
       cat("\n")
       print("--------------------------------------------------------------------------------------------------------------------------")
-      print(paste0("FIT A GAM THROUGH THE FRACTION OF OF PIXELS WITH NDSI > NDSI_threshold PER LOCATIONID"))
+      print(paste0("FIT A GAM THROUGH THE FRACTION OF OF PIXELS WITH NDSI > NDSI_threshold PER POLYGON"))
       print("--------------------------------------------------------------------------------------------------------------------------")
       
       #(1) Create an empty dataframe
-        df_SubAreas_SnowFraction_GAM <- data.frame(NDSI_threshold=character(),
+        df_Polygons_SnowFraction_GAM <- data.frame(NDSI_threshold=character(),
                                                    SnowFraction=numeric(),
                                                    Date=factor(),
                                                    doy=numeric(),
-                                                   SubArea=factor(),
+                                                   Polygon=factor(),
                                                    outliers=logical())
        
-        df_SubAreas_SnowFraction_GAM_predictions <- data.frame(SubArea=character(),
+        df_Polygons_SnowFraction_GAM_predictions <- data.frame(Polygon=character(),
                                                                NDSI_threshold=character(),
                                                                doy=numeric(), 
                                                                SnowFraction_gam_predict=numeric(), 
                                                                stringsAsFactors=FALSE)   
     
-      #(2) Loop through all SubAreas and fit a separate gam (with sequential outlier removal) to the SubArea-specific SnowFraction data
+      #(2) Loop through all Polygons and fit a separate gam (with sequential outlier removal) to the Polygon-specific SnowFraction data
         
-          #Loop through all SubAreas
-          for(i in unique(df_SubAreas_SnowFraction$SubArea)){
+          #Loop through all Polygons
+          for(i in unique(df_Polygons_SnowFraction$Polygon)){
             
             #For debugging  
-            #i=unique(df_SubAreas_SnowFraction$SubArea)[1]
+            #i=unique(df_Polygons_SnowFraction$Polygon)[1]
            
             #Loop through all NDSI_thresholds
-            for(j in unique(df_SubAreas_SnowFraction$NDSI_threshold)){
+            for(j in unique(df_Polygons_SnowFraction$NDSI_threshold)){
               
               #For debugging
-              #j=unique(df_SubAreas_SnowFraction$NDSI_threshold)[1]
+              #j=unique(df_Polygons_SnowFraction$NDSI_threshold)[1]
             
-              #Select SubArea-specific subset of data:
-              df_SubArea_SnowFraction_GAM_new <- df_SubAreas_SnowFraction[df_SubAreas_SnowFraction$SubArea==i & 
-                                                                          df_SubAreas_SnowFraction$NDSI_threshold==j &
-                                                                          !is.na(df_SubAreas_SnowFraction$SnowFraction),
-                                                                          c("NDSI_threshold", "SnowFraction", "Date", "doy", "SubArea")]
+              #Select Polygon-specific subset of data:
+              df_Polygon_SnowFraction_GAM_new <- df_Polygons_SnowFraction[df_Polygons_SnowFraction$Polygon==i & 
+                                                                          df_Polygons_SnowFraction$NDSI_threshold==j &
+                                                                          !is.na(df_Polygons_SnowFraction$SnowFraction),
+                                                                          c("NDSI_threshold", "SnowFraction", "Date", "doy", "Polygon")]
                                  
-              #Fit a gam through the SubArea-specific SnowFraction ~ doy data and emply sequential outlier removal
-              df_SubArea_SnowFraction_GAM_new <- f_gam_SeqRemOutliers(data=df_SubArea_SnowFraction_GAM_new, y="SnowFraction", x="doy", outlier_removal=outlier_removal, 
+              #Fit a gam through the Polygon-specific SnowFraction ~ doy data and emply sequential outlier removal
+              df_Polygon_SnowFraction_GAM_new <- f_gam_SeqRemOutliers(data=df_Polygon_SnowFraction_GAM_new, y="SnowFraction", x="doy", outlier_removal=outlier_removal, 
                                                                outlier_thresh_1=outlier_thresh_1, outlier_thresh_2=outlier_thresh_2, 
                                                                default_k=gam_k_outlier)
             
-              #Sort df_SubArea_SnowFraction_GAM_new by doy:
-              df_SubArea_SnowFraction_GAM_new <- df_SubArea_SnowFraction_GAM_new[order(df_SubArea_SnowFraction_GAM_new$doy),]
+              #Sort df_Polygon_SnowFraction_GAM_new by doy:
+              df_Polygon_SnowFraction_GAM_new <- df_Polygon_SnowFraction_GAM_new[order(df_Polygon_SnowFraction_GAM_new$doy),]
                
-              #Bind the SubArea-specific dataframe with outlier-filtered GAM estimates to the dataframe containing all dataframes from previous iterations
-               df_SubAreas_SnowFraction_GAM <- rbind(df_SubAreas_SnowFraction_GAM, df_SubArea_SnowFraction_GAM_new)
+              #Bind the Polygon-specific dataframe with outlier-filtered GAM estimates to the dataframe containing all dataframes from previous iterations
+               df_Polygons_SnowFraction_GAM <- rbind(df_Polygons_SnowFraction_GAM, df_Polygon_SnowFraction_GAM_new)
             
               #Create more detailed predictions (not only at the doy present in the dataframe) to plot more smooth curves
              
                 #Refit GAM through data
-                 index <- which(df_SubArea_SnowFraction_GAM_new$outliers==FALSE)
-                 mod_gam <- with(df_SubArea_SnowFraction_GAM_new[index,], mgcv::gam(SnowFraction ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
+                 index <- which(df_Polygon_SnowFraction_GAM_new$outliers==FALSE)
+                 mod_gam <- with(df_Polygon_SnowFraction_GAM_new[index,], mgcv::gam(SnowFraction ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
              
                 #Use gam to make predictions on a more detailed (1-day) day of year interval
-                 df_SubArea_SnowFraction_GAM_predictions_new <- data.frame(SubArea=i, NDSI_threshold=j, doy=seq(min(df_SubArea_SnowFraction_GAM_new$doy), max(df_SubArea_SnowFraction_GAM_new$doy), 0.01))
-                 df_SubArea_SnowFraction_GAM_predictions_new$SnowFraction_gam_predict <- stats::predict(mod_gam, newdata=df_SubArea_SnowFraction_GAM_predictions_new, type="response")
-                 df_SubArea_SnowFraction_GAM_predictions_new <- df_SubArea_SnowFraction_GAM_predictions_new[order(df_SubArea_SnowFraction_GAM_predictions_new$doy),]
+                 df_Polygon_SnowFraction_GAM_predictions_new <- data.frame(Polygon=i, NDSI_threshold=j, doy=seq(min(df_Polygon_SnowFraction_GAM_new$doy), max(df_Polygon_SnowFraction_GAM_new$doy), 0.01))
+                 df_Polygon_SnowFraction_GAM_predictions_new$SnowFraction_gam_predict <- stats::predict(mod_gam, newdata=df_Polygon_SnowFraction_GAM_predictions_new, type="response")
+                 df_Polygon_SnowFraction_GAM_predictions_new <- df_Polygon_SnowFraction_GAM_predictions_new[order(df_Polygon_SnowFraction_GAM_predictions_new$doy),]
                 
-                #Add predictions to df_SubAreas_SnowFraction_GAM_predictions dataframe:  
-                 df_SubAreas_SnowFraction_GAM_predictions <- rbind(df_SubAreas_SnowFraction_GAM_predictions, df_SubArea_SnowFraction_GAM_predictions_new)
+                #Add predictions to df_Polygons_SnowFraction_GAM_predictions dataframe:  
+                 df_Polygons_SnowFraction_GAM_predictions <- rbind(df_Polygons_SnowFraction_GAM_predictions, df_Polygon_SnowFraction_GAM_predictions_new)
              
                }
             
             }
          
-          #Change subArea column to factor
-          df_SubAreas_SnowFraction_GAM$SubArea <- as.factor(as.character(df_SubAreas_SnowFraction_GAM$SubArea))
-          df_SubAreas_SnowFraction_GAM_predictions$SubArea <- as.factor(as.character(df_SubAreas_SnowFraction_GAM_predictions$SubArea))
+          #Change Polygon column to factor
+          df_Polygons_SnowFraction_GAM$Polygon <- as.factor(as.character(df_Polygons_SnowFraction_GAM$Polygon))
+          df_Polygons_SnowFraction_GAM_predictions$Polygon <- as.factor(as.character(df_Polygons_SnowFraction_GAM_predictions$Polygon))
           
           #Save dataframe with GAM fits for SnowFraction
-          #write.csv(df_SubAreas_SnowFraction_GAM, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_Data_SnowFraction_GAM.csv"), row.names = FALSE)
-          write.csv(df_SubAreas_SnowFraction_GAM_predictions, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_GAM_Predictions_SnowFraction.csv"), row.names = FALSE)
+          #write.csv(df_Polygons_SnowFraction_GAM, paste0(here(), "/Output/S2/05_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Data_SnowFraction_GAM.csv"), row.names = FALSE)
+          write.csv(df_Polygons_SnowFraction_GAM_predictions, paste0(here(), "/Output/S2/05_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_GAM_Predictions_SnowFraction.csv"), row.names = FALSE)
           
-      #(3) Plot the raw Snowfraction datapoints and gam predictions for each SubArea:
+      #(3) Plot the raw Snowfraction datapoints and gam predictions for each Polygon:
     
-          #Plot Snowfraction and model predictions for all SubAreas in a single plot
-          p_SubArea_SnowFraction = ggplot()+
-            geom_point(data=df_SubAreas_SnowFraction_GAM, aes(x=doy, y=SnowFraction, fill=SubArea, col=SubArea))+
-            geom_line(data=df_SubAreas_SnowFraction_GAM_predictions, aes(x=doy, y=SnowFraction_gam_predict, col=SubArea)) +
+          #Plot Snowfraction and model predictions for all Polygons in a single plot
+          p_Polygon_SnowFraction = ggplot()+
+            geom_point(data=df_Polygons_SnowFraction_GAM, aes(x=doy, y=SnowFraction, fill=Polygon, col=Polygon))+
+            geom_line(data=df_Polygons_SnowFraction_GAM_predictions, aes(x=doy, y=SnowFraction_gam_predict, col=Polygon)) +
             xlab(paste0("Day of year (starting at 01-01-", year_ID, ")")) +
             ylab("Fraction of snow-covered pixels") +
             facet_wrap(~NDSI_threshold, ncol=3)+
             theme_tom()
            
-      #(4): Calculate at which day of year the SnowFraction value is equal to snowFraction_threshold for each SubArea using predictions from mod_gam
+      #(4): Calculate at which day of year the SnowFraction value is equal to snowFraction_threshold for each Polygon using predictions from mod_gam
           
           #Create an empty dataframe to store snowfraction dates
-          df_SubArea_Snowfraction <- data.frame(NDSI_threshold=character(),
+          df_Polygon_Snowfraction <- data.frame(NDSI_threshold=character(),
                                                 Snowfraction_threshold=character(),
                                                 doy=numeric(), 
-                                                SubArea=character(), 
+                                                Polygon=character(), 
                                                 stringsAsFactors=FALSE)   
           
           #Setup parallel processing
@@ -1224,35 +1224,35 @@
           cl <- makePSOCKcluster(numCores)
           registerDoSNOW(cl)
           
-          #Loop through all SubAreas in the df_SubAreas_SnowFraction_GAM_predictions dataframe and extract snowfraction dates for each SubArea:
-          for(i in unique(df_SubAreas_SnowFraction_GAM_predictions$SubArea)){
+          #Loop through all Polygons in the df_Polygons_SnowFraction_GAM_predictions dataframe and extract snowfraction dates for each Polygon:
+          for(i in unique(df_Polygons_SnowFraction_GAM_predictions$Polygon)){
             
             #For debugging  
-            #i=unique(df_SubAreas_SnowFraction_GAM_predictions$SubArea)[1] #for debugging
+            #i=unique(df_Polygons_SnowFraction_GAM_predictions$Polygon)[1] #for debugging
             
-            #Select dataset with GAM predictions for current SubArea
-            df_SubArea_gam <- df_SubAreas_SnowFraction_GAM_predictions[df_SubAreas_SnowFraction_GAM_predictions$SubArea==i & !is.na(df_SubAreas_SnowFraction_GAM_predictions$SnowFraction_gam_predict),]
+            #Select dataset with GAM predictions for current Polygon
+            df_Polygon_gam <- df_Polygons_SnowFraction_GAM_predictions[df_Polygons_SnowFraction_GAM_predictions$Polygon==i & !is.na(df_Polygons_SnowFraction_GAM_predictions$SnowFraction_gam_predict),]
             
             #Use the function f_detect_threshold_date_parallel to extract the moments the GAM predictions cross the thresholds in Snowfraction_threshold_vector (per level of NDSI_threshold)
             results <- f_detect_threshold_date_parallel(subset=1, #data subset (not relevant here, set to 1)
                                                         pixelIDs_split = list(NDSI_threshold_vector), #levels of NDSI_threshold (input needs to be a list)
-                                                        df_pixel_y = df_SubArea_gam, #dataframe containing GAM predictions
+                                                        df_pixel_y = df_Polygon_gam, #dataframe containing GAM predictions
                                                         pixel_ID_column="NDSI_threshold", #Grouping column
                                                         y="SnowFraction_gam_predict", #response variable in GAM
                                                         x="doy", #predictor variable in GAM
                                                         pixel_gam_plots = FALSE, #Should GAM plots be created
                                                         y_threshold = Snowfraction_threshold_vector) #Which threshold values for 'y' should be calculated 
             
-            #Store dates of snowmelt per SubArea
-            df_SubArea_SnowFraction_new <- results[[1]]
-            df_SubArea_SnowFraction_new <- as.data.frame(do.call(rbind, df_SubArea_SnowFraction_new))
-            colnames(df_SubArea_SnowFraction_new)[colnames(df_SubArea_SnowFraction_new)=="pixel_ID"] <- "NDSI_threshold"
-            colnames(df_SubArea_SnowFraction_new)[colnames(df_SubArea_SnowFraction_new)=="x_threshold"] <- "doy"
-            colnames(df_SubArea_SnowFraction_new)[colnames(df_SubArea_SnowFraction_new)=="y_threshold"] <- "Snowfraction_threshold"
-            df_SubArea_SnowFraction_new$SubArea <- i
+            #Store dates of snowmelt per Polygon
+            df_Polygon_SnowFraction_new <- results[[1]]
+            df_Polygon_SnowFraction_new <- as.data.frame(do.call(rbind, df_Polygon_SnowFraction_new))
+            colnames(df_Polygon_SnowFraction_new)[colnames(df_Polygon_SnowFraction_new)=="pixel_ID"] <- "NDSI_threshold"
+            colnames(df_Polygon_SnowFraction_new)[colnames(df_Polygon_SnowFraction_new)=="x_threshold"] <- "doy"
+            colnames(df_Polygon_SnowFraction_new)[colnames(df_Polygon_SnowFraction_new)=="y_threshold"] <- "Snowfraction_threshold"
+            df_Polygon_SnowFraction_new$Polygon <- i
             
-            #Add snowmelt data for current SubArea to general dataframe
-            df_SubArea_Snowfraction <- rbind(df_SubArea_Snowfraction, df_SubArea_SnowFraction_new)
+            #Add snowmelt data for current Polygon to general dataframe
+            df_Polygon_Snowfraction <- rbind(df_Polygon_Snowfraction, df_Polygon_SnowFraction_new)
             
           }
             
@@ -1260,47 +1260,47 @@
           stopCluster(cl)
           registerDoSEQ()
             
-          #Change column subArea to a factor:
-          df_SubArea_Snowfraction$SubArea <- as.factor(as.character(df_SubArea_Snowfraction$SubArea))
+          #Change column Polygon to a factor:
+          df_Polygon_Snowfraction$Polygon <- as.factor(as.character(df_Polygon_Snowfraction$Polygon))
           
-          #Save dates of snowmelt per subarea per SnowFraction threshold as a .csv file
-          write.csv(df_SubArea_Snowfraction, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_Snowmelt_Snowfraction.csv"), row.names = FALSE)
+          #Save dates of snowmelt per polygon per SnowFraction threshold as a .csv file
+          write.csv(df_Polygon_Snowfraction, paste0(here(), "/Output/S2/05_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Snowmelt_Snowfraction.csv"), row.names = FALSE)
           
-      #(5): Create a separate plot with GAM predictions per location and NDSI_threshold:
+      #(5): Create a separate plot with GAM predictions per polygon and NDSI_threshold:
           
           #Create an empty list to store plots
           list_plots_snowfraction <- list(list())
           
           #Loop through all levels of NDSI_threshold
-          for(i in unique(df_SubAreas_SnowFraction_GAM_predictions$NDSI_threshold)){
+          for(i in unique(df_Polygons_SnowFraction_GAM_predictions$NDSI_threshold)){
             
-            #i=unique(df_SubAreas_SnowFraction_GAM_predictions$NDSI_threshold)[1]
+            #i=unique(df_Polygons_SnowFraction_GAM_predictions$NDSI_threshold)[1]
             
             #Create an index variable for parameter i
-            i_index <- which( unique(df_SubAreas_SnowFraction_GAM_predictions$NDSI_threshold) == i)
+            i_index <- which( unique(df_Polygons_SnowFraction_GAM_predictions$NDSI_threshold) == i)
             
             #Store i as a character (for naming in output files)
             NDSI_threshold_char <- gsub("\\.", "_", as.character(i))
             
-            #Loop through all levels of SubArea:
-            for(j in unique(df_SubAreas_SnowFraction_GAM_predictions$SubArea)){
+            #Loop through all Polygons:
+            for(j in unique(df_Polygons_SnowFraction_GAM_predictions$Polygon)){
               
-              #j=unique(df_SubAreas_SnowFraction_GAM_predictions$SubArea)[1]
+              #j=unique(df_Polygons_SnowFraction_GAM_predictions$Polygon)[1]
               
               #Create an index variable for parameter j
-              j_index <- which( unique(df_SubAreas_SnowFraction_GAM_predictions$SubArea) == j)
+              j_index <- which( unique(df_Polygons_SnowFraction_GAM_predictions$Polygon) == j)
              
-              #select datasets for current NDSI_threshold and SubArea:
-              df_SubArea_SnowFraction_GAM <- df_SubAreas_SnowFraction_GAM[df_SubAreas_SnowFraction_GAM$NDSI_threshold==i & df_SubAreas_SnowFraction_GAM$SubArea==j,]
-              df_SubArea_SnowFraction_GAM_predictions <- df_SubAreas_SnowFraction_GAM_predictions[df_SubAreas_SnowFraction_GAM_predictions$NDSI_threshold==i & df_SubAreas_SnowFraction_GAM_predictions$SubArea==j,]
-              df_SubArea_SnowfractionDate <- df_SubArea_Snowfraction[df_SubArea_Snowfraction$NDSI_threshold==i & df_SubArea_Snowfraction$SubArea==j,]
+              #select datasets for current NDSI_threshold and Polygon:
+              df_Polygon_SnowFraction_GAM <- df_Polygons_SnowFraction_GAM[df_Polygons_SnowFraction_GAM$NDSI_threshold==i & df_Polygons_SnowFraction_GAM$Polygon==j,]
+              df_Polygon_SnowFraction_GAM_predictions <- df_Polygons_SnowFraction_GAM_predictions[df_Polygons_SnowFraction_GAM_predictions$NDSI_threshold==i & df_Polygons_SnowFraction_GAM_predictions$Polygon==j,]
+              df_Polygon_SnowfractionDate <- df_Polygon_Snowfraction[df_Polygon_Snowfraction$NDSI_threshold==i & df_Polygon_Snowfraction$Polygon==j,]
               
-              #create plot for current NDSI_threshold and SubArea and store it in list_plots_snowfraction:
+              #create plot for current NDSI_threshold and Polygon and store it in list_plots_snowfraction:
               list_plots_snowfraction[[i_index]][[j_index]] <- ggplot()+ 
-                geom_point(data=df_SubArea_SnowFraction_GAM[df_SubArea_SnowFraction_GAM$outliers==FALSE,], aes(x=doy, y=SnowFraction))+
-                geom_point(data=df_SubArea_SnowFraction_GAM[df_SubArea_SnowFraction_GAM$outliers==TRUE,], aes(x=doy, y=SnowFraction), col="black", pch=16, alpha=0.2)+
-                geom_line(data=df_SubArea_SnowFraction_GAM_predictions, aes(x=doy, y=SnowFraction_gam_predict), col="#1620de", lwd=1.25)+
-                geom_point(data=df_SubArea_SnowfractionDate[!is.na(df_SubArea_SnowfractionDate$doy),], aes(x=doy, y=Snowfraction_threshold), col="red", size=3)+
+                geom_point(data=df_Polygon_SnowFraction_GAM[df_Polygon_SnowFraction_GAM$outliers==FALSE,], aes(x=doy, y=SnowFraction))+
+                geom_point(data=df_Polygon_SnowFraction_GAM[df_Polygon_SnowFraction_GAM$outliers==TRUE,], aes(x=doy, y=SnowFraction), col="black", pch=16, alpha=0.2)+
+                geom_line(data=df_Polygon_SnowFraction_GAM_predictions, aes(x=doy, y=SnowFraction_gam_predict), col="#1620de", lwd=1.25)+
+                geom_point(data=df_Polygon_SnowfractionDate[!is.na(df_Polygon_SnowfractionDate$doy),], aes(x=doy, y=Snowfraction_threshold), col="red", size=3)+
                 geom_vline(xintercept = 150, colour="grey", lty=2)+
                 geom_hline(yintercept = Snowfraction_threshold_vector, colour="grey", lty=2)+
                 xlab(paste0("Day of year (starting at 01-01-", year_ID, ")")) +
@@ -1310,12 +1310,12 @@
               
                }
             
-            #Plot SnowFraction and model predictions in a separate plot per SubArea per NDSI_threshold
+            #Plot SnowFraction and model predictions in a separate plot per Polygon per NDSI_threshold
             plots_snowfraction <- list_plots_snowfraction[i_index]
             plots_per_page = 25
             plots_snowfraction <- lapply(plots_snowfraction, function(x){split(x, ceiling(seq_along(plots_snowfraction[[1]])/plots_per_page))})
             plots_snowfraction <- unname(unlist(plots_snowfraction, recursive = F))
-            pdf(paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_Plot_Snowfraction.pdf"), width=20, height=16, onefile = TRUE)
+            pdf(paste0(here(), "/Output/S2/05_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Plot_Snowfraction.pdf"), width=20, height=16, onefile = TRUE)
             for (k in seq(length(plots_snowfraction))) { do.call("grid.arrange", plots_snowfraction[[k]]) }
             dev.off()
             
@@ -1326,89 +1326,89 @@
            
 ########################################################################################################################################################################################
  
-  #(II): AVERAGE BAND VALUES - Fit a Generalized Additive Model (GAM) through the average band values within each sub-area         
+  #(II): AVERAGE BAND VALUES - Fit a Generalized Additive Model (GAM) through the average band values within each polygon         
     if("avg_NDSI" %in% method){ 
          
 ########################################################################################################################################################################################
 
-    #(A): FSC_Gascoin2020 - Fit a Generalized Additive Model (GAM) through the FSC_Gascoin2020 data within each sub-area
+    #(A): FSC_Gascoin2020 - Fit a Generalized Additive Model (GAM) through the FSC_Gascoin2020 data within each polygon
   
       #(A.0) Print message
         cat("\n")
         print("--------------------------------------------------------------------------------------------------------------------------")
-        print(paste0("FIT A GAM THROUGH THE AVERAGE FSC_GASCOIN2020 DATA PER LOCATIONID"))
+        print(paste0("FIT A GAM THROUGH THE AVERAGE FSC_GASCOIN2020 DATA PER POLYGON"))
         print("--------------------------------------------------------------------------------------------------------------------------")
         
       #(A.1) Create an empty dataframe
-        df_SubAreas_FSC_Gascoin2020_GAM <- data.frame(FSC_Gascoin2020=numeric(),
+        df_Polygons_FSC_Gascoin2020_GAM <- data.frame(FSC_Gascoin2020=numeric(),
                                                       Date=factor(),
                                                       doy=numeric(),
-                                                      SubArea=factor(),
+                                                      Polygon=factor(),
                                                       outliers=logical())
   
-        df_SubAreas_FSC_Gascoin2020_GAM_predictions <- data.frame(SubArea=character(),
+        df_Polygons_FSC_Gascoin2020_GAM_predictions <- data.frame(Polygon=character(),
                                                                   doy=numeric(),
                                                                   FSC_Gascoin2020_gam_predict=numeric(),
                                                                   stringsAsFactors=FALSE)
   
-      #(A.2) Loop through all SubAreas and fit a separate gam (with sequential outlier removal) to the SubArea-specific FSC_Gascoin2020 data
-        for(i in unique(df_SubAreas_BandValues$SubArea)){
+      #(A.2) Loop through all Polygons and fit a separate gam (with sequential outlier removal) to the Polygon-specific FSC_Gascoin2020 data
+        for(i in unique(df_Polygons_BandValues$Polygon)){
   
           #For debugging
-          #i=unique(df_SubAreas_BandValues$SubArea)[1]
+          #i=unique(df_Polygons_BandValues$Polygon)[1]
   
-          #Select SubArea-specific subset of data:
-          df_SubArea_FSC_Gascoin2020_GAM_new <- df_SubAreas_BandValues[df_SubAreas_BandValues$SubArea==i &
-                                                                       !is.na(df_SubAreas_BandValues$FSC_Gascoin2020),
-                                                                       c("FSC_Gascoin2020", "Date", "doy", "SubArea")]
+          #Select Polygon-specific subset of data:
+          df_Polygon_FSC_Gascoin2020_GAM_new <- df_Polygons_BandValues[df_Polygons_BandValues$Polygon==i &
+                                                                       !is.na(df_Polygons_BandValues$FSC_Gascoin2020),
+                                                                       c("FSC_Gascoin2020", "Date", "doy", "Polygon")]
   
-          #Fit a gam through the SubArea-specific FSC_Gascoin2020 ~ doy data and emply sequential outlier removal
-          df_SubArea_FSC_Gascoin2020_GAM_new <- f_gam_SeqRemOutliers(data=df_SubArea_FSC_Gascoin2020_GAM_new, y="FSC_Gascoin2020", x="doy", outlier_removal=outlier_removal,
+          #Fit a gam through the Polygon-specific FSC_Gascoin2020 ~ doy data and emply sequential outlier removal
+          df_Polygon_FSC_Gascoin2020_GAM_new <- f_gam_SeqRemOutliers(data=df_Polygon_FSC_Gascoin2020_GAM_new, y="FSC_Gascoin2020", x="doy", outlier_removal=outlier_removal,
                                                                      outlier_thresh_1=outlier_thresh_1, outlier_thresh_2=outlier_thresh_2,
                                                                      default_k=gam_k_outlier)
   
-          #Sort df_SubArea_FSC_Gascoin2020_GAM_new by doy:
-          df_SubArea_FSC_Gascoin2020_GAM_new <- df_SubArea_FSC_Gascoin2020_GAM_new[order(df_SubArea_FSC_Gascoin2020_GAM_new$doy),]
+          #Sort df_Polygon_FSC_Gascoin2020_GAM_new by doy:
+          df_Polygon_FSC_Gascoin2020_GAM_new <- df_Polygon_FSC_Gascoin2020_GAM_new[order(df_Polygon_FSC_Gascoin2020_GAM_new$doy),]
   
-          #Bind the SubArea-specific dataframe with outlier-filtered GAM estimates to the dataframe containing all dataframes from previous iterations
-           df_SubAreas_FSC_Gascoin2020_GAM <- rbind(df_SubAreas_FSC_Gascoin2020_GAM, df_SubArea_FSC_Gascoin2020_GAM_new)
+          #Bind the Polygon-specific dataframe with outlier-filtered GAM estimates to the dataframe containing all dataframes from previous iterations
+           df_Polygons_FSC_Gascoin2020_GAM <- rbind(df_Polygons_FSC_Gascoin2020_GAM, df_Polygon_FSC_Gascoin2020_GAM_new)
   
           #Create more detailed predictions (not only at the doy present in the datframe) at a 1-day interval to plot more smooth curves
   
             #Refit GAM through data
-             index <- which(df_SubArea_FSC_Gascoin2020_GAM_new$outliers==FALSE)
-             mod_gam <- with(df_SubArea_FSC_Gascoin2020_GAM_new[index,], mgcv::gam(FSC_Gascoin2020 ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
+             index <- which(df_Polygon_FSC_Gascoin2020_GAM_new$outliers==FALSE)
+             mod_gam <- with(df_Polygon_FSC_Gascoin2020_GAM_new[index,], mgcv::gam(FSC_Gascoin2020 ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
   
             #Use gam to make predictions on a more detailed interval
-             df_SubArea_FSC_Gascoin2020_GAM_predictions_new <- data.frame(SubArea=i, doy=seq(min(df_SubArea_FSC_Gascoin2020_GAM_new$doy), max(df_SubArea_FSC_Gascoin2020_GAM_new$doy), 0.01))
-             df_SubArea_FSC_Gascoin2020_GAM_predictions_new$FSC_Gascoin2020_gam_predict <- stats::predict(mod_gam, newdata=df_SubArea_FSC_Gascoin2020_GAM_predictions_new, type="response")
-             df_SubArea_FSC_Gascoin2020_GAM_predictions_new <- df_SubArea_FSC_Gascoin2020_GAM_predictions_new[order(df_SubArea_FSC_Gascoin2020_GAM_predictions_new$doy),]
+             df_Polygon_FSC_Gascoin2020_GAM_predictions_new <- data.frame(Polygon=i, doy=seq(min(df_Polygon_FSC_Gascoin2020_GAM_new$doy), max(df_Polygon_FSC_Gascoin2020_GAM_new$doy), 0.01))
+             df_Polygon_FSC_Gascoin2020_GAM_predictions_new$FSC_Gascoin2020_gam_predict <- stats::predict(mod_gam, newdata=df_Polygon_FSC_Gascoin2020_GAM_predictions_new, type="response")
+             df_Polygon_FSC_Gascoin2020_GAM_predictions_new <- df_Polygon_FSC_Gascoin2020_GAM_predictions_new[order(df_Polygon_FSC_Gascoin2020_GAM_predictions_new$doy),]
   
-            #Add predictions to df_SubAreas_FSC_Gascoin2020_GAM_predictions dataframe:
-             df_SubAreas_FSC_Gascoin2020_GAM_predictions <- rbind(df_SubAreas_FSC_Gascoin2020_GAM_predictions, df_SubArea_FSC_Gascoin2020_GAM_predictions_new)
+            #Add predictions to df_Polygons_FSC_Gascoin2020_GAM_predictions dataframe:
+             df_Polygons_FSC_Gascoin2020_GAM_predictions <- rbind(df_Polygons_FSC_Gascoin2020_GAM_predictions, df_Polygon_FSC_Gascoin2020_GAM_predictions_new)
   
           }
   
-        #Change subArea column to factor
-        df_SubAreas_FSC_Gascoin2020_GAM$SubArea <- as.factor(as.character(df_SubAreas_FSC_Gascoin2020_GAM$SubArea))
-        df_SubAreas_FSC_Gascoin2020_GAM_predictions$SubArea <- as.factor(as.character(df_SubAreas_FSC_Gascoin2020_GAM_predictions$SubArea))
+        #Change Polygon column to factor
+        df_Polygons_FSC_Gascoin2020_GAM$Polygon <- as.factor(as.character(df_Polygons_FSC_Gascoin2020_GAM$Polygon))
+        df_Polygons_FSC_Gascoin2020_GAM_predictions$Polygon <- as.factor(as.character(df_Polygons_FSC_Gascoin2020_GAM_predictions$Polygon))
   
         #Save dataframe with GAM fits for FSC_Gascoin2020
-        #write.csv(df_SubAreas_FSC_Gascoin2020_GAM, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_Data_FSCGascoin2020_GAM.csv"), row.names = FALSE)
-        write.csv(df_SubAreas_FSC_Gascoin2020_GAM_predictions, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_GAM_Predictions_FSCGascoin2020.csv"), row.names = FALSE)
+        #write.csv(df_Polygons_FSC_Gascoin2020_GAM, paste0(here(), "/Output/S2/05_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Data_FSCGascoin2020_GAM.csv"), row.names = FALSE)
+        write.csv(df_Polygons_FSC_Gascoin2020_GAM_predictions, paste0(here(), "/Output/S2/05_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_GAM_Predictions_FSCGascoin2020.csv"), row.names = FALSE)
   
-      #(A.3) Plot the raw FSC_Gascoin2020 datapoints and gam predictions for each SubArea:
+      #(A.3) Plot the raw FSC_Gascoin2020 datapoints and gam predictions for each Polygon:
   
-         #Plot FSC_Gascoin2020 and model predictions for all SubAreas in a single plot
-          p_SubArea_FSC_Gascoin2020 = ggplot()+
-            geom_point(data=df_SubAreas_FSC_Gascoin2020_GAM, aes(x=doy, y=FSC_Gascoin2020, fill=SubArea, col=SubArea))+
-            geom_line(data=df_SubAreas_FSC_Gascoin2020_GAM_predictions, aes(x=doy, y=FSC_Gascoin2020_gam_predict, col=SubArea)) +
+         #Plot FSC_Gascoin2020 and model predictions for all Polygons in a single plot
+          p_Polygon_FSC_Gascoin2020 = ggplot()+
+            geom_point(data=df_Polygons_FSC_Gascoin2020_GAM, aes(x=doy, y=FSC_Gascoin2020, fill=Polygon, col=Polygon))+
+            geom_line(data=df_Polygons_FSC_Gascoin2020_GAM_predictions, aes(x=doy, y=FSC_Gascoin2020_gam_predict, col=Polygon)) +
             geom_hline(yintercept = Snowfraction_threshold_vector, colour="grey", lty=2)+
             xlab(paste0("Day of year (starting at 01-01-", year_ID, ")")) +
             ylab("FSC_Gascoin2020") +
             theme_tom()
   
-      #(A.4): Calculate at which day of year the FSC_Gascoin2020 value is equal to Snowfraction_threshold for each SubArea using predictions from mod_gam
+      #(A.4): Calculate at which day of year the FSC_Gascoin2020 value is equal to Snowfraction_threshold for each Polygon using predictions from mod_gam
   
           #Setup parallel processing
           numCores <- detectCores()
@@ -1417,9 +1417,9 @@
   
           #Use the function f_detect_threshold_date_parallel to extract the moments the GAM predictions cross the thresholds in Snowfraction_threshold_vector
           results <- f_detect_threshold_date_parallel(subset=1, #data subset (not relevant here, set to 1)
-                                                      pixelIDs_split = list(unique(df_SubAreas_FSC_Gascoin2020_GAM_predictions$SubArea)), #levels of SubArea (input needs to be a list)
-                                                      df_pixel_y = df_SubAreas_FSC_Gascoin2020_GAM_predictions, #dataframe containing GAM predictions
-                                                      pixel_ID_column="SubArea", #Grouping column
+                                                      pixelIDs_split = list(unique(df_Polygons_FSC_Gascoin2020_GAM_predictions$Polygon)), #levels of Polygon (input needs to be a list)
+                                                      df_pixel_y = df_Polygons_FSC_Gascoin2020_GAM_predictions, #dataframe containing GAM predictions
+                                                      pixel_ID_column="Polygon", #Grouping column
                                                       y="FSC_Gascoin2020_gam_predict", #response variable in GAM
                                                       x="doy", #predictor variable in GAM
                                                       pixel_gam_plots = FALSE, #Should GAM plots be created
@@ -1429,43 +1429,43 @@
           stopCluster(cl)
           registerDoSEQ()
   
-          #Store dates of snowmelt per SubArea
-          df_SubArea_FSC_Gascoin2020 <- results[[1]]
-          df_SubArea_FSC_Gascoin2020 <- as.data.frame(do.call(rbind, df_SubArea_FSC_Gascoin2020))
-          colnames(df_SubArea_FSC_Gascoin2020)[colnames(df_SubArea_FSC_Gascoin2020)=="pixel_ID"] <- "SubArea"
-          colnames(df_SubArea_FSC_Gascoin2020)[colnames(df_SubArea_FSC_Gascoin2020)=="x_threshold"] <- "doy"
-          colnames(df_SubArea_FSC_Gascoin2020)[colnames(df_SubArea_FSC_Gascoin2020)=="y_threshold"] <- "Snowfraction_threshold"
+          #Store dates of snowmelt per Polygon
+          df_Polygon_FSC_Gascoin2020 <- results[[1]]
+          df_Polygon_FSC_Gascoin2020 <- as.data.frame(do.call(rbind, df_Polygon_FSC_Gascoin2020))
+          colnames(df_Polygon_FSC_Gascoin2020)[colnames(df_Polygon_FSC_Gascoin2020)=="pixel_ID"] <- "Polygon"
+          colnames(df_Polygon_FSC_Gascoin2020)[colnames(df_Polygon_FSC_Gascoin2020)=="x_threshold"] <- "doy"
+          colnames(df_Polygon_FSC_Gascoin2020)[colnames(df_Polygon_FSC_Gascoin2020)=="y_threshold"] <- "Snowfraction_threshold"
   
-          #Change column subArea to a factor:
-          df_SubArea_FSC_Gascoin2020$SubArea <- as.factor(as.character(df_SubArea_FSC_Gascoin2020$SubArea))
+          #Change column Polygon to a factor:
+          df_Polygon_FSC_Gascoin2020$Polygon <- as.factor(as.character(df_Polygon_FSC_Gascoin2020$Polygon))
   
-          #Save dates of snowmelt per subarea per FSC_Gascoin2020 threshold as a .csv file
-          write.csv(df_SubArea_FSC_Gascoin2020, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_Snowmelt_FSCGascoin2020.csv"), row.names = FALSE)
+          #Save dates of snowmelt per polygon per FSC_Gascoin2020 threshold as a .csv file
+          write.csv(df_Polygon_FSC_Gascoin2020, paste0(here(), "/Output/S2/05_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Snowmelt_FSCGascoin2020.csv"), row.names = FALSE)
   
-      #(A.5): Create a separate plot with GAM predictions per location
+      #(A.5): Create a separate plot with GAM predictions per polygon
   
           #Create an empty list to store plots
           list_plots_fsc_gascoin2020 <- list(list())
   
-          #Loop through all SubAreas
-          for(i in unique(df_SubAreas_FSC_Gascoin2020_GAM_predictions$SubArea)){
+          #Loop through all Polygons
+          for(i in unique(df_Polygons_FSC_Gascoin2020_GAM_predictions$Polygon)){
   
-            #i=unique(df_SubAreas_FSC_Gascoin2020_GAM_predictions$SubArea)[1]
+            #i=unique(df_Polygons_FSC_Gascoin2020_GAM_predictions$Polygon)[1]
   
             #Create an index variable for parameter i
-            i_index <- which( unique(df_SubAreas_FSC_Gascoin2020_GAM_predictions$SubArea) == i)
+            i_index <- which( unique(df_Polygons_FSC_Gascoin2020_GAM_predictions$Polygon) == i)
   
-            #select datasets for current Snowfraction_threshold and SubArea:
-            df_SubArea_FSC_Gascoin2020_GAM <- df_SubAreas_FSC_Gascoin2020_GAM[df_SubAreas_FSC_Gascoin2020_GAM$SubArea==i,]
-            df_SubArea_FSC_Gascoin2020_GAM_predictions <- df_SubAreas_FSC_Gascoin2020_GAM_predictions[df_SubAreas_FSC_Gascoin2020_GAM_predictions$SubArea==i,]
-            df_SubArea_FSC_Gascoin2020_snowmelt <- df_SubArea_FSC_Gascoin2020[df_SubArea_FSC_Gascoin2020$SubArea==i,]
+            #select datasets for current Snowfraction_threshold and Polygon:
+            df_Polygon_FSC_Gascoin2020_GAM <- df_Polygons_FSC_Gascoin2020_GAM[df_Polygons_FSC_Gascoin2020_GAM$Polygon==i,]
+            df_Polygon_FSC_Gascoin2020_GAM_predictions <- df_Polygons_FSC_Gascoin2020_GAM_predictions[df_Polygons_FSC_Gascoin2020_GAM_predictions$Polygon==i,]
+            df_Polygon_FSC_Gascoin2020_snowmelt <- df_Polygon_FSC_Gascoin2020[df_Polygon_FSC_Gascoin2020$Polygon==i,]
   
-            #create plot for current SubArea and store it in list_plots_fsc_gascoin2020:
+            #create plot for current Polygon and store it in list_plots_fsc_gascoin2020:
             list_plots_fsc_gascoin2020[[i_index]] <- ggplot()+
-              geom_point(data=df_SubArea_FSC_Gascoin2020_GAM[df_SubArea_FSC_Gascoin2020_GAM$outliers==FALSE,], aes(x=doy, y=FSC_Gascoin2020))+
-              geom_point(data=df_SubArea_FSC_Gascoin2020_GAM[df_SubArea_FSC_Gascoin2020_GAM$outliers==TRUE,], aes(x=doy, y=FSC_Gascoin2020), col="black", pch=16, alpha=0.2)+
-              geom_line(data=df_SubArea_FSC_Gascoin2020_GAM_predictions, aes(x=doy, y=FSC_Gascoin2020_gam_predict), col="#1620de", lwd=1.25)+
-              geom_point(data=df_SubArea_FSC_Gascoin2020_snowmelt[!is.na(df_SubArea_FSC_Gascoin2020_snowmelt$doy),], aes(x=doy, y=Snowfraction_threshold), col="red", size=3)+
+              geom_point(data=df_Polygon_FSC_Gascoin2020_GAM[df_Polygon_FSC_Gascoin2020_GAM$outliers==FALSE,], aes(x=doy, y=FSC_Gascoin2020))+
+              geom_point(data=df_Polygon_FSC_Gascoin2020_GAM[df_Polygon_FSC_Gascoin2020_GAM$outliers==TRUE,], aes(x=doy, y=FSC_Gascoin2020), col="black", pch=16, alpha=0.2)+
+              geom_line(data=df_Polygon_FSC_Gascoin2020_GAM_predictions, aes(x=doy, y=FSC_Gascoin2020_gam_predict), col="#1620de", lwd=1.25)+
+              geom_point(data=df_Polygon_FSC_Gascoin2020_snowmelt[!is.na(df_Polygon_FSC_Gascoin2020_snowmelt$doy),], aes(x=doy, y=Snowfraction_threshold), col="red", size=3)+
               geom_vline(xintercept = 150, colour="grey", lty=2)+
               geom_hline(yintercept = Snowfraction_threshold_vector, colour="grey", lty=2)+
               xlab(paste0("Day of year (starting at 01-01-", year_ID, ")")) +
@@ -1475,95 +1475,95 @@
   
             }
   
-          #Plot FSC_Gascoin2020 and model predictions in a separate plot per SubArea
+          #Plot FSC_Gascoin2020 and model predictions in a separate plot per Polygon
           plots_fsc_gascoin2020 <- list(list_plots_fsc_gascoin2020)
           plots_per_page = 25
           plots_fsc_gascoin2020 <- lapply(plots_fsc_gascoin2020, function(x){split(x, ceiling(seq_along(plots_fsc_gascoin2020[[1]])/plots_per_page))})
           plots_fsc_gascoin2020 <- unname(unlist(plots_fsc_gascoin2020, recursive = F))
-          pdf(paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_Plot_FSCGascoin2020.pdf"), width=20, height=16, onefile = TRUE)
+          pdf(paste0(here(), "/Output/S2/05_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Plot_FSCGascoin2020.pdf"), width=20, height=16, onefile = TRUE)
           for (k in seq(length(plots_fsc_gascoin2020))) { do.call("grid.arrange", plots_fsc_gascoin2020[[k]]) }
           dev.off()
          
 ########################################################################################################################################################################################
 
-    #(B): FSC_Aalstad2020 - Fit a Generalized Additive Model (GAM) through the FSC_Aalstad2020 data within each sub-area
+    #(B): FSC_Aalstad2020 - Fit a Generalized Additive Model (GAM) through the FSC_Aalstad2020 data within each polygon
   
       #(B.0) Print message
         cat("\n")
         print("--------------------------------------------------------------------------------------------------------------------------")
-        print(paste0("FIT A GAM THROUGH THE AVERAGE FSC_AALSTAD2020 DATA PER LOCATIONID"))
+        print(paste0("FIT A GAM THROUGH THE AVERAGE FSC_AALSTAD2020 DATA PER POLYGON"))
         print("--------------------------------------------------------------------------------------------------------------------------")
           
       #(B.1) Create an empty dataframe
-        df_SubAreas_FSC_Aalstad2020_GAM <- data.frame(FSC_Aalstad2020=numeric(),
+        df_Polygons_FSC_Aalstad2020_GAM <- data.frame(FSC_Aalstad2020=numeric(),
                                                       Date=factor(),
                                                       doy=numeric(),
-                                                      SubArea=factor(),
+                                                      Polygon=factor(),
                                                       outliers=logical())
   
-        df_SubAreas_FSC_Aalstad2020_GAM_predictions <- data.frame(SubArea=character(),
+        df_Polygons_FSC_Aalstad2020_GAM_predictions <- data.frame(Polygon=character(),
                                                                   doy=numeric(),
                                                                   FSC_Aalstad2020_gam_predict=numeric(),
                                                                   stringsAsFactors=FALSE)
   
-      #(B.2) Loop through all SubAreas and fit a separate gam (with sequential outlier removal) to the SubArea-specific FSC_Aalstad2020 data
-        for(i in unique(df_SubAreas_BandValues$SubArea)){
+      #(B.2) Loop through all Polygons and fit a separate gam (with sequential outlier removal) to the Polygon-specific FSC_Aalstad2020 data
+        for(i in unique(df_Polygons_BandValues$Polygon)){
   
           #For debugging
-          #i=unique(df_SubAreas_BandValues$SubArea)[1]
+          #i=unique(df_Polygons_BandValues$Polygon)[1]
   
-          #Select SubArea-specific subset of data:
-          df_SubArea_FSC_Aalstad2020_GAM_new <- df_SubAreas_BandValues[df_SubAreas_BandValues$SubArea==i &
-                                                                       !is.na(df_SubAreas_BandValues$FSC_Aalstad2020),
-                                                                       c("FSC_Aalstad2020", "Date", "doy", "SubArea")]
+          #Select Polygon-specific subset of data:
+          df_Polygon_FSC_Aalstad2020_GAM_new <- df_Polygons_BandValues[df_Polygons_BandValues$Polygon==i &
+                                                                       !is.na(df_Polygons_BandValues$FSC_Aalstad2020),
+                                                                       c("FSC_Aalstad2020", "Date", "doy", "Polygon")]
   
-          #Fit a gam through the SubArea-specific FSC_Aalstad2020 ~ doy data and emply sequential outlier removal
-          df_SubArea_FSC_Aalstad2020_GAM_new <- f_gam_SeqRemOutliers(data=df_SubArea_FSC_Aalstad2020_GAM_new, y="FSC_Aalstad2020", x="doy", outlier_removal=outlier_removal,
+          #Fit a gam through the Polygon-specific FSC_Aalstad2020 ~ doy data and emply sequential outlier removal
+          df_Polygon_FSC_Aalstad2020_GAM_new <- f_gam_SeqRemOutliers(data=df_Polygon_FSC_Aalstad2020_GAM_new, y="FSC_Aalstad2020", x="doy", outlier_removal=outlier_removal,
                                                                      outlier_thresh_1=outlier_thresh_1, outlier_thresh_2=outlier_thresh_2,
                                                                      default_k=gam_k_outlier)
   
-          #Sort df_SubArea_FSC_Aalstad2020_GAM_new by doy:
-          df_SubArea_FSC_Aalstad2020_GAM_new <- df_SubArea_FSC_Aalstad2020_GAM_new[order(df_SubArea_FSC_Aalstad2020_GAM_new$doy),]
+          #Sort df_Polygon_FSC_Aalstad2020_GAM_new by doy:
+          df_Polygon_FSC_Aalstad2020_GAM_new <- df_Polygon_FSC_Aalstad2020_GAM_new[order(df_Polygon_FSC_Aalstad2020_GAM_new$doy),]
   
-          #Bind the SubArea-specific dataframe with outlier-filtered GAM estimates to the dataframe containing all dataframes from previous iterations
-           df_SubAreas_FSC_Aalstad2020_GAM <- rbind(df_SubAreas_FSC_Aalstad2020_GAM, df_SubArea_FSC_Aalstad2020_GAM_new)
+          #Bind the Polygon-specific dataframe with outlier-filtered GAM estimates to the dataframe containing all dataframes from previous iterations
+           df_Polygons_FSC_Aalstad2020_GAM <- rbind(df_Polygons_FSC_Aalstad2020_GAM, df_Polygon_FSC_Aalstad2020_GAM_new)
   
           #Create more detailed predictions (not only at the doy present in the datframe) at a 1-day interval to plot more smooth curves
   
             #Refit GAM through data
-             index <- which(df_SubArea_FSC_Aalstad2020_GAM_new$outliers==FALSE)
-             mod_gam <- with(df_SubArea_FSC_Aalstad2020_GAM_new[index,], mgcv::gam(FSC_Aalstad2020 ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
+             index <- which(df_Polygon_FSC_Aalstad2020_GAM_new$outliers==FALSE)
+             mod_gam <- with(df_Polygon_FSC_Aalstad2020_GAM_new[index,], mgcv::gam(FSC_Aalstad2020 ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
   
             #Use gam to make predictions on a more detailed interval
-             df_SubArea_FSC_Aalstad2020_GAM_predictions_new <- data.frame(SubArea=i, doy=seq(min(df_SubArea_FSC_Aalstad2020_GAM_new$doy), max(df_SubArea_FSC_Aalstad2020_GAM_new$doy), 0.01))
-             df_SubArea_FSC_Aalstad2020_GAM_predictions_new$FSC_Aalstad2020_gam_predict <- stats::predict(mod_gam, newdata=df_SubArea_FSC_Aalstad2020_GAM_predictions_new, type="response")
-             df_SubArea_FSC_Aalstad2020_GAM_predictions_new <- df_SubArea_FSC_Aalstad2020_GAM_predictions_new[order(df_SubArea_FSC_Aalstad2020_GAM_predictions_new$doy),]
+             df_Polygon_FSC_Aalstad2020_GAM_predictions_new <- data.frame(Polygon=i, doy=seq(min(df_Polygon_FSC_Aalstad2020_GAM_new$doy), max(df_Polygon_FSC_Aalstad2020_GAM_new$doy), 0.01))
+             df_Polygon_FSC_Aalstad2020_GAM_predictions_new$FSC_Aalstad2020_gam_predict <- stats::predict(mod_gam, newdata=df_Polygon_FSC_Aalstad2020_GAM_predictions_new, type="response")
+             df_Polygon_FSC_Aalstad2020_GAM_predictions_new <- df_Polygon_FSC_Aalstad2020_GAM_predictions_new[order(df_Polygon_FSC_Aalstad2020_GAM_predictions_new$doy),]
   
-            #Add predictions to df_SubAreas_FSC_Aalstad2020_GAM_predictions dataframe:
-             df_SubAreas_FSC_Aalstad2020_GAM_predictions <- rbind(df_SubAreas_FSC_Aalstad2020_GAM_predictions, df_SubArea_FSC_Aalstad2020_GAM_predictions_new)
+            #Add predictions to df_Polygons_FSC_Aalstad2020_GAM_predictions dataframe:
+             df_Polygons_FSC_Aalstad2020_GAM_predictions <- rbind(df_Polygons_FSC_Aalstad2020_GAM_predictions, df_Polygon_FSC_Aalstad2020_GAM_predictions_new)
   
           }
   
-        #Change subArea column to factor
-        df_SubAreas_FSC_Aalstad2020_GAM$SubArea <- as.factor(as.character(df_SubAreas_FSC_Aalstad2020_GAM$SubArea))
-        df_SubAreas_FSC_Aalstad2020_GAM_predictions$SubArea <- as.factor(as.character(df_SubAreas_FSC_Aalstad2020_GAM_predictions$SubArea))
+        #Change Polygon column to factor
+        df_Polygons_FSC_Aalstad2020_GAM$Polygon <- as.factor(as.character(df_Polygons_FSC_Aalstad2020_GAM$Polygon))
+        df_Polygons_FSC_Aalstad2020_GAM_predictions$Polygon <- as.factor(as.character(df_Polygons_FSC_Aalstad2020_GAM_predictions$Polygon))
   
         #Save dataframe with GAM fits for FSC_Aalstad2020
-        #write.csv(df_SubAreas_FSC_Aalstad2020_GAM, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_Data_FSCAalstad2020_GAM.csv"), row.names = FALSE)
-        write.csv(df_SubAreas_FSC_Aalstad2020_GAM_predictions, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_GAM_Predictions_FSCAalstad2020.csv"), row.names = FALSE)
+        #write.csv(df_Polygons_FSC_Aalstad2020_GAM, paste0(here(), "/Output/S2/05_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Data_FSCAalstad2020_GAM.csv"), row.names = FALSE)
+        write.csv(df_Polygons_FSC_Aalstad2020_GAM_predictions, paste0(here(), "/Output/S2/05_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_GAM_Predictions_FSCAalstad2020.csv"), row.names = FALSE)
   
-      #(B.3) Plot the raw FSC_Aalstad2020 datapoints and gam predictions for each SubArea:
+      #(B.3) Plot the raw FSC_Aalstad2020 datapoints and gam predictions for each Polygon:
   
-         #Plot FSC_Aalstad2020 and model predictions for all SubAreas in a single plot
-          p_SubArea_FSC_Aalstad2020 = ggplot()+
-            geom_point(data=df_SubAreas_FSC_Aalstad2020_GAM, aes(x=doy, y=FSC_Aalstad2020, fill=SubArea, col=SubArea))+
-            geom_line(data=df_SubAreas_FSC_Aalstad2020_GAM_predictions, aes(x=doy, y=FSC_Aalstad2020_gam_predict, col=SubArea)) +
+         #Plot FSC_Aalstad2020 and model predictions for all Polygons in a single plot
+          p_Polygon_FSC_Aalstad2020 = ggplot()+
+            geom_point(data=df_Polygons_FSC_Aalstad2020_GAM, aes(x=doy, y=FSC_Aalstad2020, fill=Polygon, col=Polygon))+
+            geom_line(data=df_Polygons_FSC_Aalstad2020_GAM_predictions, aes(x=doy, y=FSC_Aalstad2020_gam_predict, col=Polygon)) +
             geom_hline(yintercept = Snowfraction_threshold_vector, colour="grey", lty=2)+
             xlab(paste0("Day of year (starting at 01-01-", year_ID, ")")) +
             ylab("FSC_Aalstad2020") +
             theme_tom()
   
-      #(B.4): Calculate at which day of year the FSC_Aalstad2020 value is equal to Snowfraction_threshold for each SubArea using predictions from mod_gam
+      #(B.4): Calculate at which day of year the FSC_Aalstad2020 value is equal to Snowfraction_threshold for each Polygon using predictions from mod_gam
   
           #Setup parallel processing
           numCores <- detectCores()
@@ -1572,9 +1572,9 @@
   
           #Use the function f_detect_threshold_date_parallel to extract the moments the GAM predictions cross the thresholds in Snowfraction_threshold_vector
           results <- f_detect_threshold_date_parallel(subset=1, #data subset (not relevant here, set to 1)
-                                                      pixelIDs_split = list(unique(df_SubAreas_FSC_Aalstad2020_GAM_predictions$SubArea)), #levels of SubArea (input needs to be a list)
-                                                      df_pixel_y = df_SubAreas_FSC_Aalstad2020_GAM_predictions, #dataframe containing GAM predictions
-                                                      pixel_ID_column="SubArea", #Grouping column
+                                                      pixelIDs_split = list(unique(df_Polygons_FSC_Aalstad2020_GAM_predictions$Polygon)), #levels of Polygon (input needs to be a list)
+                                                      df_pixel_y = df_Polygons_FSC_Aalstad2020_GAM_predictions, #dataframe containing GAM predictions
+                                                      pixel_ID_column="Polygon", #Grouping column
                                                       y="FSC_Aalstad2020_gam_predict", #response variable in GAM
                                                       x="doy", #predictor variable in GAM
                                                       pixel_gam_plots = FALSE, #Should GAM plots be created
@@ -1584,43 +1584,43 @@
           stopCluster(cl)
           registerDoSEQ()
   
-          #Store dates of snowmelt per SubArea
-          df_SubArea_FSC_Aalstad2020 <- results[[1]]
-          df_SubArea_FSC_Aalstad2020 <- as.data.frame(do.call(rbind, df_SubArea_FSC_Aalstad2020))
-          colnames(df_SubArea_FSC_Aalstad2020)[colnames(df_SubArea_FSC_Aalstad2020)=="pixel_ID"] <- "SubArea"
-          colnames(df_SubArea_FSC_Aalstad2020)[colnames(df_SubArea_FSC_Aalstad2020)=="x_threshold"] <- "doy"
-          colnames(df_SubArea_FSC_Aalstad2020)[colnames(df_SubArea_FSC_Aalstad2020)=="y_threshold"] <- "Snowfraction_threshold"
+          #Store dates of snowmelt per Polygon
+          df_Polygon_FSC_Aalstad2020 <- results[[1]]
+          df_Polygon_FSC_Aalstad2020 <- as.data.frame(do.call(rbind, df_Polygon_FSC_Aalstad2020))
+          colnames(df_Polygon_FSC_Aalstad2020)[colnames(df_Polygon_FSC_Aalstad2020)=="pixel_ID"] <- "Polygon"
+          colnames(df_Polygon_FSC_Aalstad2020)[colnames(df_Polygon_FSC_Aalstad2020)=="x_threshold"] <- "doy"
+          colnames(df_Polygon_FSC_Aalstad2020)[colnames(df_Polygon_FSC_Aalstad2020)=="y_threshold"] <- "Snowfraction_threshold"
   
-          #Change column subArea to a factor:
-          df_SubArea_FSC_Aalstad2020$SubArea <- as.factor(as.character(df_SubArea_FSC_Aalstad2020$SubArea))
+          #Change column Polygon to a factor:
+          df_Polygon_FSC_Aalstad2020$Polygon <- as.factor(as.character(df_Polygon_FSC_Aalstad2020$Polygon))
   
-          #Save dates of snowmelt per subarea per FSC_Aalstad2020 threshold as a .csv file
-          write.csv(df_SubArea_FSC_Aalstad2020, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_Snowmelt_FSCAalstad2020.csv"), row.names = FALSE)
+          #Save dates of snowmelt per polygon per FSC_Aalstad2020 threshold as a .csv file
+          write.csv(df_Polygon_FSC_Aalstad2020, paste0(here(), "/Output/S2/05_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Snowmelt_FSCAalstad2020.csv"), row.names = FALSE)
   
-      #(B.5): Create a separate plot with GAM predictions per location
+      #(B.5): Create a separate plot with GAM predictions per polygon
   
           #Create an empty list to store plots
           list_plots_fsc_aalstad2020 <- list(list())
   
-          #Loop through all SubAreas
-          for(i in unique(df_SubAreas_FSC_Aalstad2020_GAM_predictions$SubArea)){
+          #Loop through all Polygons
+          for(i in unique(df_Polygons_FSC_Aalstad2020_GAM_predictions$Polygon)){
   
-            #i=unique(df_SubAreas_FSC_Aalstad2020_GAM_predictions$SubArea)[1]
+            #i=unique(df_Polygons_FSC_Aalstad2020_GAM_predictions$Polygon)[1]
   
             #Create an index variable for parameter i
-            i_index <- which( unique(df_SubAreas_FSC_Aalstad2020_GAM_predictions$SubArea) == i)
+            i_index <- which( unique(df_Polygons_FSC_Aalstad2020_GAM_predictions$Polygon) == i)
   
-            #select datasets for current Snowfraction_threshold and SubArea:
-            df_SubArea_FSC_Aalstad2020_GAM <- df_SubAreas_FSC_Aalstad2020_GAM[df_SubAreas_FSC_Aalstad2020_GAM$SubArea==i,]
-            df_SubArea_FSC_Aalstad2020_GAM_predictions <- df_SubAreas_FSC_Aalstad2020_GAM_predictions[df_SubAreas_FSC_Aalstad2020_GAM_predictions$SubArea==i,]
-            df_SubArea_FSC_Aalstad2020_snowmelt <- df_SubArea_FSC_Aalstad2020[df_SubArea_FSC_Aalstad2020$SubArea==i,]
+            #select datasets for current Snowfraction_threshold and Polygon:
+            df_Polygon_FSC_Aalstad2020_GAM <- df_Polygons_FSC_Aalstad2020_GAM[df_Polygons_FSC_Aalstad2020_GAM$Polygon==i,]
+            df_Polygon_FSC_Aalstad2020_GAM_predictions <- df_Polygons_FSC_Aalstad2020_GAM_predictions[df_Polygons_FSC_Aalstad2020_GAM_predictions$Polygon==i,]
+            df_Polygon_FSC_Aalstad2020_snowmelt <- df_Polygon_FSC_Aalstad2020[df_Polygon_FSC_Aalstad2020$Polygon==i,]
   
-            #create plot for current SubArea and store it in list_plots_fsc_aalstad2020:
+            #create plot for current Polygon and store it in list_plots_fsc_aalstad2020:
             list_plots_fsc_aalstad2020[[i_index]] <- ggplot()+
-              geom_point(data=df_SubArea_FSC_Aalstad2020_GAM[df_SubArea_FSC_Aalstad2020_GAM$outliers==FALSE,], aes(x=doy, y=FSC_Aalstad2020))+
-              geom_point(data=df_SubArea_FSC_Aalstad2020_GAM[df_SubArea_FSC_Aalstad2020_GAM$outliers==TRUE,], aes(x=doy, y=FSC_Aalstad2020), col="black", pch=16, alpha=0.2)+
-              geom_line(data=df_SubArea_FSC_Aalstad2020_GAM_predictions, aes(x=doy, y=FSC_Aalstad2020_gam_predict), col="#1620de", lwd=1.25)+
-              geom_point(data=df_SubArea_FSC_Aalstad2020_snowmelt[!is.na(df_SubArea_FSC_Aalstad2020_snowmelt$doy),], aes(x=doy, y=Snowfraction_threshold), col="red", size=3)+
+              geom_point(data=df_Polygon_FSC_Aalstad2020_GAM[df_Polygon_FSC_Aalstad2020_GAM$outliers==FALSE,], aes(x=doy, y=FSC_Aalstad2020))+
+              geom_point(data=df_Polygon_FSC_Aalstad2020_GAM[df_Polygon_FSC_Aalstad2020_GAM$outliers==TRUE,], aes(x=doy, y=FSC_Aalstad2020), col="black", pch=16, alpha=0.2)+
+              geom_line(data=df_Polygon_FSC_Aalstad2020_GAM_predictions, aes(x=doy, y=FSC_Aalstad2020_gam_predict), col="#1620de", lwd=1.25)+
+              geom_point(data=df_Polygon_FSC_Aalstad2020_snowmelt[!is.na(df_Polygon_FSC_Aalstad2020_snowmelt$doy),], aes(x=doy, y=Snowfraction_threshold), col="red", size=3)+
               geom_vline(xintercept = 150, colour="grey", lty=2)+
               geom_hline(yintercept = Snowfraction_threshold_vector, colour="grey", lty=2)+
               xlab(paste0("Day of year (starting at 01-01-", year_ID, ")")) +
@@ -1630,95 +1630,95 @@
   
             }
   
-          #Plot FSC_Aalstad2020 and model predictions in a separate plot per SubArea
+          #Plot FSC_Aalstad2020 and model predictions in a separate plot per Polygon
           plots_fsc_aalstad2020 <- list(list_plots_fsc_aalstad2020)
           plots_per_page = 25
           plots_fsc_aalstad2020 <- lapply(plots_fsc_aalstad2020, function(x){split(x, ceiling(seq_along(plots_fsc_aalstad2020[[1]])/plots_per_page))})
           plots_fsc_aalstad2020 <- unname(unlist(plots_fsc_aalstad2020, recursive = F))
-          pdf(paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_Plot_FSCAalstad2020.pdf"), width=20, height=16, onefile = TRUE)
+          pdf(paste0(here(), "/Output/S2/05_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Plot_FSCAalstad2020.pdf"), width=20, height=16, onefile = TRUE)
           for (k in seq(length(plots_fsc_aalstad2020))) { do.call("grid.arrange", plots_fsc_aalstad2020[[k]]) }
           dev.off()
    
 ########################################################################################################################################################################################
 
-    #(C): NDSI - Fit a Generalized Additive Model (GAM) through the NDSI data within each sub-area
+    #(C): NDSI - Fit a Generalized Additive Model (GAM) through the NDSI data within each polygon
   
         #(C.0) Print message
           cat("\n")
           print("--------------------------------------------------------------------------------------------------------------------------")
-          print(paste0("FIT A GAM THROUGH THE AVERAGE NDSI DATA PER LOCATIONID"))
+          print(paste0("FIT A GAM THROUGH THE AVERAGE NDSI DATA PER POLYGON"))
           print("--------------------------------------------------------------------------------------------------------------------------")
           
         #(C.1) Create an empty dataframe
-          df_SubAreas_NDSI_GAM <- data.frame(NDSI=numeric(),
+          df_Polygons_NDSI_GAM <- data.frame(NDSI=numeric(),
                                              Date=factor(),
                                              doy=numeric(),
-                                             SubArea=factor(),
+                                             Polygon=factor(),
                                              outliers=logical())
   
-          df_SubAreas_NDSI_GAM_predictions <- data.frame(SubArea=character(),
+          df_Polygons_NDSI_GAM_predictions <- data.frame(Polygon=character(),
                                                          doy=numeric(),
                                                          NDSI_gam_predict=numeric(),
                                                          stringsAsFactors=FALSE)
   
-        #(C.2) Loop through all SubAreas and fit a separate gam (with sequential outlier removal) to the SubArea-specific NDSI data
-          for(i in unique(df_SubAreas_BandValues$SubArea)){
+        #(C.2) Loop through all Polygons and fit a separate gam (with sequential outlier removal) to the Polygon-specific NDSI data
+          for(i in unique(df_Polygons_BandValues$Polygon)){
   
             #For debugging
-            #i=unique(df_SubAreas_BandValues$SubArea)[1]
+            #i=unique(df_Polygons_BandValues$Polygon)[1]
   
-            #Select SubArea-specific subset of data:
-            df_SubArea_NDSI_GAM_new <- df_SubAreas_BandValues[df_SubAreas_BandValues$SubArea==i &
-                                                              !is.na(df_SubAreas_BandValues$NDSI),
-                                                              c("NDSI", "Date", "doy", "SubArea")]
+            #Select Polygon-specific subset of data:
+            df_Polygon_NDSI_GAM_new <- df_Polygons_BandValues[df_Polygons_BandValues$Polygon==i &
+                                                              !is.na(df_Polygons_BandValues$NDSI),
+                                                              c("NDSI", "Date", "doy", "Polygon")]
   
-            #Fit a gam through the SubArea-specific NDSI ~ doy data and emply sequential outlier removal
-            df_SubArea_NDSI_GAM_new <- f_gam_SeqRemOutliers(data=df_SubArea_NDSI_GAM_new, y="NDSI", x="doy", outlier_removal=outlier_removal,
+            #Fit a gam through the Polygon-specific NDSI ~ doy data and emply sequential outlier removal
+            df_Polygon_NDSI_GAM_new <- f_gam_SeqRemOutliers(data=df_Polygon_NDSI_GAM_new, y="NDSI", x="doy", outlier_removal=outlier_removal,
                                                              outlier_thresh_1=outlier_thresh_1, outlier_thresh_2=outlier_thresh_2,
                                                              default_k=gam_k_outlier)
   
-            #Sort df_SubArea_NDSI_GAM_new by doy:
-            df_SubArea_NDSI_GAM_new <- df_SubArea_NDSI_GAM_new[order(df_SubArea_NDSI_GAM_new$doy),]
+            #Sort df_Polygon_NDSI_GAM_new by doy:
+            df_Polygon_NDSI_GAM_new <- df_Polygon_NDSI_GAM_new[order(df_Polygon_NDSI_GAM_new$doy),]
   
-            #Bind the SubArea-specific dataframe with outlier-filtered GAM estimates to the dataframe containing all dataframes from previous iterations
-             df_SubAreas_NDSI_GAM <- rbind(df_SubAreas_NDSI_GAM, df_SubArea_NDSI_GAM_new)
+            #Bind the Polygon-specific dataframe with outlier-filtered GAM estimates to the dataframe containing all dataframes from previous iterations
+             df_Polygons_NDSI_GAM <- rbind(df_Polygons_NDSI_GAM, df_Polygon_NDSI_GAM_new)
   
             #Create more detailed predictions (not only at the doy present in the datframe) at a 1-day interval to plot more smooth curves
   
               #Refit GAM through data
-               index <- which(df_SubArea_NDSI_GAM_new$outliers==FALSE)
-               mod_gam <- with(df_SubArea_NDSI_GAM_new[index,], mgcv::gam(NDSI ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
+               index <- which(df_Polygon_NDSI_GAM_new$outliers==FALSE)
+               mod_gam <- with(df_Polygon_NDSI_GAM_new[index,], mgcv::gam(NDSI ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
   
               #Use gam to make predictions on a more detailed interval
-               df_SubArea_NDSI_GAM_predictions_new <- data.frame(SubArea=i, doy=seq(min(df_SubArea_NDSI_GAM_new$doy), max(df_SubArea_NDSI_GAM_new$doy), 0.01))
-               df_SubArea_NDSI_GAM_predictions_new$NDSI_gam_predict <- stats::predict(mod_gam, newdata=df_SubArea_NDSI_GAM_predictions_new, type="response")
-               df_SubArea_NDSI_GAM_predictions_new <- df_SubArea_NDSI_GAM_predictions_new[order(df_SubArea_NDSI_GAM_predictions_new$doy),]
+               df_Polygon_NDSI_GAM_predictions_new <- data.frame(Polygon=i, doy=seq(min(df_Polygon_NDSI_GAM_new$doy), max(df_Polygon_NDSI_GAM_new$doy), 0.01))
+               df_Polygon_NDSI_GAM_predictions_new$NDSI_gam_predict <- stats::predict(mod_gam, newdata=df_Polygon_NDSI_GAM_predictions_new, type="response")
+               df_Polygon_NDSI_GAM_predictions_new <- df_Polygon_NDSI_GAM_predictions_new[order(df_Polygon_NDSI_GAM_predictions_new$doy),]
   
-              #Add predictions to df_SubAreas_NDSI_GAM_predictions dataframe:
-               df_SubAreas_NDSI_GAM_predictions <- rbind(df_SubAreas_NDSI_GAM_predictions, df_SubArea_NDSI_GAM_predictions_new)
+              #Add predictions to df_Polygons_NDSI_GAM_predictions dataframe:
+               df_Polygons_NDSI_GAM_predictions <- rbind(df_Polygons_NDSI_GAM_predictions, df_Polygon_NDSI_GAM_predictions_new)
   
             }
   
-          #Change subArea column to factor
-          df_SubAreas_NDSI_GAM$SubArea <- as.factor(as.character(df_SubAreas_NDSI_GAM$SubArea))
-          df_SubAreas_NDSI_GAM_predictions$SubArea <- as.factor(as.character(df_SubAreas_NDSI_GAM_predictions$SubArea))
+          #Change Polygon column to factor
+          df_Polygons_NDSI_GAM$Polygon <- as.factor(as.character(df_Polygons_NDSI_GAM$Polygon))
+          df_Polygons_NDSI_GAM_predictions$Polygon <- as.factor(as.character(df_Polygons_NDSI_GAM_predictions$Polygon))
   
           #Save dataframe with GAM fits for NDSI
-          #write.csv(df_SubAreas_NDSI_GAM, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_Data_NDSI_GAM.csv"), row.names = FALSE)
-          write.csv(df_SubAreas_NDSI_GAM_predictions, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_GAM_Predictions_NDSI.csv"), row.names = FALSE)
+          #write.csv(df_Polygons_NDSI_GAM, paste0(here(), "/Output/S2/05_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Data_NDSI_GAM.csv"), row.names = FALSE)
+          write.csv(df_Polygons_NDSI_GAM_predictions, paste0(here(), "/Output/S2/05_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_GAM_Predictions_NDSI.csv"), row.names = FALSE)
   
-        #(C.3) Plot the raw NDSI datapoints and gam predictions for each SubArea:
+        #(C.3) Plot the raw NDSI datapoints and gam predictions for each Polygon:
   
-           #Plot NDSI and model predictions for all SubAreas in a single plot
-            p_SubArea_NDSI = ggplot()+
-              geom_point(data=df_SubAreas_NDSI_GAM, aes(x=doy, y=NDSI, fill=SubArea, col=SubArea))+
-              geom_line(data=df_SubAreas_NDSI_GAM_predictions, aes(x=doy, y=NDSI_gam_predict, col=SubArea)) +
+           #Plot NDSI and model predictions for all Polygons in a single plot
+            p_Polygon_NDSI = ggplot()+
+              geom_point(data=df_Polygons_NDSI_GAM, aes(x=doy, y=NDSI, fill=Polygon, col=Polygon))+
+              geom_line(data=df_Polygons_NDSI_GAM_predictions, aes(x=doy, y=NDSI_gam_predict, col=Polygon)) +
               geom_hline(yintercept = NDSI_threshold_vector, colour="grey", lty=2)+
               xlab(paste0("Day of year (starting at 01-01-", year_ID, ")")) +
               ylab("NDSI") +
               theme_tom()
              
-        #(C.4): Calculate at which day of year the NDSI value is equal to NDSI_threshold for each SubArea using predictions from mod_gam
+        #(C.4): Calculate at which day of year the NDSI value is equal to NDSI_threshold for each Polygon using predictions from mod_gam
   
             #Setup parallel processing
             numCores <- detectCores()
@@ -1727,9 +1727,9 @@
             
             #Use the function f_detect_threshold_date_parallel to extract the moments the GAM predictions cross the thresholds in NDSI_threshold_vector
             results <- f_detect_threshold_date_parallel(subset=1, #data subset (not relevant here, set to 1)
-                                                        pixelIDs_split = list(unique(df_SubAreas_NDSI_GAM_predictions$SubArea)), #levels of NDSI_threshold (input needs to be a list)
-                                                        df_pixel_y = df_SubAreas_NDSI_GAM_predictions, #dataframe containing GAM predictions
-                                                        pixel_ID_column="SubArea", #Grouping column
+                                                        pixelIDs_split = list(unique(df_Polygons_NDSI_GAM_predictions$Polygon)), #levels of NDSI_threshold (input needs to be a list)
+                                                        df_pixel_y = df_Polygons_NDSI_GAM_predictions, #dataframe containing GAM predictions
+                                                        pixel_ID_column="Polygon", #Grouping column
                                                         y="NDSI_gam_predict", #response variable in GAM
                                                         x="doy", #predictor variable in GAM
                                                         pixel_gam_plots = FALSE, #Should GAM plots be created
@@ -1739,43 +1739,43 @@
             stopCluster(cl)
             registerDoSEQ()  
             
-            #Store dates of snowmelt per SubArea
-            df_SubArea_NDSI <- results[[1]]
-            df_SubArea_NDSI <- as.data.frame(do.call(rbind, df_SubArea_NDSI))
-            colnames(df_SubArea_NDSI)[colnames(df_SubArea_NDSI)=="pixel_ID"] <- "SubArea"
-            colnames(df_SubArea_NDSI)[colnames(df_SubArea_NDSI)=="x_threshold"] <- "doy"
-            colnames(df_SubArea_NDSI)[colnames(df_SubArea_NDSI)=="y_threshold"] <- "NDSI_threshold"
+            #Store dates of snowmelt per Polygon
+            df_Polygon_NDSI <- results[[1]]
+            df_Polygon_NDSI <- as.data.frame(do.call(rbind, df_Polygon_NDSI))
+            colnames(df_Polygon_NDSI)[colnames(df_Polygon_NDSI)=="pixel_ID"] <- "Polygon"
+            colnames(df_Polygon_NDSI)[colnames(df_Polygon_NDSI)=="x_threshold"] <- "doy"
+            colnames(df_Polygon_NDSI)[colnames(df_Polygon_NDSI)=="y_threshold"] <- "NDSI_threshold"
            
-            #Change column subArea to a factor:
-            df_SubArea_NDSI$SubArea <- as.factor(as.character(df_SubArea_NDSI$SubArea))
+            #Change column Polygon to a factor:
+            df_Polygon_NDSI$Polygon <- as.factor(as.character(df_Polygon_NDSI$Polygon))
   
-            #Save dates of snowmelt per subarea per NDSI threshold as a .csv file
-            write.csv(df_SubArea_NDSI, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_Snowmelt_NDSI.csv"), row.names = FALSE)
+            #Save dates of snowmelt per polygon per NDSI threshold as a .csv file
+            write.csv(df_Polygon_NDSI, paste0(here(), "/Output/S2/05_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Snowmelt_NDSI.csv"), row.names = FALSE)
   
-        #(C.5): Create a separate plot with GAM predictions per location
+        #(C.5): Create a separate plot with GAM predictions per polygon
             
             #Create an empty list to store plots
             list_plots_ndsi <- list(list())
             
-            #Loop through all SubAreas
-            for(i in unique(df_SubAreas_NDSI_GAM_predictions$SubArea)){
+            #Loop through all Polygons
+            for(i in unique(df_Polygons_NDSI_GAM_predictions$Polygon)){
               
-              #i=unique(df_SubAreas_NDSI_GAM_predictions$SubArea)[1]
+              #i=unique(df_Polygons_NDSI_GAM_predictions$Polygon)[1]
               
               #Create an index variable for parameter i
-              i_index <- which( unique(df_SubAreas_NDSI_GAM_predictions$SubArea) == i)
+              i_index <- which( unique(df_Polygons_NDSI_GAM_predictions$Polygon) == i)
   
-              #select datasets for current NDSI_threshold and SubArea:
-              df_SubArea_NDSI_GAM <- df_SubAreas_NDSI_GAM[df_SubAreas_NDSI_GAM$SubArea==i,]
-              df_SubArea_NDSI_GAM_predictions <- df_SubAreas_NDSI_GAM_predictions[df_SubAreas_NDSI_GAM_predictions$SubArea==i,]
-              df_SubArea_NDSI_snowmelt <- df_SubArea_NDSI[df_SubArea_NDSI$SubArea==i,]
+              #select datasets for current NDSI_threshold and Polygon:
+              df_Polygon_NDSI_GAM <- df_Polygons_NDSI_GAM[df_Polygons_NDSI_GAM$Polygon==i,]
+              df_Polygon_NDSI_GAM_predictions <- df_Polygons_NDSI_GAM_predictions[df_Polygons_NDSI_GAM_predictions$Polygon==i,]
+              df_Polygon_NDSI_snowmelt <- df_Polygon_NDSI[df_Polygon_NDSI$Polygon==i,]
                 
-              #create plot for current SubArea and store it in list_plots_ndsi:
+              #create plot for current Polygon and store it in list_plots_ndsi:
               list_plots_ndsi[[i_index]] <- ggplot()+ 
-                geom_point(data=df_SubArea_NDSI_GAM[df_SubArea_NDSI_GAM$outliers==FALSE,], aes(x=doy, y=NDSI))+
-                geom_point(data=df_SubArea_NDSI_GAM[df_SubArea_NDSI_GAM$outliers==TRUE,], aes(x=doy, y=NDSI), col="black", pch=16, alpha=0.2)+
-                geom_line(data=df_SubArea_NDSI_GAM_predictions, aes(x=doy, y=NDSI_gam_predict), col="#1620de", lwd=1.25)+
-                geom_point(data=df_SubArea_NDSI_snowmelt[!is.na(df_SubArea_NDSI_snowmelt$doy),], aes(x=doy, y=NDSI_threshold), col="red", size=3)+
+                geom_point(data=df_Polygon_NDSI_GAM[df_Polygon_NDSI_GAM$outliers==FALSE,], aes(x=doy, y=NDSI))+
+                geom_point(data=df_Polygon_NDSI_GAM[df_Polygon_NDSI_GAM$outliers==TRUE,], aes(x=doy, y=NDSI), col="black", pch=16, alpha=0.2)+
+                geom_line(data=df_Polygon_NDSI_GAM_predictions, aes(x=doy, y=NDSI_gam_predict), col="#1620de", lwd=1.25)+
+                geom_point(data=df_Polygon_NDSI_snowmelt[!is.na(df_Polygon_NDSI_snowmelt$doy),], aes(x=doy, y=NDSI_threshold), col="red", size=3)+
                 geom_vline(xintercept = 150, colour="grey", lty=2)+
                 geom_hline(yintercept = NDSI_threshold_vector, colour="grey", lty=2)+
                 xlab(paste0("Day of year (starting at 01-01-", year_ID, ")")) +
@@ -1785,115 +1785,115 @@
                 
               }
               
-            #Plot NDSI and model predictions in a separate plot per SubArea
+            #Plot NDSI and model predictions in a separate plot per Polygon
             plots_ndsi <- list(list_plots_ndsi)
             plots_per_page = 25
             plots_ndsi <- lapply(plots_ndsi, function(x){split(x, ceiling(seq_along(plots_ndsi[[1]])/plots_per_page))})
             plots_ndsi <- unname(unlist(plots_ndsi, recursive = F))
-            pdf(paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_Plot_NDSI.pdf"), width=20, height=16, onefile = TRUE)
+            pdf(paste0(here(), "/Output/S2/05_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Plot_NDSI.pdf"), width=20, height=16, onefile = TRUE)
             for (k in seq(length(plots_ndsi))) { do.call("grid.arrange", plots_ndsi[[k]]) }
             dev.off()
           
 ########################################################################################################################################################################################
               
-    #(D): NDVI - Fit a Generalized Additive Model (GAM) through the NDVI data within each sub-area
+    #(D): NDVI - Fit a Generalized Additive Model (GAM) through the NDVI data within each polygon
   
         #(D.0) Print message
           cat("\n")
           print("--------------------------------------------------------------------------------------------------------------------------")
-          print(paste0("FIT A GAM THROUGH THE AVERAGE NDVI DATA PER LOCATIONID"))
+          print(paste0("FIT A GAM THROUGH THE AVERAGE NDVI DATA PER POLYGON"))
           print("--------------------------------------------------------------------------------------------------------------------------")
             
         #(D.1) Create an empty dataframe
-          df_SubAreas_NDVI_GAM <- data.frame(NDVI=numeric(),
+          df_Polygons_NDVI_GAM <- data.frame(NDVI=numeric(),
                                              Date=factor(),
                                              doy=numeric(),
-                                             SubArea=factor(),
+                                             Polygon=factor(),
                                              outliers=logical())
   
-          df_SubAreas_NDVI_GAM_predictions <- data.frame(SubArea=character(),
+          df_Polygons_NDVI_GAM_predictions <- data.frame(Polygon=character(),
                                                          doy=numeric(),
                                                          NDVI_gam_predict=numeric(),
                                                          stringsAsFactors=FALSE)
   
-        #(D.2) Loop through all SubAreas and fit a separate gam (with sequential outlier removal) to the SubArea-specific NDVI data
-          for(i in unique(df_SubAreas_BandValues$SubArea)){
+        #(D.2) Loop through all Polygons and fit a separate gam (with sequential outlier removal) to the Polygon-specific NDVI data
+          for(i in unique(df_Polygons_BandValues$Polygon)){
   
             #For debugging
-            #i=unique(df_SubAreas_BandValues$SubArea)[1]
+            #i=unique(df_Polygons_BandValues$Polygon)[1]
   
-            #Select SubArea-specific subset of data:
-            df_SubArea_NDVI_GAM_new <- df_SubAreas_BandValues[df_SubAreas_BandValues$SubArea==i &
-                                                              !is.na(df_SubAreas_BandValues$NDVI),
-                                                              c("NDVI", "Date", "doy", "SubArea")]
+            #Select Polygon-specific subset of data:
+            df_Polygon_NDVI_GAM_new <- df_Polygons_BandValues[df_Polygons_BandValues$Polygon==i &
+                                                              !is.na(df_Polygons_BandValues$NDVI),
+                                                              c("NDVI", "Date", "doy", "Polygon")]
   
-            #Fit a gam through the SubArea-specific NDVI ~ doy data and emply sequential outlier removal
-            df_SubArea_NDVI_GAM_new <- f_gam_SeqRemOutliers(data=df_SubArea_NDVI_GAM_new, y="NDVI", x="doy", outlier_removal=outlier_removal,
+            #Fit a gam through the Polygon-specific NDVI ~ doy data and emply sequential outlier removal
+            df_Polygon_NDVI_GAM_new <- f_gam_SeqRemOutliers(data=df_Polygon_NDVI_GAM_new, y="NDVI", x="doy", outlier_removal=outlier_removal,
                                                              outlier_thresh_1=outlier_thresh_1, outlier_thresh_2=outlier_thresh_2,
                                                              default_k=gam_k_outlier)
   
-            #Sort df_SubArea_NDVI_GAM_new by doy:
-            df_SubArea_NDVI_GAM_new <- df_SubArea_NDVI_GAM_new[order(df_SubArea_NDVI_GAM_new$doy),]
+            #Sort df_Polygon_NDVI_GAM_new by doy:
+            df_Polygon_NDVI_GAM_new <- df_Polygon_NDVI_GAM_new[order(df_Polygon_NDVI_GAM_new$doy),]
   
-            #Bind the SubArea-specific dataframe with outlier-filtered GAM estimates to the dataframe containing all dataframes from previous iterations
-             df_SubAreas_NDVI_GAM <- rbind(df_SubAreas_NDVI_GAM, df_SubArea_NDVI_GAM_new)
+            #Bind the Polygon-specific dataframe with outlier-filtered GAM estimates to the dataframe containing all dataframes from previous iterations
+             df_Polygons_NDVI_GAM <- rbind(df_Polygons_NDVI_GAM, df_Polygon_NDVI_GAM_new)
   
             #Create more detailed predictions (not only at the doy present in the datframe) at a 1-day interval to plot more smooth curves
   
               #Refit GAM through data
-               index <- which(df_SubArea_NDVI_GAM_new$outliers==FALSE)
-               mod_gam <- with(df_SubArea_NDVI_GAM_new[index,], mgcv::gam(NDVI ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
+               index <- which(df_Polygon_NDVI_GAM_new$outliers==FALSE)
+               mod_gam <- with(df_Polygon_NDVI_GAM_new[index,], mgcv::gam(NDVI ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
   
               #Use gam to make predictions on a more detailed (1-day) day of year interval
-               df_SubArea_NDVI_GAM_predictions_new <- data.frame(SubArea=i, doy=seq(min(df_SubArea_NDVI_GAM_new$doy), max(df_SubArea_NDVI_GAM_new$doy), 0.01))
-               df_SubArea_NDVI_GAM_predictions_new$NDVI_gam_predict <- stats::predict(mod_gam, newdata=df_SubArea_NDVI_GAM_predictions_new, type="response")
-               df_SubArea_NDVI_GAM_predictions_new <- df_SubArea_NDVI_GAM_predictions_new[order(df_SubArea_NDVI_GAM_predictions_new$doy),]
+               df_Polygon_NDVI_GAM_predictions_new <- data.frame(Polygon=i, doy=seq(min(df_Polygon_NDVI_GAM_new$doy), max(df_Polygon_NDVI_GAM_new$doy), 0.01))
+               df_Polygon_NDVI_GAM_predictions_new$NDVI_gam_predict <- stats::predict(mod_gam, newdata=df_Polygon_NDVI_GAM_predictions_new, type="response")
+               df_Polygon_NDVI_GAM_predictions_new <- df_Polygon_NDVI_GAM_predictions_new[order(df_Polygon_NDVI_GAM_predictions_new$doy),]
   
-              #Add predictions to df_SubAreas_NDVI_GAM_predictions dataframe:
-               df_SubAreas_NDVI_GAM_predictions <- rbind(df_SubAreas_NDVI_GAM_predictions, df_SubArea_NDVI_GAM_predictions_new)
+              #Add predictions to df_Polygons_NDVI_GAM_predictions dataframe:
+               df_Polygons_NDVI_GAM_predictions <- rbind(df_Polygons_NDVI_GAM_predictions, df_Polygon_NDVI_GAM_predictions_new)
   
             }
   
-          #Change subArea column to factor
-          df_SubAreas_NDVI_GAM$SubArea <- as.factor(as.character(df_SubAreas_NDVI_GAM$SubArea))
-          df_SubAreas_NDVI_GAM_predictions$SubArea <- as.factor(as.character(df_SubAreas_NDVI_GAM_predictions$SubArea))
+          #Change Polygon column to factor
+          df_Polygons_NDVI_GAM$Polygon <- as.factor(as.character(df_Polygons_NDVI_GAM$Polygon))
+          df_Polygons_NDVI_GAM_predictions$Polygon <- as.factor(as.character(df_Polygons_NDVI_GAM_predictions$Polygon))
   
           #Save dataframe with GAM fits for NDVI
-          #write.csv(df_SubAreas_NDVI_GAM, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_Data_NDVI_GAM.csv"), row.names = FALSE)
-          write.csv(df_SubAreas_NDVI_GAM_predictions, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_GAM_Predictions_NDVI.csv"), row.names = FALSE)
+          #write.csv(df_Polygons_NDVI_GAM, paste0(here(), "/Output/S2/05_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Data_NDVI_GAM.csv"), row.names = FALSE)
+          write.csv(df_Polygons_NDVI_GAM_predictions, paste0(here(), "/Output/S2/05_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_GAM_Predictions_NDVI.csv"), row.names = FALSE)
   
-        #(D.3) Plot the raw NDVI datapoints and gam predictions for each SubArea:
+        #(D.3) Plot the raw NDVI datapoints and gam predictions for each Polygon:
   
-           #Plot NDVI and model predictions for all SubAreas in a single plot
-            p_SubArea_NDVI = ggplot()+
-              geom_point(data=df_SubAreas_NDVI_GAM, aes(x=doy, y=NDVI, fill=SubArea, col=SubArea))+
-              geom_line(data=df_SubAreas_NDVI_GAM_predictions, aes(x=doy, y=NDVI_gam_predict, col=SubArea)) +
+           #Plot NDVI and model predictions for all Polygons in a single plot
+            p_Polygon_NDVI = ggplot()+
+              geom_point(data=df_Polygons_NDVI_GAM, aes(x=doy, y=NDVI, fill=Polygon, col=Polygon))+
+              geom_line(data=df_Polygons_NDVI_GAM_predictions, aes(x=doy, y=NDVI_gam_predict, col=Polygon)) +
               xlab(paste0("Day of year (starting at 01-01-", year_ID, ")")) +
               ylab("NDVI") +
               theme_tom()
         
-        #(D.4): Create a separate plot with GAM predictions per location
+        #(D.4): Create a separate plot with GAM predictions per polygon
             
             #Create an empty list to store plots
             list_plots_ndvi <- list(list())
             
-            #Loop through all SubAreas
-            for(i in unique(df_SubAreas_NDVI_GAM_predictions$SubArea)){
+            #Loop through all Polygons
+            for(i in unique(df_Polygons_NDVI_GAM_predictions$Polygon)){
               
-              #i=unique(df_SubAreas_NDVI_GAM_predictions$SubArea)[1]
+              #i=unique(df_Polygons_NDVI_GAM_predictions$Polygon)[1]
               
               #Create an index variable for parameter i
-              i_index <- which( unique(df_SubAreas_NDVI_GAM_predictions$SubArea) == i)
+              i_index <- which( unique(df_Polygons_NDVI_GAM_predictions$Polygon) == i)
               
-              #select datasets for current NDVI_threshold and SubArea:
-              df_SubArea_NDVI_GAM <- df_SubAreas_NDVI_GAM[df_SubAreas_NDVI_GAM$SubArea==i,]
-              df_SubArea_NDVI_GAM_predictions <- df_SubAreas_NDVI_GAM_predictions[df_SubAreas_NDVI_GAM_predictions$SubArea==i,]
+              #select datasets for current NDVI_threshold and Polygon:
+              df_Polygon_NDVI_GAM <- df_Polygons_NDVI_GAM[df_Polygons_NDVI_GAM$Polygon==i,]
+              df_Polygon_NDVI_GAM_predictions <- df_Polygons_NDVI_GAM_predictions[df_Polygons_NDVI_GAM_predictions$Polygon==i,]
         
-              #create plot for current SubArea and store it in list_plots_ndvi:
+              #create plot for current Polygon and store it in list_plots_ndvi:
               list_plots_ndvi[[i_index]] <- ggplot()+ 
-                geom_point(data=df_SubArea_NDVI_GAM[df_SubArea_NDVI_GAM$outliers==FALSE,], aes(x=doy, y=NDVI))+
-                geom_point(data=df_SubArea_NDVI_GAM[df_SubArea_NDVI_GAM$outliers==TRUE,], aes(x=doy, y=NDVI), col="black", pch=16, alpha=0.2)+
-                geom_line(data=df_SubArea_NDVI_GAM_predictions, aes(x=doy, y=NDVI_gam_predict), col="#08a31a", lwd=1.25)+
+                geom_point(data=df_Polygon_NDVI_GAM[df_Polygon_NDVI_GAM$outliers==FALSE,], aes(x=doy, y=NDVI))+
+                geom_point(data=df_Polygon_NDVI_GAM[df_Polygon_NDVI_GAM$outliers==TRUE,], aes(x=doy, y=NDVI), col="black", pch=16, alpha=0.2)+
+                geom_line(data=df_Polygon_NDVI_GAM_predictions, aes(x=doy, y=NDVI_gam_predict), col="#08a31a", lwd=1.25)+
                 geom_vline(xintercept = 150, colour="grey", lty=2)+
                 xlab(paste0("Day of year (starting at 01-01-", year_ID, ")")) +
                 ylab("NDVI") +
@@ -1902,115 +1902,115 @@
               
             }
             
-            #Plot NDVI and model predictions in a separate plot per SubArea
+            #Plot NDVI and model predictions in a separate plot per Polygon
             plots_ndvi <- list(list_plots_ndvi)
             plots_per_page = 25
             plots_ndvi <- lapply(plots_ndvi, function(x){split(x, ceiling(seq_along(plots_ndvi[[1]])/plots_per_page))})
             plots_ndvi <- unname(unlist(plots_ndvi, recursive = F))
-            pdf(paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_Plot_NDVI.pdf"), width=20, height=16, onefile = TRUE)
+            pdf(paste0(here(), "/Output/S2/05_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Plot_NDVI.pdf"), width=20, height=16, onefile = TRUE)
             for (k in seq(length(plots_ndvi))) { do.call("grid.arrange", plots_ndvi[[k]]) }
             dev.off()
  
 ########################################################################################################################################################################################
 
-    #(E): NDMI - Fit a Generalized Additive Model (GAM) through the NDMI data within each sub-area
+    #(E): NDMI - Fit a Generalized Additive Model (GAM) through the NDMI data within each polygon
   
         #(E.0) Print message
           cat("\n")
           print("--------------------------------------------------------------------------------------------------------------------------")
-          print(paste0("FIT A GAM THROUGH THE AVERAGE NDMI DATA PER LOCATIONID"))
+          print(paste0("FIT A GAM THROUGH THE AVERAGE NDMI DATA PER POLYGON"))
           print("--------------------------------------------------------------------------------------------------------------------------")
             
         #(E.1) Create an empty dataframe
-          df_SubAreas_NDMI_GAM <- data.frame(NDMI=numeric(),
+          df_Polygons_NDMI_GAM <- data.frame(NDMI=numeric(),
                                              Date=factor(),
                                              doy=numeric(),
-                                             SubArea=factor(),
+                                             Polygon=factor(),
                                              outliers=logical())
   
-          df_SubAreas_NDMI_GAM_predictions <- data.frame(SubArea=character(),
+          df_Polygons_NDMI_GAM_predictions <- data.frame(Polygon=character(),
                                                          doy=numeric(),
                                                          NDMI_gam_predict=numeric(),
                                                          stringsAsFactors=FALSE)
   
-        #(E.2) Loop through all SubAreas and fit a separate gam (with sequential outlier removal) to the SubArea-specific NDMI data
-          for(i in unique(df_SubAreas_BandValues$SubArea)){
+        #(E.2) Loop through all Polygons and fit a separate gam (with sequential outlier removal) to the Polygon-specific NDMI data
+          for(i in unique(df_Polygons_BandValues$Polygon)){
   
             #For debugging
-            #i=unique(df_SubAreas_BandValues$SubArea)[1]
+            #i=unique(df_Polygons_BandValues$Polygon)[1]
   
-            #Select SubArea-specific subset of data:
-            df_SubArea_NDMI_GAM_new <- df_SubAreas_BandValues[df_SubAreas_BandValues$SubArea==i &
-                                                              !is.na(df_SubAreas_BandValues$NDMI),
-                                                              c("NDMI", "Date", "doy", "SubArea")]
+            #Select Polygon-specific subset of data:
+            df_Polygon_NDMI_GAM_new <- df_Polygons_BandValues[df_Polygons_BandValues$Polygon==i &
+                                                              !is.na(df_Polygons_BandValues$NDMI),
+                                                              c("NDMI", "Date", "doy", "Polygon")]
   
-            #Fit a gam through the SubArea-specific NDMI ~ doy data and emply sequential outlier removal
-            df_SubArea_NDMI_GAM_new <- f_gam_SeqRemOutliers(data=df_SubArea_NDMI_GAM_new, y="NDMI", x="doy", outlier_removal=outlier_removal,
+            #Fit a gam through the Polygon-specific NDMI ~ doy data and emply sequential outlier removal
+            df_Polygon_NDMI_GAM_new <- f_gam_SeqRemOutliers(data=df_Polygon_NDMI_GAM_new, y="NDMI", x="doy", outlier_removal=outlier_removal,
                                                              outlier_thresh_1=outlier_thresh_1, outlier_thresh_2=outlier_thresh_2,
                                                              default_k=gam_k_outlier)
   
-            #Sort df_SubArea_NDMI_GAM_new by doy:
-            df_SubArea_NDMI_GAM_new <- df_SubArea_NDMI_GAM_new[order(df_SubArea_NDMI_GAM_new$doy),]
+            #Sort df_Polygon_NDMI_GAM_new by doy:
+            df_Polygon_NDMI_GAM_new <- df_Polygon_NDMI_GAM_new[order(df_Polygon_NDMI_GAM_new$doy),]
   
-            #Bind the SubArea-specific dataframe with outlier-filtered GAM estimates to the dataframe containing all dataframes from previous iterations
-             df_SubAreas_NDMI_GAM <- rbind(df_SubAreas_NDMI_GAM, df_SubArea_NDMI_GAM_new)
+            #Bind the Polygon-specific dataframe with outlier-filtered GAM estimates to the dataframe containing all dataframes from previous iterations
+             df_Polygons_NDMI_GAM <- rbind(df_Polygons_NDMI_GAM, df_Polygon_NDMI_GAM_new)
   
             #Create more detailed predictions (not only at the doy present in the datframe) at a 1-day interval to plot more smooth curves
   
               #Refit GAM through data
-               index <- which(df_SubArea_NDMI_GAM_new$outliers==FALSE)
-               mod_gam <- with(df_SubArea_NDMI_GAM_new[index,], mgcv::gam(NDMI ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
+               index <- which(df_Polygon_NDMI_GAM_new$outliers==FALSE)
+               mod_gam <- with(df_Polygon_NDMI_GAM_new[index,], mgcv::gam(NDMI ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
   
               #Use gam to make predictions on a more detailed (1-day) day of year interval
-               df_SubArea_NDMI_GAM_predictions_new <- data.frame(SubArea=i, doy=seq(min(df_SubArea_NDMI_GAM_new$doy), max(df_SubArea_NDMI_GAM_new$doy), 0.01))
-               df_SubArea_NDMI_GAM_predictions_new$NDMI_gam_predict <- stats::predict(mod_gam, newdata=df_SubArea_NDMI_GAM_predictions_new, type="response")
-               df_SubArea_NDMI_GAM_predictions_new <- df_SubArea_NDMI_GAM_predictions_new[order(df_SubArea_NDMI_GAM_predictions_new$doy),]
+               df_Polygon_NDMI_GAM_predictions_new <- data.frame(Polygon=i, doy=seq(min(df_Polygon_NDMI_GAM_new$doy), max(df_Polygon_NDMI_GAM_new$doy), 0.01))
+               df_Polygon_NDMI_GAM_predictions_new$NDMI_gam_predict <- stats::predict(mod_gam, newdata=df_Polygon_NDMI_GAM_predictions_new, type="response")
+               df_Polygon_NDMI_GAM_predictions_new <- df_Polygon_NDMI_GAM_predictions_new[order(df_Polygon_NDMI_GAM_predictions_new$doy),]
   
-              #Add predictions to df_SubAreas_NDMI_GAM_predictions dataframe:
-               df_SubAreas_NDMI_GAM_predictions <- rbind(df_SubAreas_NDMI_GAM_predictions, df_SubArea_NDMI_GAM_predictions_new)
+              #Add predictions to df_Polygons_NDMI_GAM_predictions dataframe:
+               df_Polygons_NDMI_GAM_predictions <- rbind(df_Polygons_NDMI_GAM_predictions, df_Polygon_NDMI_GAM_predictions_new)
   
             }
   
-          #Change subArea column to factor
-          df_SubAreas_NDMI_GAM$SubArea <- as.factor(as.character(df_SubAreas_NDMI_GAM$SubArea))
-          df_SubAreas_NDMI_GAM_predictions$SubArea <- as.factor(as.character(df_SubAreas_NDMI_GAM_predictions$SubArea))
+          #Change Polygon column to factor
+          df_Polygons_NDMI_GAM$Polygon <- as.factor(as.character(df_Polygons_NDMI_GAM$Polygon))
+          df_Polygons_NDMI_GAM_predictions$Polygon <- as.factor(as.character(df_Polygons_NDMI_GAM_predictions$Polygon))
   
           #Save dataframe with GAM fits for NDMI
-          #write.csv(df_SubAreas_NDMI_GAM, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_Data_NDMI_GAM.csv"), row.names = FALSE)
-          write.csv(df_SubAreas_NDMI_GAM_predictions, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_GAM_Predictions_NDMI.csv"), row.names = FALSE)
+          #write.csv(df_Polygons_NDMI_GAM, paste0(here(), "/Output/S2/05_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Data_NDMI_GAM.csv"), row.names = FALSE)
+          write.csv(df_Polygons_NDMI_GAM_predictions, paste0(here(), "/Output/S2/05_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_GAM_Predictions_NDMI.csv"), row.names = FALSE)
   
-        #(E.3) Plot the raw NDMI datapoints and gam predictions for each SubArea:
+        #(E.3) Plot the raw NDMI datapoints and gam predictions for each Polygon:
   
-           #Plot NDMI and model predictions for all SubAreas in a single plot
-            p_SubArea_NDMI = ggplot()+
-              geom_point(data=df_SubAreas_NDMI_GAM, aes(x=doy, y=NDMI, fill=SubArea, col=SubArea))+
-              geom_line(data=df_SubAreas_NDMI_GAM_predictions, aes(x=doy, y=NDMI_gam_predict, col=SubArea)) +
+           #Plot NDMI and model predictions for all Polygons in a single plot
+            p_Polygon_NDMI = ggplot()+
+              geom_point(data=df_Polygons_NDMI_GAM, aes(x=doy, y=NDMI, fill=Polygon, col=Polygon))+
+              geom_line(data=df_Polygons_NDMI_GAM_predictions, aes(x=doy, y=NDMI_gam_predict, col=Polygon)) +
               xlab(paste0("Day of year (starting at 01-01-", year_ID, ")")) +
               ylab("NDMI") +
               theme_tom()
   
-        #(E.4): Create a separate plot with GAM predictions per location
+        #(E.4): Create a separate plot with GAM predictions per polygon
   
             #Create an empty list to store plots
             list_plots_ndmi <- list(list())
   
-            #Loop through all SubAreas
-            for(i in unique(df_SubAreas_NDMI_GAM_predictions$SubArea)){
+            #Loop through all Polygons
+            for(i in unique(df_Polygons_NDMI_GAM_predictions$Polygon)){
   
-              #i=unique(df_SubAreas_NDMI_GAM_predictions$SubArea)[1]
+              #i=unique(df_Polygons_NDMI_GAM_predictions$Polygon)[1]
   
               #Create an index variable for parameter i
-              i_index <- which( unique(df_SubAreas_NDMI_GAM_predictions$SubArea) == i)
+              i_index <- which( unique(df_Polygons_NDMI_GAM_predictions$Polygon) == i)
   
-              #select datasets for current NDMI_threshold and SubArea:
-              df_SubArea_NDMI_GAM <- df_SubAreas_NDMI_GAM[df_SubAreas_NDMI_GAM$SubArea==i,]
-              df_SubArea_NDMI_GAM_predictions <- df_SubAreas_NDMI_GAM_predictions[df_SubAreas_NDMI_GAM_predictions$SubArea==i,]
+              #select datasets for current NDMI_threshold and Polygon:
+              df_Polygon_NDMI_GAM <- df_Polygons_NDMI_GAM[df_Polygons_NDMI_GAM$Polygon==i,]
+              df_Polygon_NDMI_GAM_predictions <- df_Polygons_NDMI_GAM_predictions[df_Polygons_NDMI_GAM_predictions$Polygon==i,]
   
-              #create plot for current SubArea and store it in list_plots_ndmi:
+              #create plot for current Polygon and store it in list_plots_ndmi:
               list_plots_ndmi[[i_index]] <- ggplot()+
-                geom_point(data=df_SubArea_NDMI_GAM[df_SubArea_NDMI_GAM$outliers==FALSE,], aes(x=doy, y=NDMI))+
-                geom_point(data=df_SubArea_NDMI_GAM[df_SubArea_NDMI_GAM$outliers==TRUE,], aes(x=doy, y=NDMI), col="black", pch=16, alpha=0.2)+
-                geom_line(data=df_SubArea_NDMI_GAM_predictions, aes(x=doy, y=NDMI_gam_predict), col="#16acde", lwd=1.25)+
+                geom_point(data=df_Polygon_NDMI_GAM[df_Polygon_NDMI_GAM$outliers==FALSE,], aes(x=doy, y=NDMI))+
+                geom_point(data=df_Polygon_NDMI_GAM[df_Polygon_NDMI_GAM$outliers==TRUE,], aes(x=doy, y=NDMI), col="black", pch=16, alpha=0.2)+
+                geom_line(data=df_Polygon_NDMI_GAM_predictions, aes(x=doy, y=NDMI_gam_predict), col="#16acde", lwd=1.25)+
                 geom_vline(xintercept = 150, colour="grey", lty=2)+
                 xlab(paste0("Day of year (starting at 01-01-", year_ID, ")")) +
                 ylab("NDMI") +
@@ -2019,35 +2019,35 @@
   
             }
   
-            #Plot NDMI and model predictions in a separate plot per SubArea
+            #Plot NDMI and model predictions in a separate plot per Polygon
             plots_ndmi <- list(list_plots_ndmi)
             plots_per_page = 25
             plots_ndmi <- lapply(plots_ndmi, function(x){split(x, ceiling(seq_along(plots_ndmi[[1]])/plots_per_page))})
             plots_ndmi <- unname(unlist(plots_ndmi, recursive = F))
-            pdf(paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_Plot_NDMI.pdf"), width=20, height=16, onefile = TRUE)
+            pdf(paste0(here(), "/Output/S2/05_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Plot_NDMI.pdf"), width=20, height=16, onefile = TRUE)
             for (k in seq(length(plots_ndmi))) { do.call("grid.arrange", plots_ndmi[[k]]) }
             dev.off()
 
-    #(F) Plot NDSI, NDVI and NDMI together in a plot per SubArea
+    #(F) Plot NDSI, NDVI and NDMI together in a plot per Polygon
         
         # #Plot:   
-        #  p_SubArea_BANDS_grid <- ggplot()+ 
-        #    geom_point(data=df_SubAreas_NDSI_GAM[df_SubAreas_NDSI_GAM$outliers==FALSE,], aes(x=doy, y=NDSI))+
-        #    geom_point(data=df_SubAreas_NDSI_GAM[df_SubAreas_NDSI_GAM$outliers==TRUE,], aes(x=doy, y=NDSI), col="black", pch=16, alpha=0.2)+
-        #    geom_point(data=df_SubAreas_NDVI_GAM[df_SubAreas_NDVI_GAM$outliers==FALSE,], aes(x=doy, y=NDVI), col="black")+
-        #    geom_point(data=df_SubAreas_NDVI_GAM[df_SubAreas_NDVI_GAM$outliers==TRUE,], aes(x=doy, y=NDVI), col="black", pch=16, alpha=0.2)+
-        #    geom_point(data=df_SubAreas_NDMI_GAM[df_SubAreas_NDMI_GAM$outliers==FALSE,], aes(x=doy, y=NDMI), col="black")+
-        #    geom_point(data=df_SubAreas_NDMI_GAM[df_SubAreas_NDMI_GAM$outliers==TRUE,], aes(x=doy, y=NDMI), col="black", pch=16, alpha=0.2)+
-        #    geom_line(data=df_SubAreas_NDSI_GAM_predictions, aes(x=doy, y=NDSI_gam_predict), col="#1620de", lwd=1.25)+
-        #    geom_line(data=df_SubAreas_NDVI_GAM_predictions, aes(x=doy, y=NDVI_gam_predict), col="#08a31a", lwd=1.25)+
-        #    geom_line(data=df_SubAreas_NDMI_GAM_predictions, aes(x=doy, y=NDMI_gam_predict), col="#16acde", lwd=1.25)+
+        #  p_Polygon_BANDS_grid <- ggplot()+ 
+        #    geom_point(data=df_Polygons_NDSI_GAM[df_Polygons_NDSI_GAM$outliers==FALSE,], aes(x=doy, y=NDSI))+
+        #    geom_point(data=df_Polygons_NDSI_GAM[df_Polygons_NDSI_GAM$outliers==TRUE,], aes(x=doy, y=NDSI), col="black", pch=16, alpha=0.2)+
+        #    geom_point(data=df_Polygons_NDVI_GAM[df_Polygons_NDVI_GAM$outliers==FALSE,], aes(x=doy, y=NDVI), col="black")+
+        #    geom_point(data=df_Polygons_NDVI_GAM[df_Polygons_NDVI_GAM$outliers==TRUE,], aes(x=doy, y=NDVI), col="black", pch=16, alpha=0.2)+
+        #    geom_point(data=df_Polygons_NDMI_GAM[df_Polygons_NDMI_GAM$outliers==FALSE,], aes(x=doy, y=NDMI), col="black")+
+        #    geom_point(data=df_Polygons_NDMI_GAM[df_Polygons_NDMI_GAM$outliers==TRUE,], aes(x=doy, y=NDMI), col="black", pch=16, alpha=0.2)+
+        #    geom_line(data=df_Polygons_NDSI_GAM_predictions, aes(x=doy, y=NDSI_gam_predict), col="#1620de", lwd=1.25)+
+        #    geom_line(data=df_Polygons_NDVI_GAM_predictions, aes(x=doy, y=NDVI_gam_predict), col="#08a31a", lwd=1.25)+
+        #    geom_line(data=df_Polygons_NDMI_GAM_predictions, aes(x=doy, y=NDMI_gam_predict), col="#16acde", lwd=1.25)+
         #    geom_vline(xintercept = 150, colour="grey", lty=2)+
-        #    facet_wrap(~SubArea, ncol=ceiling(length(unique(df_SubAreas_NDMI_GAM$SubArea))^0.5))+
+        #    facet_wrap(~Polygon, ncol=ceiling(length(unique(df_Polygons_NDMI_GAM$Polygon))^0.5))+
         #    xlab("Day of year") + 
         #    ylab("Normalized Difference Band Index") +
         #    theme_tom()
         #  
-        #    ggsave(plot=p_SubArea_BANDS_grid, paste0(here(), "/Output/S2/06_Shapefile_SubAreas_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_SubAreas_Plot_AllBands.pdf"), width=14, height = 12)
+        #    ggsave(plot=p_Polygon_BANDS_grid, paste0(here(), "/Output/S2/05_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Plot_AllBands.pdf"), width=14, height = 12)
         
 } 
       
