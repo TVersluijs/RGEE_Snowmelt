@@ -17,19 +17,19 @@
 #It is harder to justify the 'avg_NDSI' method, because it is rather unclear what this average NDSI value entails. An even better approach 
 #is to calculate the date of snowmelt on a pixel level by fitting GAMS through pixel-level NDSI data (i.e. method = 'pixel_gam'), and to
 #use these pixel-level snowmelt dates to calculate the fraction of snow-covered pixels at each day of year. However, this approach
-#is not implemented in this script (07). Instead, it is implemented in script "04-RGEE_TomVersluijs_S2_Points_Snowmelt.R", and in script
-#"08-RGEE_TomVersluijs_S2_Shapefile_Pixel_Snowmelt.R". In the former script, these calculations are made for all pixels within the buffer
+#is not implemented in this script (08). Instead, it is implemented in script "06-RGEE_TomVersluijs_S2_Points_Snowmelt.R", and in script
+#"05-RGEE_TomVersluijs_S2_Pixels_Snowmelt.R". In the former script, these calculations are made for all pixels within the buffer
 #zone of point locations. In the latter script these calculates are made for all pixels within a user-specified shapefile, resulting in a 
-#pixel-level map of the timing of snowmelt. Script "10-RGEE_TomVersluijs_S2_ExtractSnowFraction.R" can then be used to extract timeseries 
+#pixel-level map of the timing of snowmelt. Script "10-RGEE_TomVersluijs_ExtractSnowFraction.R" can then be used to extract timeseries 
 #of the fraction of snowcover for points/polygons of interest from this map.
 
-#The current script (07) is similar to the script '04-RGEE_TomVersluijs_S2_Points_Snowmelt.R'. However, in the latter script all points  
+#The current script (08) is similar to the script '06-RGEE_TomVersluijs_S2_Points_Snowmelt.R'. However, in the latter script all points  
 #are analysed consecutively using a loop, which makes that script significantly slower to run. That script does not rely on a shapefile 
 #and thus works for points spaced much further apart (i.e. tracking data of migratory birds). The current script only works for small 
 #areas of c.a. 50-100 km2 (larger areas might result in computation errors unless the spatial resolution of the analyses is decreased).
-#In addition, the 'pixel_gam' method is implemented in script "04", but not in the current script "07".
+#In addition, the 'pixel_gam' method is implemented in script "06", but not in the current script "08".
 
-#Copyright Tom Versluijs 2024-04-03. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
+#Copyright Tom Versluijs 2024-07-16. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
 
 #Before running this script make sure to install RGEE according to the instructions in script "00-RGEE_TomVersluijs_Installation.R". 
 #Note that a GoogleDrive is required. Important: make sure to run this script from within the "RGEE_Snowmelt.Rproj" project file.
@@ -238,10 +238,10 @@
     if(mask_water==TRUE & (mask_water_type=="water_mask_Manual" | mask_water_type=="both")){mask_clouds=TRUE}      
     
     #Create output folder
-    if(dir.exists(paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt"))==FALSE){dir.create(paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt"), recursive = TRUE)}
+    if(dir.exists(paste0(here(), "/Output/S2/08_Shapefile_Points_Snowmelt"))==FALSE){dir.create(paste0(here(), "/Output/S2/08_Shapefile_Points_Snowmelt"), recursive = TRUE)}
     
     #Save all parameters and their values in the environment to a text file 
-    file_conn <- file(paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Parameters.txt"), "w")
+    file_conn <- file(paste0(here(), "/Output/S2/08_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Parameters.txt"), "w")
     for (obj in setdiff(ls(), lsf.str())) {cat(paste(obj, "=", get(obj)), file = file_conn) ; cat("\n", file = file_conn)}
     close(file_conn)
     
@@ -774,7 +774,7 @@
         ee_monitoring(task_vector0, task_time=60, max_attempts=1000000)
 
        #Export results to local folder
-        exported_stats <- ee_drive_to_local(task = task_vector0, dsn=paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Data_Pixel_Counts_polygon"))
+        exported_stats <- ee_drive_to_local(task = task_vector0, dsn=paste0(here(), "/Output/S2/08_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Data_Pixel_Counts_polygon"))
         df_pixelcount <- read.csv(exported_stats)
         unlink(exported_stats)
 
@@ -789,7 +789,7 @@
                                    total=max(df_pixelcount$total))
       df_pixelcount <- rbind(df_pixelcount, df_doy_missing)
       df_pixelcount <- df_pixelcount[order(df_pixelcount$doy),]
-      write.csv(df_pixelcount, file=paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Data_Pixel_Counts_polygon.csv"), quote=FALSE, row.names=FALSE)
+      write.csv(df_pixelcount, file=paste0(here(), "/Output/S2/08_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Data_Pixel_Counts_polygon.csv"), quote=FALSE, row.names=FALSE)
 
      #(E): Create barplot with the pixel counts per day of year within aoi_Shapefile
       df_pixelcount$masked <- df_pixelcount$total - df_pixelcount$unmasked
@@ -804,7 +804,7 @@
        theme_classic()
 
      #(F): Save barplot
-      pdf(paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Plot_Pixel_Counts_polygon.pdf"), width=12, height=8)
+      pdf(paste0(here(), "/Output/S2/08_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Plot_Pixel_Counts_polygon.pdf"), width=12, height=8)
       print(p_pixelcounts)
       dev.off()
       
@@ -869,7 +869,7 @@
         ee_monitoring(task_vector1, task_time=60, max_attempts=1000000) #250s at 100m
         
         #Import results
-        exported_stats <- ee_drive_to_local(task=task_vector1, dsn=paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Data_MeanBandvalues"))
+        exported_stats <- ee_drive_to_local(task=task_vector1, dsn=paste0(here(), "/Output/S2/08_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Data_MeanBandvalues"))
         Locations_Data_BandValues <- read.csv(exported_stats)
         unlink(exported_stats)
         
@@ -891,7 +891,7 @@
         Locations_Data_BandValues <- left_join(Locations_Data_BandValues, Locations_sf[,c("LON_x", "LAT_y", "LocationID")], by=c("LocationID"))
         
         #Save dataframe
-        write.csv(Locations_Data_BandValues, paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Data_MeanBandvalues.csv"), row.names = FALSE)
+        write.csv(Locations_Data_BandValues, paste0(here(), "/Output/S2/08_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Data_MeanBandvalues.csv"), row.names = FALSE)
         
     }
       
@@ -997,7 +997,7 @@
         ee_monitoring(task_vector2, task_time=60, max_attempts=1000000) #250s at 100m
 
        #Import results
-        exported_stats <- ee_drive_to_local(task=task_vector2, dsn=paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Locations_Data_SnowFraction"))
+        exported_stats <- ee_drive_to_local(task=task_vector2, dsn=paste0(here(), "/Output/S2/08_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Locations_Data_SnowFraction"))
         df_Locations_SnowFraction_new <- read.csv(exported_stats)
         unlink(exported_stats)
 
@@ -1029,8 +1029,8 @@
        }
 
     #Save dataframe
-    write.csv(df_Locations_SnowFraction, paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Data_SnowFraction.csv"), row.names = FALSE)
-    #df_Locations_SnowFraction <- read.csv(file=paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Data_SnowFraction.csv"), header=T)
+    write.csv(df_Locations_SnowFraction, paste0(here(), "/Output/S2/08_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Data_SnowFraction.csv"), row.names = FALSE)
+    #df_Locations_SnowFraction <- read.csv(file=paste0(here(), "/Output/S2/08_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Data_SnowFraction.csv"), header=T)
 
     }
       
@@ -1119,8 +1119,8 @@
               df_Locations_NDSI_predictions$LocationID <- as.factor(as.character(df_Locations_NDSI_predictions$LocationID))
 
              #Save dataframe with GAM fits for NDSI
-              #write.csv(df_Locations_NDSI, paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Data_NDSI_GAM.csv"), row.names = FALSE)
-              write.csv(df_Locations_NDSI_predictions, paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_GAM_Predictions_NDSI.csv"), row.names = FALSE)
+              #write.csv(df_Locations_NDSI, paste0(here(), "/Output/S2/08_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Data_NDSI_GAM.csv"), row.names = FALSE)
+              write.csv(df_Locations_NDSI_predictions, paste0(here(), "/Output/S2/08_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_GAM_Predictions_NDSI.csv"), row.names = FALSE)
               
          #(d) Plot the raw NDSI datapoints and gam predictions for each Location:
 
@@ -1144,7 +1144,7 @@
                 ylab("NDSI") +
                 theme_tom()
 
-                #ggsave(plot=p_Locations_NDSI_grid, paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Plot_NDSI.pdf"), width=12, height = 10)
+                #ggsave(plot=p_Locations_NDSI_grid, paste0(here(), "/Output/S2/08_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Plot_NDSI.pdf"), width=12, height = 10)
 
          #(e) Calculate at which day of year the average NDSI is equal to NDSI_threshold_vector for each location using predictions from mod_gam
 
@@ -1195,13 +1195,13 @@
               df_Snowmelt_NDSI_Locations <- left_join(df_Snowmelt_NDSI_Locations, Locations_sf, by=c("LocationID"))  
               
               #Save dates of snowmelt per Location as a .csv file
-              write.csv(df_Snowmelt_NDSI_Locations, paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Snowmelt_NDSI.csv"), row.names = FALSE)
+              write.csv(df_Snowmelt_NDSI_Locations, paste0(here(), "/Output/S2/08_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Snowmelt_NDSI.csv"), row.names = FALSE)
               
               #Add dates of snowmelt to the plot 'p_Locations_NDSI_grid'
               p_Locations_NDSI_Snowmelt_grid <- p_Locations_NDSI_grid +
                 geom_point(data=df_Snowmelt_NDSI_Locations[!is.na(df_Snowmelt_NDSI_Locations$doy),], aes(x=doy, y=NDSI_threshold), col="red", size=3)
               
-              ggsave(plot=p_Locations_NDSI_Snowmelt_grid, paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Plot_NDSI.pdf"), width=12, height = 10)
+              ggsave(plot=p_Locations_NDSI_Snowmelt_grid, paste0(here(), "/Output/S2/08_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Plot_NDSI.pdf"), width=12, height = 10)
               }
               
       #VEGETATION - Fit a Generalized Additive Model (GAM) through the NDVI data for each location
@@ -1261,8 +1261,8 @@
              df_Locations_NDVI_predictions$LocationID <- as.factor(as.character(df_Locations_NDVI_predictions$LocationID))
 
              #Save dataframe with GAM fits for NDVI
-             #write.csv(df_Locations_NDVI, paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Data_NDVI_GAM.csv"), row.names = FALSE)
-             write.csv(df_Locations_NDVI_predictions, paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_GAM_Predictions_NDVI.csv"), row.names = FALSE)
+             #write.csv(df_Locations_NDVI, paste0(here(), "/Output/S2/08_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Data_NDVI_GAM.csv"), row.names = FALSE)
+             write.csv(df_Locations_NDVI_predictions, paste0(here(), "/Output/S2/08_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_GAM_Predictions_NDVI.csv"), row.names = FALSE)
              
          #(c) Plot the raw NDVI datapoints and gam predictions for each location:
 
@@ -1285,7 +1285,7 @@
                 ylab("NDVI") +
                 theme_tom()
 
-                ggsave(plot=p_Locations_NDVI_grid, paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Plot_NDVI.pdf"), width=12, height = 10)
+                ggsave(plot=p_Locations_NDVI_grid, paste0(here(), "/Output/S2/08_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Plot_NDVI.pdf"), width=12, height = 10)
               }
          
       #MOISTURE - Fit a Generalized Additive Model (GAM) through the NDMI data for each location
@@ -1344,8 +1344,8 @@
                df_Locations_NDMI_predictions$LocationID <- as.factor(as.character(df_Locations_NDMI_predictions$LocationID))
 
               #Save dataframe with GAM fits for NDMI
-               #write.csv(df_Locations_NDMI, paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Data_NDMI_GAM.csv"), row.names = FALSE)
-               write.csv(df_Locations_NDMI_predictions, paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_GAM_Predictions_NDMI.csv"), row.names = FALSE)
+               #write.csv(df_Locations_NDMI, paste0(here(), "/Output/S2/08_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Data_NDMI_GAM.csv"), row.names = FALSE)
+               write.csv(df_Locations_NDMI_predictions, paste0(here(), "/Output/S2/08_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_GAM_Predictions_NDMI.csv"), row.names = FALSE)
                
          #(c) Plot the raw NDMI datapoints and gam predictions for each location:
 
@@ -1368,7 +1368,7 @@
                 ylab("NDMI") +
                 theme_tom()
 
-                ggsave(plot=p_Locations_NDMI_grid, paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Plot_NDMI.pdf"), width=12, height = 10)
+                ggsave(plot=p_Locations_NDMI_grid, paste0(here(), "/Output/S2/08_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Plot_NDMI.pdf"), width=12, height = 10)
               }
                 
       #Plot NDSI, NDVI and NDMI together in a plot per location
@@ -1390,7 +1390,7 @@
             ylab("Normalized Difference Band Index") +
             theme_tom()
   
-            ggsave(plot=p_Locations_BANDS_grid, paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Plot_AllBands.pdf"), width=14, height =12)
+            ggsave(plot=p_Locations_BANDS_grid, paste0(here(), "/Output/S2/08_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Plot_AllBands.pdf"), width=14, height =12)
   
           }
       
@@ -1487,8 +1487,8 @@
              df_Locations_SnowFraction_GAM_predictions$LocationID <- as.factor(as.character(df_Locations_SnowFraction_GAM_predictions$LocationID))
 
              #Save dataframe with GAM fits for the SnowFraction data
-             #write.csv(df_Locations_SnowFraction_GAM, paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Data_SnowFraction_GAM.csv"), row.names = FALSE)
-             write.csv(df_Locations_SnowFraction_GAM_predictions, paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_GAM_Predictions_SnowFraction.csv"), row.names = FALSE)
+             #write.csv(df_Locations_SnowFraction_GAM, paste0(here(), "/Output/S2/08_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Data_SnowFraction_GAM.csv"), row.names = FALSE)
+             write.csv(df_Locations_SnowFraction_GAM_predictions, paste0(here(), "/Output/S2/08_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_GAM_Predictions_SnowFraction.csv"), row.names = FALSE)
              
         #(d) Plot the raw SnowFraction datapoints and gam predictions for each Location:
 
@@ -1513,7 +1513,7 @@
                ylab("Snowcover fraction per location") +
                theme_tom()
 
-               #ggsave(plot=p_Locations_SnowFraction_grid, paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Plot_SnowFraction.pdf"), width=12, height = 10)
+               #ggsave(plot=p_Locations_SnowFraction_grid, paste0(here(), "/Output/S2/08_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Plot_SnowFraction.pdf"), width=12, height = 10)
 
         #(e) Calculate at which day of year the SnowFraction is equal to Snowfraction_threshold_vector for each location using predictions from mod_gam
 
@@ -1569,13 +1569,13 @@
             df_Snowmelt_SnowFraction_Locations <- left_join(df_Snowmelt_SnowFraction_Locations, Locations_sf, by=c("LocationID"))
 
             #Save dates of snowmelt per Location per SnowFraction threshold as a .csv file
-            write.csv(df_Snowmelt_SnowFraction_Locations, paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Snowmelt_Snowfraction.csv"), row.names = FALSE)
+            write.csv(df_Snowmelt_SnowFraction_Locations, paste0(here(), "/Output/S2/08_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Snowmelt_Snowfraction.csv"), row.names = FALSE)
 
             #Add dates of snowmelt to the plot 'p_Locations_NDSI_grid'
             p_Locations_SnowFraction_Snowmelt_grid <- p_Locations_SnowFraction_grid +
               geom_point(data=df_Snowmelt_SnowFraction_Locations[!is.na(df_Snowmelt_SnowFraction_Locations$doy),], aes(x=doy, y=Snowfraction_threshold), col="red", size=3)
 
-            ggsave(plot=p_Locations_SnowFraction_Snowmelt_grid, paste0(here(), "/Output/S2/07_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Plot_Snowfraction.pdf"), width=12, height = 10)
+            ggsave(plot=p_Locations_SnowFraction_Snowmelt_grid, paste0(here(), "/Output/S2/08_Shapefile_Points_Snowmelt/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_Locations_Plot_Snowfraction.pdf"), width=12, height = 10)
           
         } 
 

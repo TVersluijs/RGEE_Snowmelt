@@ -4,7 +4,7 @@
 #Snowmelt is calculated per pixel by fitting a GAM through the average NDSI data and extracting the moment this GAM crosses a user 
 #specified NDSI threshold. This script requires a single shapefile of the study area as input. The user can specify whether clouds 
 #and permanent water bodies need to be masked. No composite image can be generated because this will result in computation errors.
-#After creating the snowmelt map, script "10-RGEE_TomVersluijs_S2_ExtractSnowFraction.R" can be used to extract timeseries of the 
+#After creating the snowmelt map, script "10-RGEE_TomVersluijs_ExtractSnowFraction.R" can be used to extract timeseries of the 
 #fraction of snowcover for points/polygon(s) of interest from this map.
 
 #Copyright Tom Versluijs 2024-04-03. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
@@ -202,10 +202,10 @@
        if(mask_water==TRUE & (mask_water_type=="water_mask_Manual" | mask_water_type=="both")){mask_clouds=TRUE}       
          
       #Create output folder
-       if(dir.exists(paste0(here(), "/Output/S2/08_Shapefile_Pixel_Snowmelt"))==FALSE){dir.create(paste0(here(), "/Output/S2/08_Shapefile_Pixel_Snowmelt"), recursive = TRUE)}
+       if(dir.exists(paste0(here(), "/Output/S2/05_Pixels_Snowmelt"))==FALSE){dir.create(paste0(here(), "/Output/S2/05_Pixels_Snowmelt"), recursive = TRUE)}
        
       #Save all parameters and their values in the environment to a text file 
-       file_conn <- file(paste0(here(), "/Output/S2/08_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Parameters.txt"), "w")
+       file_conn <- file(paste0(here(), "/Output/S2/05_Pixels_Snowmelt/", timestamp, "_", data_ID, "_Parameters.txt"), "w")
        for (obj in setdiff(ls(), lsf.str())) {cat(paste(obj, "=", get(obj)), file = file_conn) ; cat("\n", file = file_conn)}
        close(file_conn)
               
@@ -529,7 +529,7 @@
         ee_monitoring(task_vector0, quiet=T, max_attempts=1000000)
 
        #Export results to local folder
-        exported_stats <- ee_drive_to_local(task = task_vector0, dsn=paste0(here(), "/Output/S2/08_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Data_Pixel_Counts_polygon"))
+        exported_stats <- ee_drive_to_local(task = task_vector0, dsn=paste0(here(), "/Output/S2/05_Pixels_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Data_Pixel_Counts_polygon"))
         df_pixelcount <- read.csv(exported_stats)
         unlink(exported_stats)
 
@@ -544,7 +544,7 @@
                                    total=max(df_pixelcount$total))
       df_pixelcount <- rbind(df_pixelcount, df_doy_missing)
       df_pixelcount <- df_pixelcount[order(df_pixelcount$doy),]
-      write.csv(df_pixelcount, file=paste0(here(), "/Output/S2/08_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Data_Pixel_Counts_polygon.csv"), quote=FALSE, row.names=FALSE)
+      write.csv(df_pixelcount, file=paste0(here(), "/Output/S2/05_Pixels_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Data_Pixel_Counts_polygon.csv"), quote=FALSE, row.names=FALSE)
 
      #(E): Create barplot with the pixel counts per day of year within aoi_Shapefile
       df_pixelcount$masked <- df_pixelcount$total - df_pixelcount$unmasked
@@ -559,7 +559,7 @@
        theme_classic()
 
      #(F): Save barplot
-      pdf(paste0(here(), "/Output/S2/08_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Plot_Pixel_Counts_polygon.pdf"), width=12, height=8)
+      pdf(paste0(here(), "/Output/S2/05_Pixels_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Plot_Pixel_Counts_polygon.pdf"), width=12, height=8)
       print(p_pixelcounts)
       dev.off()
       
@@ -628,13 +628,13 @@
         #ee$data$getTaskList()
         #ee$data$cancelTask()
         
-        exported_stats <- ee_drive_to_local(task = task_vector1, dsn=paste0(here(), "/Output/S2/08_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Data_Pixel_NDSI_Shapefile"))
+        exported_stats <- ee_drive_to_local(task = task_vector1, dsn=paste0(here(), "/Output/S2/05_Pixels_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Data_Pixel_NDSI_Shapefile"))
         df_pixel_ndsi <- read.csv(exported_stats)
         b=Sys.time()
         print(paste0("Computation finished in ",  round(as.numeric(difftime(b, a, units="mins")),2), " minutes"))
 
        # #Load dataframe (takes ca 2 minutes):
-       #  df_pixel_ndsi <- read.csv(paste0(here(), "/Output/S2/08_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Data_Pixel_NDSI_Shapefile.csv"))
+       #  df_pixel_ndsi <- read.csv(paste0(here(), "/Output/S2/05_Pixels_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Data_Pixel_NDSI_Shapefile.csv"))
 
        #Add day of year
         df_pixel_ndsi$doy <- as.numeric(format(as.POSIXct(df_pixel_ndsi$Date, format = "%Y-%m-%d %H:%M:%S"), "%j"))
@@ -707,14 +707,14 @@
           df_pixel_snowmelt <- lapply(results, "[[", 1)
           df_pixel_snowmelt <- as.data.frame(do.call(rbind, do.call(c, df_pixel_snowmelt)))
           colnames(df_pixel_snowmelt)[colnames(df_pixel_snowmelt)=="x_threshold"] <- "doy_snowmelt"
-          write.csv(df_pixel_snowmelt, file=paste0(here(), "/Output/S2/08_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Data_Pixel_Snowmelt_Shapefile.csv"), quote = FALSE, row.names=FALSE)
+          write.csv(df_pixel_snowmelt, file=paste0(here(), "/Output/S2/05_Pixels_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Data_Pixel_Snowmelt_Shapefile.csv"), quote = FALSE, row.names=FALSE)
           
           # #Store plots per pixel
           # plot_pixel_snowmelt <- lapply(results, "[[", 2)
           # plot_pixel_snowmelt <- do.call(c, plot_pixel_snowmelt)
           # plots_per_page = 25
           # plot_pixel_snowmelt <- split(plot_pixel_snowmelt, ceiling(seq_along(plot_pixel_snowmelt)/plots_per_page))
-          # pdf(paste0(here(), "/Output/S2/08_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Plot_Pixel_Snowmelt_Shapefile.pdf"), width=20, height=16, onefile = TRUE)
+          # pdf(paste0(here(), "/Output/S2/05_Pixels_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Plot_Pixel_Snowmelt_Shapefile.pdf"), width=20, height=16, onefile = TRUE)
           # for (i in seq(length(plot_pixel_snowmelt))) { do.call("grid.arrange", plot_pixel_snowmelt[[i]]) }
           # dev.off()
           })
@@ -723,7 +723,7 @@
        #to c.a. 5 hours!
 
        # #Read dataframe
-       #  df_pixel_snowmelt <- read.csv(file=paste0(here(), "/Output/S2/08_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Data_Pixel_Snowmelt_Shapefile.csv"), header=TRUE)
+       #  df_pixel_snowmelt <- read.csv(file=paste0(here(), "/Output/S2/05_Pixels_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Data_Pixel_Snowmelt_Shapefile.csv"), header=TRUE)
        #  df_pixel_snowmelt now contains the date of snowmelt for each pixel within the area depicted by aoi_Shapefile.  
         
        #Clean up the cluster after finishing the parallel runs
@@ -807,7 +807,7 @@
        
        #This step results in memory errors (on the server side) when the image contains more than 2.5 million pixels. In the latter case
        #we need to split up our study area in several sub-areas (i.e. create separate adjacent shapefiles using QGIS). If such errors are
-       #encountered here then script "6-RGEE_TomVersluijs_PixelDateOfSnowmelt_TAY" should be run instead. 
+       #encountered here then script "09-RGEE_TomVersluijs_Pixels_Snowmelt_LargeAreas.R" should be run instead. 
     
         #(A): Select a single image from the image collection
          img <- s2_clouds_filtered$first()$select("NDSI")
@@ -903,7 +903,7 @@
            #ee_manage_assetlist(path_asset)
           
           #Save assetid2 for future downloading of FC_pixels_snowmelt_optimized
-           saveRDS(object=assetid2, file=paste0(here(), "/Output/S2/08_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Variable_AssetID.Rds"))
+           saveRDS(object=assetid2, file=paste0(here(), "/Output/S2/05_Pixels_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Variable_AssetID.Rds"))
            
           #Get feature collection from asset folder and create FC_pixels_snowmelt_optimized
            #assetid2=paste0(path_asset, "/", current_timestamp2, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_FC_pixels_snowmelt_optimized")
@@ -948,7 +948,7 @@
             #Start and monitor export task:
              task_vector3$start()
              ee_monitoring(task_vector3, task_time=30, max_attempts = 1000000)
-             ee_drive_to_local(task = task_vector3, dsn=paste0(here(), "/Output/S2/08_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, '_Pixel_Image_DoySnowmelt'))
+             ee_drive_to_local(task = task_vector3, dsn=paste0(here(), "/Output/S2/05_Pixels_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, '_Pixel_Image_DoySnowmelt'))
              
           #(E): Export RGB image to Google Drive (takes c.a. 2 minutes):
          
@@ -974,10 +974,10 @@
             #Start and monitor export task:
              task_vector4$start()
              ee_monitoring(task_vector4, task_time=30, max_attempts = 1000000)
-             ee_drive_to_local(task = task_vector4, dsn=paste0(here(), "/Output/S2/08_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_Image_DoySnowmelt_RGB"))  
+             ee_drive_to_local(task = task_vector4, dsn=paste0(here(), "/Output/S2/05_Pixels_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_Image_DoySnowmelt_RGB"))  
              
     #(24): Save workspace 
-     save.image(paste0(here(), "/Output/S2/08_Shapefile_Pixel_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Workspace_Backup_PixelDoySnowmelt.RData"))
+     save.image(paste0(here(), "/Output/S2/05_Pixels_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Workspace_Backup_PixelDoySnowmelt.RData"))
 
 
 ###########################################################################################################################################################################

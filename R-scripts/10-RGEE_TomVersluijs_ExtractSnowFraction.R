@@ -4,11 +4,11 @@
 #to the method 'pixel_gam' in the other scripts. Input locations can either be point locations with a corresponding buffer zone, 
 #or a collection of polygons in a shapefile.
 
-#This script depends on a snowmelt map generated for MODIS using script "01-RGEE_TomVersluijs_MODIS_Pixel_Snowmelt.R", 
-#or for Sentinel-2 using script "05-RGEE_TomVersluijs_S2_Pixel_Snowmelt.R". Please run either script before continuing 
+#This script depends on a snowmelt map generated for MODIS using script "01-RGEE_TomVersluijs_MODIS_Pixels_Snowmelt.R", 
+#or for Sentinel-2 using script "05-RGEE_TomVersluijs_S2_Pixels_Snowmelt.R". Please run either script before continuing 
 #with the analysis below.
 
-#Copyright Tom Versluijs 2024-04-03. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
+#Copyright Tom Versluijs 2024-07-16. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
 
 #Before running this script make sure to install RGEE according to the instructions in script "00-RGEE_TomVersluijs_Installation.R". 
 #Note that a GoogleDrive is required. Important: make sure to run this script from within the "RGEE_Snowmelt.Rproj" project file.
@@ -147,7 +147,7 @@
    if(satellite=="MODIS"){
      
      #Specify the folder where the snowmelt image is stored:
-     dir_SnowmeltImage <- paste0(here(), "/Output/MODIS/01_Pixel_Snowmelt/")
+     dir_SnowmeltImage <- paste0(here(), "/Output/MODIS/01_Pixels_Snowmelt/")
      
      #Create a unique data_ID:
      if(nchar(area_name)>3){area_name <- substr(area_name, start = 1, stop = 3)}
@@ -162,7 +162,7 @@
    if(satellite=="Sentinel2"){
      
      #Specify the folder where the snowmelt image is stored:
-     dir_SnowmeltImage <- paste0(here(), "/Output/S2/05_Pixel_Snowmelt/")
+     dir_SnowmeltImage <- paste0(here(), "/Output/S2/05_Pixels_Snowmelt/")
      
      #Create a unique data_ID:
      if(nchar(area_name)>3){area_name <- substr(area_name, start = 1, stop = 3)}
