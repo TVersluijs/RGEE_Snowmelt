@@ -5,7 +5,8 @@
 ####################################################################################################################################
 
 #DESCRIPTION: This script contains functions that can be mapped over a MODIS image collection to add new bands to each image.
-#At this moment, four different Normalized Difference functions are depicted.
+#At this moment, four different Normalized Difference functions are depicted and two different calculations for Fractional
+#Snow Cover (FSC, following Gascoin et al. 2020 and Aalstad et al. 2020).
 
 ####################################################################################################################################
 
@@ -33,5 +34,24 @@
                                        list('B4'=img$select('sur_refl_b04'),
                                             'B2'=img$select('sur_refl_b02')))$rename('NDWI')$copyProperties(img, img$propertyNames())))}
 
+#(V): Fractional Snow Cover (FSC) function for MODIS images:
+  get_FSC <- function(img){
+    
+    #Gascoin (2020) Remote Sensing:
+    x <- img$expression('2.65 * ndsi - 1.42', list('ndsi'=img$select('NDSI')))
+    FSC_Gascoin2020 <- img$expression('0.5 * ((exp((x)) - exp(-(x))) / (exp((x)) + exp(-(x)))) + 0.5', list('x'=x))$rename('FSC_Gascoin2020')
+    
+    #Aalstad (2020) Remote Sensing of Environment
+    FSC_Aalstad2020 <- img$expression('(1.45 * ndsi) - 0.01', list('ndsi'=img$select('NDSI')))$rename('FSC_Aalstad2020')
+    FSC_Aalstad2020 <- FSC_Aalstad2020$where(FSC_Aalstad2020$lt(0), ee$Image(0))
+    FSC_Aalstad2020 <- FSC_Aalstad2020$where(FSC_Aalstad2020$gt(1), ee$Image(1))
+    
+    #Return both measures as separate bands
+    return(img$addBands(FSC_Gascoin2020)$
+               addBands(FSC_Aalstad2020)$
+               copyProperties(img, img$propertyNames()))
+    
+  }
+  
 
 ######################################################################################################################################
