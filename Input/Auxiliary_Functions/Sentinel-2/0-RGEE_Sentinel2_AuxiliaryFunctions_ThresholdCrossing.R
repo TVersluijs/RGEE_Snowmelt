@@ -58,120 +58,149 @@ f_detect_threshold_date_parallel <- function(subset, pixelIDs_split=pixelIDs_spl
                        #Select dataframe for current pixel
                        df_tmp <- df_subset[df_subset[,pixel_ID_column]==pixel,]
 
-                       #Filter dataset by sequentially removing outliers using the function 'f_gam_SeqRemOutliers'
-                       df_tmp <- f_gam_SeqRemOutliers(data=df_tmp, y=y, x=x, outlier_removal=outlier_removal,
-                                                      outlier_thresh_1=outlier_thresh_1, outlier_thresh_2=outlier_thresh_2,
-                                                      default_k=gam_k_outlier)
-
-                       #Sort df_tmp by "x" (i.e. by day of year)
-                       df_tmp <- df_tmp[order(df_tmp[,x]),]
-
-                       #Change column names of response and predictor variable to y and x respectively
-                       colnames(df_tmp)[colnames(df_tmp)==y] <- "y"
-                       colnames(df_tmp)[colnames(df_tmp)==x] <- "x"
-
-                       #Fit a GAM through the filtered pixel-specific y~x data (exclude outliers)
-                       index <- which(df_tmp$outliers==FALSE)
-                       max_k_length <- length(unique(df_tmp[index,"x"]))
-                       mod_gam <- mgcv::gam(y ~ s(x, k=min(gam_k, max_k_length-1)), data=df_tmp[index,], method="REML")
-
-                       #Use the fitted GAM to make predictions of y based on a 1 day interval in x
-                       newdata <- base::data.frame(x=seq(min(df_tmp$x), max(df_tmp$x), 1))
-                       newdata$gam_predict <- stats::predict(mod_gam, newdata=newdata, type="response")
-
-                       #Detect for each threshold in y_threshold when this was crossed in newdata
-                       list_threshold <- lapply(y_threshold, function(y_threshold_i){
-
-                         #Detect cutoff points for crossing the threshold from above y_threshold_i to below y_threshold_i (e.g. snowmelt)
-                         newdata$cutoff <- ifelse(newdata$gam_predict >= y_threshold_i, 1, 0)
-                         newdata$dif <- c(0, diff(newdata$cutoff))
-                         #the column 'cutoff' indicates whether the gam prediction is above (1) or below (0) the y_threshold_i
-                         #the column 'dif' indicates when there is a change from 1 to 0 (-1) or 0 to 1 (1) in the column cutoff
-                         #Thus, those rows where the column 'dif' is equal to -1 indicate moments where the y value changes from above
-                         #the threshold to below the threshold. It might be possible that this happens multiple times within a season due to
-                         #measurement errors or cloud effects. We therefore need to determine which 'cutoff' most likely corresponds to the
-                         #final moment of threshold crossing (e.g. the actual moment of snowmelt)
-
-                         #If y_threshold_i was at least crossed once:
-                         if(any(newdata$dif<0)){
-
-                           #Select all moments (cutoffs) where dif==-1
-                           cutoffs <- data.frame(index=which(newdata$dif<0))
-
-                           #If direction of crossing was from above to below the threshold (e.g. snowmelt):
-
-                           #For the period 30 days after each cutoff point, sum the number of days that have a y value LARGERE than y_threshold_i.
-                           #If a cutoff represents the final moment the threshold is crossed, then we do not expect any days after this moment
-                           #with y > y_threshold_i. Thus, the closer this sum is to 0, the more likely this cutoff corresponds to the final moment
-                           #that this threshold is crossed (i.e. the actual moment of snowmelt).
-                           cutoffs$min <- cutoffs$index -30
-                           cutoffs$min[cutoffs$min<1] <- 1
-                           cutoffs$max <- cutoffs$index + 29
-                           cutoffs$max[cutoffs$max>nrow(newdata)] <- nrow(newdata)
-                           cutoffs$sum_cutoff_plus_30 <- apply(cutoffs, 1, function(x){sum(newdata$cutoff[x['index']:(x['max'])])})
-                           cutoff_best <- cutoffs[cutoffs$sum_cutoff_plus_30==min(cutoffs$sum_cutoff_plus_30),'index'][1]
-
-                           #Approximate day on which threshold is crossed in period from (cutoff_best-1 : cutoff_best)
-                           newdata_subset <- newdata[max(0, cutoff_best-2) : min(cutoff_best+1, nrow(newdata)),]
-                           x_threshold <- stats::approx(x = newdata_subset$gam_predict, y = newdata_subset$x, xout = y_threshold_i)$y[1]
-
+                       #If df_tmp contains at least two datapoints then fit a GAM and detect threshold crossing:
+                       if(nrow(df_tmp) > 1){
+                       
+                         #Filter dataset by sequentially removing outliers using the function 'f_gam_SeqRemOutliers'
+                         df_tmp <- f_gam_SeqRemOutliers(data=df_tmp, y=y, x=x, outlier_removal=outlier_removal,
+                                                        outlier_thresh_1=outlier_thresh_1, outlier_thresh_2=outlier_thresh_2,
+                                                        default_k=gam_k_outlier)
+  
+                         #Sort df_tmp by "x" (i.e. by day of year)
+                         df_tmp <- df_tmp[order(df_tmp[,x]),]
+  
+                         #Change column names of response and predictor variable to y and x respectively
+                         colnames(df_tmp)[colnames(df_tmp)==y] <- "y"
+                         colnames(df_tmp)[colnames(df_tmp)==x] <- "x"
+  
+                         #Fit a GAM through the filtered pixel-specific y~x data (exclude outliers)
+                         index <- which(df_tmp$outliers==FALSE)
+                         max_k_length <- length(unique(df_tmp[index,"x"]))
+                         mod_gam <- mgcv::gam(y ~ s(x, k=min(gam_k, max_k_length-1)), data=df_tmp[index,], method="REML")
+  
+                         #Use the fitted GAM to make predictions of y based on a 1 day interval in x
+                         newdata <- base::data.frame(x=seq(min(df_tmp$x), max(df_tmp$x), 1))
+                         newdata$gam_predict <- stats::predict(mod_gam, newdata=newdata, type="response")
+  
+                         #Detect for each threshold in y_threshold when this was crossed in newdata
+                         list_threshold <- lapply(y_threshold, function(y_threshold_i){
+  
+                           #Detect cutoff points for crossing the threshold from above y_threshold_i to below y_threshold_i (e.g. snowmelt)
+                           newdata$cutoff <- ifelse(newdata$gam_predict >= y_threshold_i, 1, 0)
+                           newdata$dif <- c(0, diff(newdata$cutoff))
+                           #the column 'cutoff' indicates whether the gam prediction is above (1) or below (0) the y_threshold_i
+                           #the column 'dif' indicates when there is a change from 1 to 0 (-1) or 0 to 1 (1) in the column cutoff
+                           #Thus, those rows where the column 'dif' is equal to -1 indicate moments where the y value changes from above
+                           #the threshold to below the threshold. It might be possible that this happens multiple times within a season due to
+                           #measurement errors or cloud effects. We therefore need to determine which 'cutoff' most likely corresponds to the
+                           #final moment of threshold crossing (e.g. the actual moment of snowmelt)
+  
+                           #If y_threshold_i was at least crossed once:
+                           if(any(newdata$dif<0)){
+  
+                             #Select all moments (cutoffs) where dif==-1
+                             cutoffs <- data.frame(index=which(newdata$dif<0))
+  
+                             #If direction of crossing was from above to below the threshold (e.g. snowmelt):
+  
+                             #For the period 30 days after each cutoff point, sum the number of days that have a y value LARGERE than y_threshold_i.
+                             #If a cutoff represents the final moment the threshold is crossed, then we do not expect any days after this moment
+                             #with y > y_threshold_i. Thus, the closer this sum is to 0, the more likely this cutoff corresponds to the final moment
+                             #that this threshold is crossed (i.e. the actual moment of snowmelt).
+                             cutoffs$min <- cutoffs$index -30
+                             cutoffs$min[cutoffs$min<1] <- 1
+                             cutoffs$max <- cutoffs$index + 29
+                             cutoffs$max[cutoffs$max>nrow(newdata)] <- nrow(newdata)
+                             cutoffs$sum_cutoff_plus_30 <- apply(cutoffs, 1, function(x){sum(newdata$cutoff[x['index']:(x['max'])])})
+                             cutoff_best <- cutoffs[cutoffs$sum_cutoff_plus_30==min(cutoffs$sum_cutoff_plus_30),'index'][1]
+  
+                             #Approximate day on which threshold is crossed in period from (cutoff_best-1 : cutoff_best)
+                             newdata_subset <- newdata[max(0, cutoff_best-2) : min(cutoff_best+1, nrow(newdata)),]
+                             x_threshold <- stats::approx(x = newdata_subset$gam_predict, y = newdata_subset$x, xout = y_threshold_i)$y[1]
+  
+                           }
+                           #If threshold was not crossed:
+                           if(!any(newdata$dif<0)){
+  
+                             #There was no date at which the threshold was crossed (set x_threshold to NA)
+                             x_threshold <- NA
+  
+                           }
+  
+                           #Store date at which threshold was crossed (e.g. date of snowmelt in case of y=NDSI) for each pixel in dataframe:
+                           df_pixel_threshold <- base::data.frame(pixel_ID=pixel, y_threshold=y_threshold_i, x_threshold=x_threshold)
+                           return(df_pixel_threshold)
+  
+                         })
+  
+                         #Store threshold crossing as dataframe
+                         df_pixel_threshold <- as.data.frame(do.call(rbind, list_threshold))
+  
+                         #Plot data
+                         if(pixel_gam_plots==T){
+  
+                           #if at least one threshold crossing was detected:
+                           if(any(!is.na(df_pixel_threshold$x_threshold))){
+  
+                             p_tmp <- ggplot2::ggplot()+
+                               geom_point(data=df_tmp[index,], aes(x=x, y=y))+
+                               geom_point(data=df_tmp[df_tmp$outliers==TRUE,], aes(x=x, y=y), col="black", pch=16, alpha=0.2)+
+                               geom_line(data=newdata, aes(x=x, y=gam_predict), col = "red") +
+                               geom_point(data=df_pixel_threshold, aes(x=x_threshold, y=y_threshold), col="blue", size=3)+
+                               geom_hline(data=df_pixel_threshold, aes(yintercept=y_threshold), lty=2, col="grey")+
+                               xlab(paste0("Day of year (starting at 01-01-", year_ID, ")")) +
+                               ylab(paste0(y, "-value at pixel")) +
+                               theme_classic()+
+                               ggtitle(pixel)
+  
+                           }
+  
+                           #If no threshold crossing was detected:
+                           if(!any(!is.na(df_pixel_threshold$x_threshold))){
+  
+                             p_tmp <- ggplot2::ggplot()+
+                               geom_point(data=df_tmp[index,], aes(x=x, y=y))+
+                               geom_point(data=df_tmp[df_tmp$outliers==TRUE,], aes(x=x, y=y), col="black", pch=16, alpha=0.2)+
+                               geom_line(data=newdata, aes(x=x, y=gam_predict), col = "red") +
+                               geom_hline(data=df_pixel_threshold, aes(yintercept=y_threshold), lty=2, col="grey")+
+                               xlab(paste0("Day of year (starting at 01-01-", year_ID, ")")) +
+                               ylab(paste0(y, "-value at pixel")) +
+                               theme_classic()+
+                               ggtitle(pixel)
+  
+                           }
+  
                          }
-                         #If threshold was not crossed:
-                         if(!any(newdata$dif<0)){
-
-                           #There was no date at which the threshold was crossed (set x_threshold to NA)
-                           x_threshold <- NA
-
-                         }
-
-                         #Store date at which threshold was crossed (e.g. date of snowmelt in case of y=NDSI) for each pixel in dataframe:
-                         df_pixel_threshold <- base::data.frame(pixel_ID=pixel, y_threshold=y_threshold_i, x_threshold=x_threshold)
-                         return(df_pixel_threshold)
-
-                       })
-
-                       #Store threshold crossing as dataframe
-                       df_pixel_threshold <- as.data.frame(do.call(rbind, list_threshold))
-
-                       #Plot data
-                       if(pixel_gam_plots==T){
-
-                         #if at least one threshold crossing was detected:
-                         if(any(!is.na(df_pixel_threshold$x_threshold))){
-
-                           p_tmp <- ggplot2::ggplot()+
-                             geom_point(data=df_tmp[index,], aes(x=x, y=y))+
-                             geom_point(data=df_tmp[df_tmp$outliers==TRUE,], aes(x=x, y=y), col="black", pch=16, alpha=0.2)+
-                             geom_line(data=newdata, aes(x=x, y=gam_predict), col = "red") +
-                             geom_point(data=df_pixel_threshold, aes(x=x_threshold, y=y_threshold), col="blue", size=3)+
-                             geom_hline(data=df_pixel_threshold, aes(yintercept=y_threshold), lty=2, col="grey")+
-                             xlab(paste0("Day of year (starting at 01-01-", year_ID, ")")) +
-                             ylab(paste0(y, "-value at pixel")) +
-                             theme_classic()+
-                             ggtitle(pixel)
-
-                         }
-
-                         #If no threshold crossing was detected:
-                         if(!any(!is.na(df_pixel_threshold$x_threshold))){
-
-                           p_tmp <- ggplot2::ggplot()+
-                             geom_point(data=df_tmp[index,], aes(x=x, y=y))+
-                             geom_point(data=df_tmp[df_tmp$outliers==TRUE,], aes(x=x, y=y), col="black", pch=16, alpha=0.2)+
-                             geom_line(data=newdata, aes(x=x, y=gam_predict), col = "red") +
-                             geom_hline(data=df_pixel_threshold, aes(yintercept=y_threshold), lty=2, col="grey")+
-                             xlab(paste0("Day of year (starting at 01-01-", year_ID, ")")) +
-                             ylab(paste0(y, "-value at pixel")) +
-                             theme_classic()+
-                             ggtitle(pixel)
-
+                         if(pixel_gam_plots==F){
+                           p_tmp <- NULL
                          }
 
                        }
-                       if(pixel_gam_plots==F){
-                         p_tmp <- NULL
+                       
+                       #If df_tmp contains less than two datapoints then do not fit GAM and return NA for threshold crossing:
+                       if(nrow(df_tmp) < 2){
+                         
+                         #Create empty dataframe
+                         df_pixel_threshold <- data.frame(pixel_ID=pixel, y_threshold=y_threshold, x_threshold=NA)
+                         
+                         #Plot data
+                         if(pixel_gam_plots==T){
+                           
+                           p_tmp <- ggplot2::ggplot()+
+                             geom_point(data=df_tmp, aes(x=x, y=y))+
+                             geom_hline(data=df_pixel_threshold, aes(yintercept=y_threshold), lty=2, col="grey")+
+                             xlab(paste0("Day of year (starting at 01-01-", year_ID, ")")) +
+                             ylab(paste0(y, "-value")) +
+                             theme_classic()+
+                             ggtitle(pixel)
+                           
+                           }
+                         if(pixel_gam_plots==F){
+                           p_tmp <- NULL
+                           }
+                         
                        }
-
+                         
                        #Store df_pixel_threshold and plot df_tmp in the multiresultclass object
                        result <- list(df_pixel_threshold, p_tmp)
 
