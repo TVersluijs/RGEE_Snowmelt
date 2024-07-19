@@ -8,7 +8,7 @@
 #or for Sentinel-2 using script "05-RGEE_TomVersluijs_S2_Pixels_Snowmelt.R". Please run either script before continuing 
 #with the analysis below.
 
-#Copyright Tom Versluijs 2024-07-16. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
+#Copyright Tom Versluijs 2024-07-19. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
 
 #Before running this script make sure to install RGEE according to the instructions in script "00-RGEE_TomVersluijs_Installation.R". 
 #Note that a GoogleDrive is required. Important: make sure to run this script from within the "RGEE_Snowmelt.Rproj" project file.
