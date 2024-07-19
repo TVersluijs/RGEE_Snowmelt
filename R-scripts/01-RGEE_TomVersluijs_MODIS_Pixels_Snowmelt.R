@@ -6,7 +6,7 @@
 #map, script "10-RGEE_TomVersluijs_ExtractSnowFraction.R" can then be used to extract timeseries of the fraction of 
 #snowcover for points/polygon(s) of interest from this map.
 
-#Copyright Tom Versluijs 2024-04-03. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
+#Copyright Tom Versluijs 2024-07-19. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
 
 #Before running this script make sure to install RGEE according to the instructions in script "00-RGEE_TomVersluijs_Installation.R". 
 #Note that a GoogleDrive is required. Important: make sure to run this script from within the "RGEE_Snowmelt.Rproj" project file.
@@ -76,8 +76,8 @@
      shapefile <- "ZAC_Outline_EPSG4326.shp"
 
      #Coordinate reference system used for calculations
-     #EPSG:4326 is recommended for areas spanning multiple UTM zones, but increased computation time (i.e. spherical coordinate system).
-     #EPSG:326XX is results in reduced computation time for areas located within a single UTM zone (i.e. planar coordinate system).
+     #EPSG:4326 is recommended
+     #EPSG:326XX might result in reduced computation time for areas located within a single UTM zone (i.e. planar coordinate system).
      crs <- "EPSG:4326"
 
    #(c) Dates
@@ -110,7 +110,7 @@
      
    #(f): Water masking
 
-     #Should permanent waterbodies be masked from the analysis (default=TRUE).
+     #Should permanent waterbodies be masked from the analysis using a 250m resolution Terra Land Water Mask dataset (default=TRUE).
      mask_water=TRUE
      
    #(g): GAM sequential outlier filtering

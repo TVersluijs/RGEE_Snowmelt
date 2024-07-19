@@ -5,7 +5,7 @@
 #snowmelt over the years for each pixel (i.e. slope of linear regression) and another image with the average timing of snowmelt 
 #over the years for each pixel (i.e. intercept of linear regression).
 
-#Copyright Tom Versluijs 2024-04-03. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
+#Copyright Tom Versluijs 2024-07-19. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
 
 #Before running this script make sure to install RGEE according to the instructions in script "00-RGEE_TomVersluijs_Installation.R". 
 #Note that a GoogleDrive is required. Important: make sure to run this script from within the "RGEE_Snowmelt.Rproj" project file.
@@ -76,8 +76,8 @@
      shapefile <- "ZAC_Outline_EPSG4326.shp"
      
      #Coordinate reference system used for calculations
-     #EPSG:4326 is recommended for areas spanning multiple UTM zones, but increased computation time (i.e. spherical coordinate system).
-     #EPSG:326XX is results in reduced computation time for areas located within a single UTM zone (i.e. planar coordinate system).
+     #EPSG:4326 is recommended
+     #EPSG:326XX might result in reduced computation time for areas located within a single UTM zone (i.e. planar coordinate system).
      crs <- "EPSG:4326"
 
    #(c) Dates
