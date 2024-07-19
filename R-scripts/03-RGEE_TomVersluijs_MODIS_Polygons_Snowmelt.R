@@ -81,7 +81,7 @@
 
      #Name of Shapefile containing either a single polygon, or a multi-polygon (located in '/Input/Shapefiles' folder)
 	   #Follow the guide "Manual_CreateShapefilePolygons.pdf" when creating this shapefile.
-     shapefile <- "TEST.shp"
+     shapefile <- "ZAC_TenEqualSizeVoronoiPolygons_EPSG4326.shp"
 
      #Coordinate reference system used for calculations
      #EPSG:4326 is recommended

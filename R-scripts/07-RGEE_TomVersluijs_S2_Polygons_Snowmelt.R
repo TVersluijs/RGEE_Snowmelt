@@ -85,7 +85,7 @@
 
      #Name of Shapefile containing either a single polygon, or a multi-polygon (located in '/Input/Shapefiles' folder)
 	   #Follow the guide "Manual_CreateShapefilePolygons.pdf" when creating this shapefile.
-     shapefile <- "ZAC_Test_EPSG4326.shp"
+     shapefile <- "ZAC_TenEqualSizeVoronoiPolygons_EPSG4326.shp"
 
      #Coordinate reference system used for calculations
      #EPSG:4326 is recommended for areas spanning multiple UTM zones, but increases computation time (i.e. spherical coordinate system).
@@ -104,10 +104,10 @@
    #(d) Snow detection
 
      #NDSI threshold for snow detection (specify multiple using c())
-     NDSI_threshold_vector = 0.4
+     NDSI_threshold_vector = c(0.3, 0.4, 0.5)
      
      #Define the snowcover fraction for which the date of its occurrence will be calculated (specify multiple using c())
-     Snowfraction_threshold_vector = 0.5
+     Snowfraction_threshold_vector = c(0.25, 0.5, 0.75)
      
      #Define the preferred method for the analysis of snowmelt
      method=c("avg_NDSI", "snowfraction") #either "avg_NDSI", "snowfraction", or a combination using c()
