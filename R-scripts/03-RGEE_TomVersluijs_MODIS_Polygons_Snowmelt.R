@@ -1035,12 +1035,12 @@
       #(5): Create a separate plot with GAM predictions per polygon and NDSI_threshold:
 
           #Create an empty list to store plots
-          list_plots_snowfraction <- list(list())
-
+          list_plots_snowfraction <- vector('list', length(unique(df_Polygons_SnowFraction_GAM_predictions$NDSI_threshold)))
+          
           #Loop through all levels of NDSI_threshold
           for(i in unique(df_Polygons_SnowFraction_GAM_predictions$NDSI_threshold)){
 
-            #i=unique(df_Polygons_SnowFraction_GAM_predictions$NDSI_threshold)[1]
+            #i=unique(df_Polygons_SnowFraction_GAM_predictions$NDSI_threshold)[2]
 
             #Create an index variable for parameter i
             i_index <- which( unique(df_Polygons_SnowFraction_GAM_predictions$NDSI_threshold) == i)
@@ -1081,7 +1081,7 @@
             plots_per_page = 25
             plots_snowfraction <- lapply(plots_snowfraction, function(x){split(x, ceiling(seq_along(plots_snowfraction[[1]])/plots_per_page))})
             plots_snowfraction <- unname(unlist(plots_snowfraction, recursive = F))
-            pdf(paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Plot_Snowfraction.pdf"), width=20, height=16, onefile = TRUE)
+            pdf(paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI_threshold_", NDSI_threshold_char, "_Polygons_Plot_Snowfraction.pdf"), width=20, height=16, onefile = TRUE)
             for (k in seq(length(plots_snowfraction))) { do.call("grid.arrange", plots_snowfraction[[k]]) }
             dev.off()
 
@@ -1231,7 +1231,7 @@
       #(A.5): Create a separate plot with GAM predictions per polygon
 
           #Create an empty list to store plots
-          list_plots_fsc_gascoin2020 <- list(list())
+          list_plots_fsc_gascoin2020 <- vector('list', length(unique(df_Polygons_FSC_Gascoin2020_GAM_predictions$Polygon)))
 
           #Loop through all Polygons
           for(i in unique(df_Polygons_FSC_Gascoin2020_GAM_predictions$Polygon)){
@@ -1406,7 +1406,7 @@
       #(B.5): Create a separate plot with GAM predictions per polygon
 
           #Create an empty list to store plots
-          list_plots_fsc_aalstad2020 <- list(list())
+          list_plots_fsc_aalstad2020 <- vector('list', length(unique(df_Polygons_FSC_Aalstad2020_GAM_predictions$Polygon)))
 
           #Loop through all Polygons
           for(i in unique(df_Polygons_FSC_Aalstad2020_GAM_predictions$Polygon)){
@@ -1581,7 +1581,7 @@
         #(C.5): Create a separate plot with GAM predictions per polygon
 
             #Create an empty list to store plots
-            list_plots_ndsi <- list(list())
+            list_plots_ndsi <- vector('list', length(unique(df_Polygons_NDSI_GAM_predictions$Polygon)))
 
             #Loop through all Polygons
             for(i in unique(df_Polygons_NDSI_GAM_predictions$Polygon)){
@@ -1721,7 +1721,7 @@
         #(D.4): Create a separate plot with GAM predictions per polygon
 
             #Create an empty list to store plots
-            list_plots_ndvi <- list(list())
+            list_plots_ndvi <- vector('list', length(unique(df_Polygons_NDVI_GAM_predictions$Polygon)))
 
             #Loop through all Polygons
             for(i in unique(df_Polygons_NDVI_GAM_predictions$Polygon)){
@@ -1858,7 +1858,7 @@
         #(E.4): Create a separate plot with GAM predictions per polygon
 
             #Create an empty list to store plots
-            list_plots_ndmi <- list(list())
+            list_plots_ndmi <- vector('list', length(unique(df_Polygons_NDMI_GAM_predictions$Polygon)))
 
             #Loop through all Polygons
             for(i in unique(df_Polygons_NDMI_GAM_predictions$Polygon)){
