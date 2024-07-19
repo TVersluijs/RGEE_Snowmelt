@@ -1,7 +1,7 @@
 ##################################################################################################################################
 
 #Use Sentinel-2 data to extract time series of (I) the average fractional snowcover (FSC), (II) the average NDVI, NDMI and NDSI,
-#and (III) the fraction of snowcover, for all polygons located within a shapefile. These shapefile can be specified by creating a
+#and (III) the fraction of snowcover, for all polygons located within a shapefile. This shapefile can be specified by creating a
 #single polygon, or multipolygon in e.g. QGIS (see manual). The fractional snowcover (FSC, I) is calculated based on two methods: 
 #following Gascoin et al 2020, and Aalstad et al 2020. This FSC is a within-pixel estimate of the fraction of snowcover, which is 
 #then averaged over all pixels per polygon. The fraction of snowcover (III) is instead estimated by calculating the fraction of 
@@ -17,7 +17,7 @@
 #This results in a pixel-level map of the date of snowmelt. Script "10-RGEE_TomVersluijs_ExtractSnowFraction.R" can then be
 #used to extract timeseries of the fraction of snowcover for points/polygons of interest from this map.
 
-#Copyright Tom Versluijs 2024-07-15. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
+#Copyright Tom Versluijs 2024-07-19. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
 
 #Before running this script make sure to install RGEE according to the instructions in script "00-RGEE_TomVersluijs_Installation.R". 
 #Note that a GoogleDrive is required. Important: make sure to run this script from within the "RGEE_Snowmelt.Rproj" project file.
@@ -88,9 +88,9 @@
      shapefile <- "ZAC_Test_EPSG4326.shp"
 
      #Coordinate reference system used for calculations
-     #EPSG:4326 is recommended for areas spanning multiple UTM zones, but increased computation time (i.e. spherical coordinate system).
-     #EPSG:326XX is results in reduced computation time for areas located within a single UTM zone (i.e. planar coordinate system).
-     crs <- "EPSG:32627"
+     #EPSG:4326 is recommended for areas spanning multiple UTM zones, but increases computation time (i.e. spherical coordinate system).
+     #EPSG:326XX might result in reduced computation time for areas located within a single UTM zone (i.e. planar coordinate system).
+     crs <- "EPSG:4326"
 
    #(c) Dates
 
@@ -1099,9 +1099,9 @@
       
       #We fit a Generalized Additive Model (GAM) through the data within each polygon. We do this using a sequential
       #process. We first fit a GAM through the data, calculating model predictions and residuals. We then exclude all 
-      #rows from the dataframe where the residual >= (0.25 * the range of the data). We then re-fit a GAM to this reduced 
+      #rows from the dataframe where the residual >= (0.4 * the range of the data). We then re-fit a GAM to this reduced 
       #dataset, make predictions and calculate residuals. We then exclude all rows from the reduced dataframe where the
-      #residual >= >= (0.1 * the range of the data). This gives us a final dataframe through which we fit a third
+      #residual >= >= (0.2 * the range of the data). This gives us a final dataframe through which we fit a third
       #GAM and store its model predictions given the dataset in which outliers were thus removed through two subsequent 
       #steps. This whole process is executed using the function f_gam_SeqRemOutliers. Note that a sequential step is
       #required because initially some datapoints might falsely be assigned a large residual because of one extreme
@@ -1142,7 +1142,7 @@
                                                                SnowFraction_gam_predict=numeric(), 
                                                                stringsAsFactors=FALSE)   
     
-      #(2) Loop through all Polygons and fit a separate gam (with sequential outlier removal) to the Polygon-specific SnowFraction data
+      #(2) Loop through all Polygons and fit a separate GAM (with sequential outlier removal) to the Polygon-specific SnowFraction data
         
           #Loop through all Polygons
           for(i in unique(df_Polygons_SnowFraction$Polygon)){
@@ -1161,37 +1161,57 @@
                                                                           df_Polygons_SnowFraction$NDSI_threshold==j &
                                                                           !is.na(df_Polygons_SnowFraction$SnowFraction),
                                                                           c("NDSI_threshold", "SnowFraction", "Date", "doy", "Polygon")]
-                                 
-              #Fit a gam through the Polygon-specific SnowFraction ~ doy data and emply sequential outlier removal
-              df_Polygon_SnowFraction_GAM_new <- f_gam_SeqRemOutliers(data=df_Polygon_SnowFraction_GAM_new, y="SnowFraction", x="doy", outlier_removal=outlier_removal, 
-                                                               outlier_thresh_1=outlier_thresh_1, outlier_thresh_2=outlier_thresh_2, 
-                                                               default_k=gam_k_outlier)
-            
-              #Sort df_Polygon_SnowFraction_GAM_new by doy:
-              df_Polygon_SnowFraction_GAM_new <- df_Polygon_SnowFraction_GAM_new[order(df_Polygon_SnowFraction_GAM_new$doy),]
-               
-              #Bind the Polygon-specific dataframe with outlier-filtered GAM estimates to the dataframe containing all dataframes from previous iterations
-               df_Polygons_SnowFraction_GAM <- rbind(df_Polygons_SnowFraction_GAM, df_Polygon_SnowFraction_GAM_new)
-            
-              #Create more detailed predictions (not only at the doy present in the dataframe) to plot more smooth curves
-             
-                #Refit GAM through data
-                 index <- which(df_Polygon_SnowFraction_GAM_new$outliers==FALSE)
-                 mod_gam <- with(df_Polygon_SnowFraction_GAM_new[index,], mgcv::gam(SnowFraction ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
-             
-                #Use gam to make predictions on a more detailed (1-day) day of year interval
-                 df_Polygon_SnowFraction_GAM_predictions_new <- data.frame(Polygon=i, NDSI_threshold=j, doy=seq(min(df_Polygon_SnowFraction_GAM_new$doy), max(df_Polygon_SnowFraction_GAM_new$doy), 0.01))
-                 df_Polygon_SnowFraction_GAM_predictions_new$SnowFraction_gam_predict <- stats::predict(mod_gam, newdata=df_Polygon_SnowFraction_GAM_predictions_new, type="response")
-                 df_Polygon_SnowFraction_GAM_predictions_new <- df_Polygon_SnowFraction_GAM_predictions_new[order(df_Polygon_SnowFraction_GAM_predictions_new$doy),]
                 
-                #Add predictions to df_Polygons_SnowFraction_GAM_predictions dataframe:  
-                 df_Polygons_SnowFraction_GAM_predictions <- rbind(df_Polygons_SnowFraction_GAM_predictions, df_Polygon_SnowFraction_GAM_predictions_new)
-             
-               }
+              #If there are at least two datapoints, then continue to fit the GAM
+              if(nrow(df_Polygon_SnowFraction_GAM_new) > 1){
+                               
+                #Fit a GAM through the Polygon-specific SnowFraction ~ doy data and employ sequential outlier removal
+                df_Polygon_SnowFraction_GAM_new <- f_gam_SeqRemOutliers(data=df_Polygon_SnowFraction_GAM_new, y="SnowFraction", x="doy", outlier_removal=outlier_removal, 
+                                                                 outlier_thresh_1=outlier_thresh_1, outlier_thresh_2=outlier_thresh_2, 
+                                                                 default_k=gam_k_outlier)
+              
+                #Sort df_Polygon_SnowFraction_GAM_new by doy:
+                df_Polygon_SnowFraction_GAM_new <- df_Polygon_SnowFraction_GAM_new[order(df_Polygon_SnowFraction_GAM_new$doy),]
+                 
+                #Bind the Polygon-specific dataframe with outlier-filtered GAM estimates to the dataframe containing all dataframes from previous iterations
+                 df_Polygons_SnowFraction_GAM <- rbind(df_Polygons_SnowFraction_GAM, df_Polygon_SnowFraction_GAM_new)
+              
+                #Create more detailed predictions (not only at the doy present in the dataframe) to plot more smooth curves
+               
+                  #Refit GAM through data
+                   index <- which(df_Polygon_SnowFraction_GAM_new$outliers==FALSE)
+                   mod_gam <- with(df_Polygon_SnowFraction_GAM_new[index,], mgcv::gam(SnowFraction ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
+               
+                  #Use GAM to make predictions on a more detailed (1-day) day of year interval
+                   df_Polygon_SnowFraction_GAM_predictions_new <- data.frame(Polygon=i, NDSI_threshold=j, doy=seq(min(df_Polygon_SnowFraction_GAM_new$doy), max(df_Polygon_SnowFraction_GAM_new$doy), 0.01))
+                   df_Polygon_SnowFraction_GAM_predictions_new$SnowFraction_gam_predict <- stats::predict(mod_gam, newdata=df_Polygon_SnowFraction_GAM_predictions_new, type="response")
+                   df_Polygon_SnowFraction_GAM_predictions_new <- df_Polygon_SnowFraction_GAM_predictions_new[order(df_Polygon_SnowFraction_GAM_predictions_new$doy),]
+                  
+                  #Add predictions to df_Polygons_SnowFraction_GAM_predictions dataframe:  
+                   df_Polygons_SnowFraction_GAM_predictions <- rbind(df_Polygons_SnowFraction_GAM_predictions, df_Polygon_SnowFraction_GAM_predictions_new)
+               
+                }
+              
+              #If there are less than two datapoints, then append empty dataframes
+              if(nrow(df_Polygon_SnowFraction_GAM_new) < 2){
+                
+                #Bind the empty dataframe to the dataframe containing all dataframes from previous iterations
+                if(nrow(df_Polygon_SnowFraction_GAM_new) < 1){df_Polygon_SnowFraction_GAM_new <- data.frame(NDSI_threshold=j, SnowFraction=NA, Date=NA, doy=NA, Polygon=i, outliers=NA)}
+                if(nrow(df_Polygon_SnowFraction_GAM_new) > 0){df_Polygon_SnowFraction_GAM_new$outliers <- NA}
+                df_Polygons_SnowFraction_GAM <- rbind(df_Polygons_SnowFraction_GAM, df_Polygon_SnowFraction_GAM_new)
+                
+                #Add empty GAM predictions to df_Polygons_SnowFraction_GAM_predictions dataframe:
+                df_Polygon_SnowFraction_GAM_predictions_new <- df_Polygon_SnowFraction_GAM_new[,c("Polygon", "NDSI_threshold", "doy")]
+                df_Polygon_SnowFraction_GAM_predictions_new$SnowFraction_gam_predict <- NA
+                df_Polygons_SnowFraction_GAM_predictions <- rbind(df_Polygons_SnowFraction_GAM_predictions, df_Polygon_SnowFraction_GAM_predictions_new)
+                
+                }
+              
+              }
             
             }
          
-          #Change Polygon column to factor
+          #Change Polygon column to a factor
           df_Polygons_SnowFraction_GAM$Polygon <- as.factor(as.character(df_Polygons_SnowFraction_GAM$Polygon))
           df_Polygons_SnowFraction_GAM_predictions$Polygon <- as.factor(as.character(df_Polygons_SnowFraction_GAM_predictions$Polygon))
           
@@ -1232,6 +1252,9 @@
             
             #Select dataset with GAM predictions for current Polygon
             df_Polygon_gam <- df_Polygons_SnowFraction_GAM_predictions[df_Polygons_SnowFraction_GAM_predictions$Polygon==i & !is.na(df_Polygons_SnowFraction_GAM_predictions$SnowFraction_gam_predict),]
+            
+            #If this results in an empty dataframe due to filtering of NAs then we return the original dataframe (required for threshold detection function below)
+            if(nrow(df_Polygon_gam) < 1){df_Polygon_gam <- df_Polygons_SnowFraction_GAM_predictions[df_Polygons_SnowFraction_GAM_predictions$Polygon==i,]}
             
             #Use the function f_detect_threshold_date_parallel to extract the moments the GAM predictions cross the thresholds in Snowfraction_threshold_vector (per level of NDSI_threshold)
             results <- f_detect_threshold_date_parallel(subset=1, #data subset (not relevant here, set to 1)
@@ -1290,12 +1313,12 @@
               #Create an index variable for parameter j
               j_index <- which( unique(df_Polygons_SnowFraction_GAM_predictions$Polygon) == j)
              
-              #select datasets for current NDSI_threshold and Polygon:
+              #Select datasets for current NDSI_threshold and Polygon:
               df_Polygon_SnowFraction_GAM <- df_Polygons_SnowFraction_GAM[df_Polygons_SnowFraction_GAM$NDSI_threshold==i & df_Polygons_SnowFraction_GAM$Polygon==j,]
               df_Polygon_SnowFraction_GAM_predictions <- df_Polygons_SnowFraction_GAM_predictions[df_Polygons_SnowFraction_GAM_predictions$NDSI_threshold==i & df_Polygons_SnowFraction_GAM_predictions$Polygon==j,]
               df_Polygon_SnowfractionDate <- df_Polygon_Snowfraction[df_Polygon_Snowfraction$NDSI_threshold==i & df_Polygon_Snowfraction$Polygon==j,]
               
-              #create plot for current NDSI_threshold and Polygon and store it in list_plots_snowfraction:
+              #Create plot for current NDSI_threshold and Polygon and store it in list_plots_snowfraction:
               list_plots_snowfraction[[i_index]][[j_index]] <- ggplot()+ 
                 geom_point(data=df_Polygon_SnowFraction_GAM[df_Polygon_SnowFraction_GAM$outliers==FALSE,], aes(x=doy, y=SnowFraction))+
                 geom_point(data=df_Polygon_SnowFraction_GAM[df_Polygon_SnowFraction_GAM$outliers==TRUE,], aes(x=doy, y=SnowFraction), col="black", pch=16, alpha=0.2)+
@@ -1351,7 +1374,7 @@
                                                                   FSC_Gascoin2020_gam_predict=numeric(),
                                                                   stringsAsFactors=FALSE)
   
-      #(A.2) Loop through all Polygons and fit a separate gam (with sequential outlier removal) to the Polygon-specific FSC_Gascoin2020 data
+      #(A.2) Loop through all Polygons and fit a separate GAM (with sequential outlier removal) to the Polygon-specific FSC_Gascoin2020 data
         for(i in unique(df_Polygons_BandValues$Polygon)){
   
           #For debugging
@@ -1362,31 +1385,51 @@
                                                                        !is.na(df_Polygons_BandValues$FSC_Gascoin2020),
                                                                        c("FSC_Gascoin2020", "Date", "doy", "Polygon")]
   
-          #Fit a gam through the Polygon-specific FSC_Gascoin2020 ~ doy data and emply sequential outlier removal
-          df_Polygon_FSC_Gascoin2020_GAM_new <- f_gam_SeqRemOutliers(data=df_Polygon_FSC_Gascoin2020_GAM_new, y="FSC_Gascoin2020", x="doy", outlier_removal=outlier_removal,
-                                                                     outlier_thresh_1=outlier_thresh_1, outlier_thresh_2=outlier_thresh_2,
-                                                                     default_k=gam_k_outlier)
-  
-          #Sort df_Polygon_FSC_Gascoin2020_GAM_new by doy:
-          df_Polygon_FSC_Gascoin2020_GAM_new <- df_Polygon_FSC_Gascoin2020_GAM_new[order(df_Polygon_FSC_Gascoin2020_GAM_new$doy),]
-  
-          #Bind the Polygon-specific dataframe with outlier-filtered GAM estimates to the dataframe containing all dataframes from previous iterations
-           df_Polygons_FSC_Gascoin2020_GAM <- rbind(df_Polygons_FSC_Gascoin2020_GAM, df_Polygon_FSC_Gascoin2020_GAM_new)
-  
-          #Create more detailed predictions (not only at the doy present in the datframe) at a 1-day interval to plot more smooth curves
-  
-            #Refit GAM through data
-             index <- which(df_Polygon_FSC_Gascoin2020_GAM_new$outliers==FALSE)
-             mod_gam <- with(df_Polygon_FSC_Gascoin2020_GAM_new[index,], mgcv::gam(FSC_Gascoin2020 ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
-  
-            #Use gam to make predictions on a more detailed interval
-             df_Polygon_FSC_Gascoin2020_GAM_predictions_new <- data.frame(Polygon=i, doy=seq(min(df_Polygon_FSC_Gascoin2020_GAM_new$doy), max(df_Polygon_FSC_Gascoin2020_GAM_new$doy), 0.01))
-             df_Polygon_FSC_Gascoin2020_GAM_predictions_new$FSC_Gascoin2020_gam_predict <- stats::predict(mod_gam, newdata=df_Polygon_FSC_Gascoin2020_GAM_predictions_new, type="response")
-             df_Polygon_FSC_Gascoin2020_GAM_predictions_new <- df_Polygon_FSC_Gascoin2020_GAM_predictions_new[order(df_Polygon_FSC_Gascoin2020_GAM_predictions_new$doy),]
-  
-            #Add predictions to df_Polygons_FSC_Gascoin2020_GAM_predictions dataframe:
-             df_Polygons_FSC_Gascoin2020_GAM_predictions <- rbind(df_Polygons_FSC_Gascoin2020_GAM_predictions, df_Polygon_FSC_Gascoin2020_GAM_predictions_new)
-  
+          #If there are at least two datapoints, then continue to fit the GAM
+          if(nrow(df_Polygon_FSC_Gascoin2020_GAM_new) > 1){ 
+          
+            #Fit a GAM through the Polygon-specific FSC_Gascoin2020 ~ doy data and emply sequential outlier removal
+            df_Polygon_FSC_Gascoin2020_GAM_new <- f_gam_SeqRemOutliers(data=df_Polygon_FSC_Gascoin2020_GAM_new, y="FSC_Gascoin2020", x="doy", outlier_removal=outlier_removal,
+                                                                       outlier_thresh_1=outlier_thresh_1, outlier_thresh_2=outlier_thresh_2,
+                                                                       default_k=gam_k_outlier)
+    
+            #Sort df_Polygon_FSC_Gascoin2020_GAM_new by doy:
+            df_Polygon_FSC_Gascoin2020_GAM_new <- df_Polygon_FSC_Gascoin2020_GAM_new[order(df_Polygon_FSC_Gascoin2020_GAM_new$doy),]
+    
+            #Bind the Polygon-specific dataframe with outlier-filtered GAM estimates to the dataframe containing all dataframes from previous iterations
+             df_Polygons_FSC_Gascoin2020_GAM <- rbind(df_Polygons_FSC_Gascoin2020_GAM, df_Polygon_FSC_Gascoin2020_GAM_new)
+    
+            #Create more detailed predictions (not only at the doy present in the datframe) at a 1-day interval to plot more smooth curves
+    
+              #Refit GAM through data
+               index <- which(df_Polygon_FSC_Gascoin2020_GAM_new$outliers==FALSE)
+               mod_gam <- with(df_Polygon_FSC_Gascoin2020_GAM_new[index,], mgcv::gam(FSC_Gascoin2020 ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
+    
+              #Use gam to make predictions on a more detailed interval
+               df_Polygon_FSC_Gascoin2020_GAM_predictions_new <- data.frame(Polygon=i, doy=seq(min(df_Polygon_FSC_Gascoin2020_GAM_new$doy), max(df_Polygon_FSC_Gascoin2020_GAM_new$doy), 0.01))
+               df_Polygon_FSC_Gascoin2020_GAM_predictions_new$FSC_Gascoin2020_gam_predict <- stats::predict(mod_gam, newdata=df_Polygon_FSC_Gascoin2020_GAM_predictions_new, type="response")
+               df_Polygon_FSC_Gascoin2020_GAM_predictions_new <- df_Polygon_FSC_Gascoin2020_GAM_predictions_new[order(df_Polygon_FSC_Gascoin2020_GAM_predictions_new$doy),]
+    
+              #Add predictions to df_Polygons_FSC_Gascoin2020_GAM_predictions dataframe:
+               df_Polygons_FSC_Gascoin2020_GAM_predictions <- rbind(df_Polygons_FSC_Gascoin2020_GAM_predictions, df_Polygon_FSC_Gascoin2020_GAM_predictions_new)
+    
+            }
+          
+          #If there are less than two datapoints, then append empty dataframes
+          if(nrow(df_Polygon_FSC_Gascoin2020_GAM_new) < 2){
+            
+            #Bind the empty dataframe to the dataframe containing all dataframes from previous iterations
+            if(nrow(df_Polygon_FSC_Gascoin2020_GAM_new) < 1){df_Polygon_FSC_Gascoin2020_GAM_new <- data.frame(FSC_Gascoin2020=NA, Date=NA, doy=NA, Polygon=i, outliers=NA)}
+            if(nrow(df_Polygon_FSC_Gascoin2020_GAM_new) > 0){df_Polygon_FSC_Gascoin2020_GAM_new$outliers <- NA}
+            df_Polygons_FSC_Gascoin2020_GAM <- rbind(df_Polygons_FSC_Gascoin2020_GAM, df_Polygon_FSC_Gascoin2020_GAM_new)
+            
+            #Add empty GAM predictions to df_Polygons_FSC_Gascoin2020_GAM_predictions dataframe:
+            df_Polygon_FSC_Gascoin2020_GAM_predictions_new <- df_Polygon_FSC_Gascoin2020_GAM_new[,c("Polygon", "doy")]
+            df_Polygon_FSC_Gascoin2020_GAM_predictions_new$FSC_Gascoin2020_gam_predict <- NA
+            df_Polygons_FSC_Gascoin2020_GAM_predictions <- rbind(df_Polygons_FSC_Gascoin2020_GAM_predictions, df_Polygon_FSC_Gascoin2020_GAM_predictions_new)
+            
+          }
+          
           }
   
         #Change Polygon column to factor
@@ -1506,7 +1549,7 @@
                                                                   FSC_Aalstad2020_gam_predict=numeric(),
                                                                   stringsAsFactors=FALSE)
   
-      #(B.2) Loop through all Polygons and fit a separate gam (with sequential outlier removal) to the Polygon-specific FSC_Aalstad2020 data
+      #(B.2) Loop through all Polygons and fit a separate GAM (with sequential outlier removal) to the Polygon-specific FSC_Aalstad2020 data
         for(i in unique(df_Polygons_BandValues$Polygon)){
   
           #For debugging
@@ -1517,31 +1560,51 @@
                                                                        !is.na(df_Polygons_BandValues$FSC_Aalstad2020),
                                                                        c("FSC_Aalstad2020", "Date", "doy", "Polygon")]
   
-          #Fit a gam through the Polygon-specific FSC_Aalstad2020 ~ doy data and emply sequential outlier removal
-          df_Polygon_FSC_Aalstad2020_GAM_new <- f_gam_SeqRemOutliers(data=df_Polygon_FSC_Aalstad2020_GAM_new, y="FSC_Aalstad2020", x="doy", outlier_removal=outlier_removal,
-                                                                     outlier_thresh_1=outlier_thresh_1, outlier_thresh_2=outlier_thresh_2,
-                                                                     default_k=gam_k_outlier)
-  
-          #Sort df_Polygon_FSC_Aalstad2020_GAM_new by doy:
-          df_Polygon_FSC_Aalstad2020_GAM_new <- df_Polygon_FSC_Aalstad2020_GAM_new[order(df_Polygon_FSC_Aalstad2020_GAM_new$doy),]
-  
-          #Bind the Polygon-specific dataframe with outlier-filtered GAM estimates to the dataframe containing all dataframes from previous iterations
-           df_Polygons_FSC_Aalstad2020_GAM <- rbind(df_Polygons_FSC_Aalstad2020_GAM, df_Polygon_FSC_Aalstad2020_GAM_new)
-  
-          #Create more detailed predictions (not only at the doy present in the datframe) at a 1-day interval to plot more smooth curves
-  
-            #Refit GAM through data
-             index <- which(df_Polygon_FSC_Aalstad2020_GAM_new$outliers==FALSE)
-             mod_gam <- with(df_Polygon_FSC_Aalstad2020_GAM_new[index,], mgcv::gam(FSC_Aalstad2020 ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
-  
-            #Use gam to make predictions on a more detailed interval
-             df_Polygon_FSC_Aalstad2020_GAM_predictions_new <- data.frame(Polygon=i, doy=seq(min(df_Polygon_FSC_Aalstad2020_GAM_new$doy), max(df_Polygon_FSC_Aalstad2020_GAM_new$doy), 0.01))
-             df_Polygon_FSC_Aalstad2020_GAM_predictions_new$FSC_Aalstad2020_gam_predict <- stats::predict(mod_gam, newdata=df_Polygon_FSC_Aalstad2020_GAM_predictions_new, type="response")
-             df_Polygon_FSC_Aalstad2020_GAM_predictions_new <- df_Polygon_FSC_Aalstad2020_GAM_predictions_new[order(df_Polygon_FSC_Aalstad2020_GAM_predictions_new$doy),]
-  
-            #Add predictions to df_Polygons_FSC_Aalstad2020_GAM_predictions dataframe:
-             df_Polygons_FSC_Aalstad2020_GAM_predictions <- rbind(df_Polygons_FSC_Aalstad2020_GAM_predictions, df_Polygon_FSC_Aalstad2020_GAM_predictions_new)
-  
+          #If there are at least two datapoints, then continue to fit the GAM
+          if(nrow(df_Polygon_FSC_Aalstad2020_GAM_new) > 1){
+          
+            #Fit a GAM through the Polygon-specific FSC_Aalstad2020 ~ doy data and emply sequential outlier removal
+            df_Polygon_FSC_Aalstad2020_GAM_new <- f_gam_SeqRemOutliers(data=df_Polygon_FSC_Aalstad2020_GAM_new, y="FSC_Aalstad2020", x="doy", outlier_removal=outlier_removal,
+                                                                       outlier_thresh_1=outlier_thresh_1, outlier_thresh_2=outlier_thresh_2,
+                                                                       default_k=gam_k_outlier)
+    
+            #Sort df_Polygon_FSC_Aalstad2020_GAM_new by doy:
+            df_Polygon_FSC_Aalstad2020_GAM_new <- df_Polygon_FSC_Aalstad2020_GAM_new[order(df_Polygon_FSC_Aalstad2020_GAM_new$doy),]
+    
+            #Bind the Polygon-specific dataframe with outlier-filtered GAM estimates to the dataframe containing all dataframes from previous iterations
+             df_Polygons_FSC_Aalstad2020_GAM <- rbind(df_Polygons_FSC_Aalstad2020_GAM, df_Polygon_FSC_Aalstad2020_GAM_new)
+    
+            #Create more detailed predictions (not only at the doy present in the datframe) at a 1-day interval to plot more smooth curves
+    
+              #Refit GAM through data
+               index <- which(df_Polygon_FSC_Aalstad2020_GAM_new$outliers==FALSE)
+               mod_gam <- with(df_Polygon_FSC_Aalstad2020_GAM_new[index,], mgcv::gam(FSC_Aalstad2020 ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
+    
+              #Use gam to make predictions on a more detailed interval
+               df_Polygon_FSC_Aalstad2020_GAM_predictions_new <- data.frame(Polygon=i, doy=seq(min(df_Polygon_FSC_Aalstad2020_GAM_new$doy), max(df_Polygon_FSC_Aalstad2020_GAM_new$doy), 0.01))
+               df_Polygon_FSC_Aalstad2020_GAM_predictions_new$FSC_Aalstad2020_gam_predict <- stats::predict(mod_gam, newdata=df_Polygon_FSC_Aalstad2020_GAM_predictions_new, type="response")
+               df_Polygon_FSC_Aalstad2020_GAM_predictions_new <- df_Polygon_FSC_Aalstad2020_GAM_predictions_new[order(df_Polygon_FSC_Aalstad2020_GAM_predictions_new$doy),]
+    
+              #Add predictions to df_Polygons_FSC_Aalstad2020_GAM_predictions dataframe:
+               df_Polygons_FSC_Aalstad2020_GAM_predictions <- rbind(df_Polygons_FSC_Aalstad2020_GAM_predictions, df_Polygon_FSC_Aalstad2020_GAM_predictions_new)
+    
+            }
+          
+          #If there are less than two datapoints, then append empty dataframes
+          if(nrow(df_Polygon_FSC_Aalstad2020_GAM_new) < 2){
+            
+            #Bind the empty dataframe to the dataframe containing all dataframes from previous iterations
+            if(nrow(df_Polygon_FSC_Aalstad2020_GAM_new) < 1){df_Polygon_FSC_Aalstad2020_GAM_new <- data.frame(FSC_Aalstad2020=NA, Date=NA, doy=NA, Polygon=i, outliers=NA)}
+            if(nrow(df_Polygon_FSC_Aalstad2020_GAM_new) > 0){df_Polygon_FSC_Aalstad2020_GAM_new$outliers <- NA}
+            df_Polygons_FSC_Aalstad2020_GAM <- rbind(df_Polygons_FSC_Aalstad2020_GAM, df_Polygon_FSC_Aalstad2020_GAM_new)
+            
+            #Add empty GAM predictions to df_Polygons_FSC_Aalstad2020_GAM_predictions dataframe:
+            df_Polygon_FSC_Aalstad2020_GAM_predictions_new <- df_Polygon_FSC_Aalstad2020_GAM_new[,c("Polygon", "doy")]
+            df_Polygon_FSC_Aalstad2020_GAM_predictions_new$FSC_Aalstad2020_gam_predict <- NA
+            df_Polygons_FSC_Aalstad2020_GAM_predictions <- rbind(df_Polygons_FSC_Aalstad2020_GAM_predictions, df_Polygon_FSC_Aalstad2020_GAM_predictions_new)
+            
+            }
+          
           }
   
         #Change Polygon column to factor
@@ -1661,7 +1724,7 @@
                                                          NDSI_gam_predict=numeric(),
                                                          stringsAsFactors=FALSE)
   
-        #(C.2) Loop through all Polygons and fit a separate gam (with sequential outlier removal) to the Polygon-specific NDSI data
+        #(C.2) Loop through all Polygons and fit a separate GAM (with sequential outlier removal) to the Polygon-specific NDSI data
           for(i in unique(df_Polygons_BandValues$Polygon)){
   
             #For debugging
@@ -1672,31 +1735,51 @@
                                                               !is.na(df_Polygons_BandValues$NDSI),
                                                               c("NDSI", "Date", "doy", "Polygon")]
   
-            #Fit a gam through the Polygon-specific NDSI ~ doy data and emply sequential outlier removal
-            df_Polygon_NDSI_GAM_new <- f_gam_SeqRemOutliers(data=df_Polygon_NDSI_GAM_new, y="NDSI", x="doy", outlier_removal=outlier_removal,
-                                                             outlier_thresh_1=outlier_thresh_1, outlier_thresh_2=outlier_thresh_2,
-                                                             default_k=gam_k_outlier)
-  
-            #Sort df_Polygon_NDSI_GAM_new by doy:
-            df_Polygon_NDSI_GAM_new <- df_Polygon_NDSI_GAM_new[order(df_Polygon_NDSI_GAM_new$doy),]
-  
-            #Bind the Polygon-specific dataframe with outlier-filtered GAM estimates to the dataframe containing all dataframes from previous iterations
-             df_Polygons_NDSI_GAM <- rbind(df_Polygons_NDSI_GAM, df_Polygon_NDSI_GAM_new)
-  
-            #Create more detailed predictions (not only at the doy present in the datframe) at a 1-day interval to plot more smooth curves
-  
-              #Refit GAM through data
-               index <- which(df_Polygon_NDSI_GAM_new$outliers==FALSE)
-               mod_gam <- with(df_Polygon_NDSI_GAM_new[index,], mgcv::gam(NDSI ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
-  
-              #Use gam to make predictions on a more detailed interval
-               df_Polygon_NDSI_GAM_predictions_new <- data.frame(Polygon=i, doy=seq(min(df_Polygon_NDSI_GAM_new$doy), max(df_Polygon_NDSI_GAM_new$doy), 0.01))
-               df_Polygon_NDSI_GAM_predictions_new$NDSI_gam_predict <- stats::predict(mod_gam, newdata=df_Polygon_NDSI_GAM_predictions_new, type="response")
-               df_Polygon_NDSI_GAM_predictions_new <- df_Polygon_NDSI_GAM_predictions_new[order(df_Polygon_NDSI_GAM_predictions_new$doy),]
-  
-              #Add predictions to df_Polygons_NDSI_GAM_predictions dataframe:
-               df_Polygons_NDSI_GAM_predictions <- rbind(df_Polygons_NDSI_GAM_predictions, df_Polygon_NDSI_GAM_predictions_new)
-  
+            #If there are at least two datapoints, then continue to fit the GAM
+            if(nrow(df_Polygon_NDSI_GAM_new) > 1){
+            
+              #Fit a gam through the Polygon-specific NDSI ~ doy data and emply sequential outlier removal
+              df_Polygon_NDSI_GAM_new <- f_gam_SeqRemOutliers(data=df_Polygon_NDSI_GAM_new, y="NDSI", x="doy", outlier_removal=outlier_removal,
+                                                               outlier_thresh_1=outlier_thresh_1, outlier_thresh_2=outlier_thresh_2,
+                                                               default_k=gam_k_outlier)
+    
+              #Sort df_Polygon_NDSI_GAM_new by doy:
+              df_Polygon_NDSI_GAM_new <- df_Polygon_NDSI_GAM_new[order(df_Polygon_NDSI_GAM_new$doy),]
+    
+              #Bind the Polygon-specific dataframe with outlier-filtered GAM estimates to the dataframe containing all dataframes from previous iterations
+               df_Polygons_NDSI_GAM <- rbind(df_Polygons_NDSI_GAM, df_Polygon_NDSI_GAM_new)
+    
+              #Create more detailed predictions (not only at the doy present in the datframe) at a 1-day interval to plot more smooth curves
+    
+                #Refit GAM through data
+                 index <- which(df_Polygon_NDSI_GAM_new$outliers==FALSE)
+                 mod_gam <- with(df_Polygon_NDSI_GAM_new[index,], mgcv::gam(NDSI ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
+    
+                #Use gam to make predictions on a more detailed interval
+                 df_Polygon_NDSI_GAM_predictions_new <- data.frame(Polygon=i, doy=seq(min(df_Polygon_NDSI_GAM_new$doy), max(df_Polygon_NDSI_GAM_new$doy), 0.01))
+                 df_Polygon_NDSI_GAM_predictions_new$NDSI_gam_predict <- stats::predict(mod_gam, newdata=df_Polygon_NDSI_GAM_predictions_new, type="response")
+                 df_Polygon_NDSI_GAM_predictions_new <- df_Polygon_NDSI_GAM_predictions_new[order(df_Polygon_NDSI_GAM_predictions_new$doy),]
+    
+                #Add predictions to df_Polygons_NDSI_GAM_predictions dataframe:
+                 df_Polygons_NDSI_GAM_predictions <- rbind(df_Polygons_NDSI_GAM_predictions, df_Polygon_NDSI_GAM_predictions_new)
+    
+              }
+            
+            #If there are less than two datapoints, then append empty dataframes
+            if(nrow(df_Polygon_NDSI_GAM_new) < 2){
+              
+              #Bind the empty dataframe to the dataframe containing all dataframes from previous iterations
+              if(nrow(df_Polygon_NDSI_GAM_new) < 1){df_Polygon_NDSI_GAM_new <- data.frame(NDSI=NA, Date=NA, doy=NA, Polygon=i, outliers=NA)}
+              if(nrow(df_Polygon_NDSI_GAM_new) > 0){df_Polygon_NDSI_GAM_new$outliers <- NA}
+              df_Polygons_NDSI_GAM <- rbind(df_Polygons_NDSI_GAM, df_Polygon_NDSI_GAM_new)
+              
+              #Add empty GAM predictions to df_Polygons_NDSI_GAM_predictions dataframe:
+              df_Polygon_NDSI_GAM_predictions_new <- df_Polygon_NDSI_GAM_new[,c("Polygon", "doy")]
+              df_Polygon_NDSI_GAM_predictions_new$NDSI_gam_predict <- NA
+              df_Polygons_NDSI_GAM_predictions <- rbind(df_Polygons_NDSI_GAM_predictions, df_Polygon_NDSI_GAM_predictions_new)
+              
+              }
+            
             }
   
           #Change Polygon column to factor
@@ -1816,7 +1899,7 @@
                                                          NDVI_gam_predict=numeric(),
                                                          stringsAsFactors=FALSE)
   
-        #(D.2) Loop through all Polygons and fit a separate gam (with sequential outlier removal) to the Polygon-specific NDVI data
+        #(D.2) Loop through all Polygons and fit a separate GAM (with sequential outlier removal) to the Polygon-specific NDVI data
           for(i in unique(df_Polygons_BandValues$Polygon)){
   
             #For debugging
@@ -1827,31 +1910,51 @@
                                                               !is.na(df_Polygons_BandValues$NDVI),
                                                               c("NDVI", "Date", "doy", "Polygon")]
   
-            #Fit a gam through the Polygon-specific NDVI ~ doy data and emply sequential outlier removal
-            df_Polygon_NDVI_GAM_new <- f_gam_SeqRemOutliers(data=df_Polygon_NDVI_GAM_new, y="NDVI", x="doy", outlier_removal=outlier_removal,
-                                                             outlier_thresh_1=outlier_thresh_1, outlier_thresh_2=outlier_thresh_2,
-                                                             default_k=gam_k_outlier)
-  
-            #Sort df_Polygon_NDVI_GAM_new by doy:
-            df_Polygon_NDVI_GAM_new <- df_Polygon_NDVI_GAM_new[order(df_Polygon_NDVI_GAM_new$doy),]
-  
-            #Bind the Polygon-specific dataframe with outlier-filtered GAM estimates to the dataframe containing all dataframes from previous iterations
-             df_Polygons_NDVI_GAM <- rbind(df_Polygons_NDVI_GAM, df_Polygon_NDVI_GAM_new)
-  
-            #Create more detailed predictions (not only at the doy present in the datframe) at a 1-day interval to plot more smooth curves
-  
-              #Refit GAM through data
-               index <- which(df_Polygon_NDVI_GAM_new$outliers==FALSE)
-               mod_gam <- with(df_Polygon_NDVI_GAM_new[index,], mgcv::gam(NDVI ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
-  
-              #Use gam to make predictions on a more detailed (1-day) day of year interval
-               df_Polygon_NDVI_GAM_predictions_new <- data.frame(Polygon=i, doy=seq(min(df_Polygon_NDVI_GAM_new$doy), max(df_Polygon_NDVI_GAM_new$doy), 0.01))
-               df_Polygon_NDVI_GAM_predictions_new$NDVI_gam_predict <- stats::predict(mod_gam, newdata=df_Polygon_NDVI_GAM_predictions_new, type="response")
-               df_Polygon_NDVI_GAM_predictions_new <- df_Polygon_NDVI_GAM_predictions_new[order(df_Polygon_NDVI_GAM_predictions_new$doy),]
-  
-              #Add predictions to df_Polygons_NDVI_GAM_predictions dataframe:
-               df_Polygons_NDVI_GAM_predictions <- rbind(df_Polygons_NDVI_GAM_predictions, df_Polygon_NDVI_GAM_predictions_new)
-  
+            #If there are at least two datapoints, then continue to fit the GAM
+            if(nrow(df_Polygon_NDVI_GAM_new) > 1){ 
+            
+              #Fit a gam through the Polygon-specific NDVI ~ doy data and emply sequential outlier removal
+              df_Polygon_NDVI_GAM_new <- f_gam_SeqRemOutliers(data=df_Polygon_NDVI_GAM_new, y="NDVI", x="doy", outlier_removal=outlier_removal,
+                                                               outlier_thresh_1=outlier_thresh_1, outlier_thresh_2=outlier_thresh_2,
+                                                               default_k=gam_k_outlier)
+    
+              #Sort df_Polygon_NDVI_GAM_new by doy:
+              df_Polygon_NDVI_GAM_new <- df_Polygon_NDVI_GAM_new[order(df_Polygon_NDVI_GAM_new$doy),]
+    
+              #Bind the Polygon-specific dataframe with outlier-filtered GAM estimates to the dataframe containing all dataframes from previous iterations
+               df_Polygons_NDVI_GAM <- rbind(df_Polygons_NDVI_GAM, df_Polygon_NDVI_GAM_new)
+    
+              #Create more detailed predictions (not only at the doy present in the datframe) at a 1-day interval to plot more smooth curves
+    
+                #Refit GAM through data
+                 index <- which(df_Polygon_NDVI_GAM_new$outliers==FALSE)
+                 mod_gam <- with(df_Polygon_NDVI_GAM_new[index,], mgcv::gam(NDVI ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
+    
+                #Use gam to make predictions on a more detailed (1-day) day of year interval
+                 df_Polygon_NDVI_GAM_predictions_new <- data.frame(Polygon=i, doy=seq(min(df_Polygon_NDVI_GAM_new$doy), max(df_Polygon_NDVI_GAM_new$doy), 0.01))
+                 df_Polygon_NDVI_GAM_predictions_new$NDVI_gam_predict <- stats::predict(mod_gam, newdata=df_Polygon_NDVI_GAM_predictions_new, type="response")
+                 df_Polygon_NDVI_GAM_predictions_new <- df_Polygon_NDVI_GAM_predictions_new[order(df_Polygon_NDVI_GAM_predictions_new$doy),]
+    
+                #Add predictions to df_Polygons_NDVI_GAM_predictions dataframe:
+                 df_Polygons_NDVI_GAM_predictions <- rbind(df_Polygons_NDVI_GAM_predictions, df_Polygon_NDVI_GAM_predictions_new)
+    
+              }
+                 
+            #If there are less than two datapoints, then append empty dataframes
+            if(nrow(df_Polygon_NDVI_GAM_new) < 2){
+              
+              #Bind the empty dataframe to the dataframe containing all dataframes from previous iterations
+              if(nrow(df_Polygon_NDVI_GAM_new) < 1){df_Polygon_NDVI_GAM_new <- data.frame(NDVI=NA, Date=NA, doy=NA, Polygon=i, outliers=NA)}
+              if(nrow(df_Polygon_NDVI_GAM_new) > 0){df_Polygon_NDVI_GAM_new$outliers <- NA}
+              df_Polygons_NDVI_GAM <- rbind(df_Polygons_NDVI_GAM, df_Polygon_NDVI_GAM_new)
+              
+              #Add empty GAM predictions to df_Polygons_NDVI_GAM_predictions dataframe:
+              df_Polygon_NDVI_GAM_predictions_new <- df_Polygon_NDVI_GAM_new[,c("Polygon", "doy")]
+              df_Polygon_NDVI_GAM_predictions_new$NDVI_gam_predict <- NA
+              df_Polygons_NDVI_GAM_predictions <- rbind(df_Polygons_NDVI_GAM_predictions, df_Polygon_NDVI_GAM_predictions_new)
+              
+            }
+            
             }
   
           #Change Polygon column to factor
@@ -1933,7 +2036,7 @@
                                                          NDMI_gam_predict=numeric(),
                                                          stringsAsFactors=FALSE)
   
-        #(E.2) Loop through all Polygons and fit a separate gam (with sequential outlier removal) to the Polygon-specific NDMI data
+        #(E.2) Loop through all Polygons and fit a separate GAM (with sequential outlier removal) to the Polygon-specific NDMI data
           for(i in unique(df_Polygons_BandValues$Polygon)){
   
             #For debugging
@@ -1944,31 +2047,51 @@
                                                               !is.na(df_Polygons_BandValues$NDMI),
                                                               c("NDMI", "Date", "doy", "Polygon")]
   
-            #Fit a gam through the Polygon-specific NDMI ~ doy data and emply sequential outlier removal
-            df_Polygon_NDMI_GAM_new <- f_gam_SeqRemOutliers(data=df_Polygon_NDMI_GAM_new, y="NDMI", x="doy", outlier_removal=outlier_removal,
-                                                             outlier_thresh_1=outlier_thresh_1, outlier_thresh_2=outlier_thresh_2,
-                                                             default_k=gam_k_outlier)
-  
-            #Sort df_Polygon_NDMI_GAM_new by doy:
-            df_Polygon_NDMI_GAM_new <- df_Polygon_NDMI_GAM_new[order(df_Polygon_NDMI_GAM_new$doy),]
-  
-            #Bind the Polygon-specific dataframe with outlier-filtered GAM estimates to the dataframe containing all dataframes from previous iterations
-             df_Polygons_NDMI_GAM <- rbind(df_Polygons_NDMI_GAM, df_Polygon_NDMI_GAM_new)
-  
-            #Create more detailed predictions (not only at the doy present in the datframe) at a 1-day interval to plot more smooth curves
-  
-              #Refit GAM through data
-               index <- which(df_Polygon_NDMI_GAM_new$outliers==FALSE)
-               mod_gam <- with(df_Polygon_NDMI_GAM_new[index,], mgcv::gam(NDMI ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
-  
-              #Use gam to make predictions on a more detailed (1-day) day of year interval
-               df_Polygon_NDMI_GAM_predictions_new <- data.frame(Polygon=i, doy=seq(min(df_Polygon_NDMI_GAM_new$doy), max(df_Polygon_NDMI_GAM_new$doy), 0.01))
-               df_Polygon_NDMI_GAM_predictions_new$NDMI_gam_predict <- stats::predict(mod_gam, newdata=df_Polygon_NDMI_GAM_predictions_new, type="response")
-               df_Polygon_NDMI_GAM_predictions_new <- df_Polygon_NDMI_GAM_predictions_new[order(df_Polygon_NDMI_GAM_predictions_new$doy),]
-  
-              #Add predictions to df_Polygons_NDMI_GAM_predictions dataframe:
-               df_Polygons_NDMI_GAM_predictions <- rbind(df_Polygons_NDMI_GAM_predictions, df_Polygon_NDMI_GAM_predictions_new)
-  
+            #If there are at least two datapoints, then continue to fit the GAM
+            if(nrow(df_Polygon_NDMI_GAM_new) > 1){
+            
+              #Fit a gam through the Polygon-specific NDMI ~ doy data and emply sequential outlier removal
+              df_Polygon_NDMI_GAM_new <- f_gam_SeqRemOutliers(data=df_Polygon_NDMI_GAM_new, y="NDMI", x="doy", outlier_removal=outlier_removal,
+                                                               outlier_thresh_1=outlier_thresh_1, outlier_thresh_2=outlier_thresh_2,
+                                                               default_k=gam_k_outlier)
+    
+              #Sort df_Polygon_NDMI_GAM_new by doy:
+              df_Polygon_NDMI_GAM_new <- df_Polygon_NDMI_GAM_new[order(df_Polygon_NDMI_GAM_new$doy),]
+    
+              #Bind the Polygon-specific dataframe with outlier-filtered GAM estimates to the dataframe containing all dataframes from previous iterations
+               df_Polygons_NDMI_GAM <- rbind(df_Polygons_NDMI_GAM, df_Polygon_NDMI_GAM_new)
+    
+              #Create more detailed predictions (not only at the doy present in the datframe) at a 1-day interval to plot more smooth curves
+    
+                #Refit GAM through data
+                 index <- which(df_Polygon_NDMI_GAM_new$outliers==FALSE)
+                 mod_gam <- with(df_Polygon_NDMI_GAM_new[index,], mgcv::gam(NDMI ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
+    
+                #Use gam to make predictions on a more detailed (1-day) day of year interval
+                 df_Polygon_NDMI_GAM_predictions_new <- data.frame(Polygon=i, doy=seq(min(df_Polygon_NDMI_GAM_new$doy), max(df_Polygon_NDMI_GAM_new$doy), 0.01))
+                 df_Polygon_NDMI_GAM_predictions_new$NDMI_gam_predict <- stats::predict(mod_gam, newdata=df_Polygon_NDMI_GAM_predictions_new, type="response")
+                 df_Polygon_NDMI_GAM_predictions_new <- df_Polygon_NDMI_GAM_predictions_new[order(df_Polygon_NDMI_GAM_predictions_new$doy),]
+    
+                #Add predictions to df_Polygons_NDMI_GAM_predictions dataframe:
+                 df_Polygons_NDMI_GAM_predictions <- rbind(df_Polygons_NDMI_GAM_predictions, df_Polygon_NDMI_GAM_predictions_new)
+    
+              }
+                 
+            #If there are less than two datapoints, then append empty dataframes
+            if(nrow(df_Polygon_NDMI_GAM_new) < 2){
+              
+              #Bind the empty dataframe to the dataframe containing all dataframes from previous iterations
+              if(nrow(df_Polygon_NDMI_GAM_new) < 1){df_Polygon_NDMI_GAM_new <- data.frame(NDMI=NA, Date=NA, doy=NA, Polygon=i, outliers=NA)}
+              if(nrow(df_Polygon_NDMI_GAM_new) > 0){df_Polygon_NDMI_GAM_new$outliers <- NA}
+              df_Polygons_NDMI_GAM <- rbind(df_Polygons_NDMI_GAM, df_Polygon_NDMI_GAM_new)
+              
+              #Add empty GAM predictions to df_Polygons_NDMI_GAM_predictions dataframe:
+              df_Polygon_NDMI_GAM_predictions_new <- df_Polygon_NDMI_GAM_new[,c("Polygon", "doy")]
+              df_Polygon_NDMI_GAM_predictions_new$NDMI_gam_predict <- NA
+              df_Polygons_NDMI_GAM_predictions <- rbind(df_Polygons_NDMI_GAM_predictions, df_Polygon_NDMI_GAM_predictions_new)
+              
+            }
+            
             }
   
           #Change Polygon column to factor
