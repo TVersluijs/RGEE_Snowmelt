@@ -63,7 +63,7 @@
 
 ######################################################################################################################################
 
-  # Install the gcloud CLI: follow the instructions of the web page link below. Pick all the default install options (i.e. 
+  #Install the gcloud CLI: follow the instructions of the web page link below. Pick all the default install options (i.e. 
   #install for local user only). https://cloud.google.com/sdk/docs/install
 
   # Check that gcloud works within the rgee python environment : 
@@ -78,6 +78,23 @@
 
   #Check if gcloud is found in windows (run code in R). This step can be skipped when running on a MAC.
   system("gcloud --version")
+  
+  #IF YOU GET ANY ERRORS AT THE END OF THIS SCRIPT RELATED TO GOOGLE CLOUD PROJECTS, THEN FOLLOW THESE STEPS:
+  #-Starting 13 November 2024, users will need to use a Cloud project to access Google Earth Engine. The use
+  # of Google Earth Engine will remain free for non-commercial and research usage. However, is mandatory to
+  # set up a Google Cloud Project and register this for non-commercial use. To set up a cloud project you can
+  # follow steps 1-4 under 'Transition to use Cloud projects' found in the following link: 
+  # https://developers.google.com/earth-engine/guides/transition_to_cloud_projects
+  # Make sure that you're logged in with the same Google account you're planning to use to access Google Earth
+  # Engine later on. At step 1 you can create the Cloud project. I suggest to follow the Earth Engine Cloud
+  # project setup guide (https://developers.google.com/earth-engine/cloud/earthengine_cloud_project_setup).
+  # If you're using this link then it also allows you to quickly conduct step 2 to enable the Earth Engine
+  # API. Then go back to the original first link to continue with step 3. Step 3 (configuring a billing 
+  # account) is only required for non-commercial use (hence for research usage it is NOT required to setup
+  # this billing account). Step 4 is mandatory to register the project for noncommercial usage. Step 5
+  # (select a subscription) can be skipped as it is only required for commercial usage. The final step is to
+  # use the right project when using Google Earth Engine. I believe this is done automatically when installing
+  # the gcloud above. If not, you can add project='your-project-name' to the ee_Initialize() call.
  
 ######################################################################################################################################
 
