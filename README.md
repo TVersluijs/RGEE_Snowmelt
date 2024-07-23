@@ -155,6 +155,7 @@ fraction of snow cover for points/polygon(s) of interest from this map.
 
 <p float="left">
   <img align="top" src="./_pictures/02B-MODIS_Zackenberg_Image_Snowmelt.png" width="49%" title="Image of the date of snow melt for all pixels within the shapefile (500m resolution)" /> 
+  <img align="top" src="./_pictures/02A-MODIS_Zackenberg_Pixels_NDSI_GAMS.png" width="49%" title="GAMS fitted through NDSI values for each pixel within the shapefile" />
 </p>
 <br />
 <br />	
