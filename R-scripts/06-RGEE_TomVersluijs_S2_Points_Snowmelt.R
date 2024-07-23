@@ -1,13 +1,12 @@
 #####################################################################################################################################
 
-#In this script the timing of snow melt is calculated based on Sentinel-2 data for all point-locations specified in an input file. 
-#No shapefile is required as input for this script, which allows for input locations to be spaced far apart. The user can specify a 
-#bufferzone (radius) to depict the area in which snow melt will be analysed per location. All locations are analysed consecutively 
-#(using a loop). First, a location specific bounding box is drawn per point location (taking into account the specified buffer zone) 
-#and Sentinel-2 satellite data is extracted within this bounding box. Second, clouds and permanent water bodies are filtered within 
-#this bounding box. Third, if this bounding box overlaps with multiple satellite tiles for a certain day, a composite image is 
-#created (picking the pixel with least cloud cover). Finally, snow melt is analysed within each locations's buffer zone based on 
-#one of the following methods (specified by the user by setting the parameter 'method'):
+#The date of snow melt is calculated based on Sentinel-2 data for all point locations specified in an input file. The user can
+#specify a bufferzone (radius) to depict the area in which snow melt will be analysed per location. All locations are analysed 
+#consecutively (using a loop). No shapefile is required as input for this script, which allows for point locations to be spaced 
+#far apart. The user can specify whether clouds and permanent waterbodies need to be masked. If the area of interest overlaps
+#with multiple satellite tiles for a certain day, then a composite image can be created (picking the pixel with the least cloud
+#cover). Snow melt is analysed within each location's buffer zone based on one of the following methods (specified by the user
+#by setting the parameter 'method'): 
 
 # (I):   'avg_NDSI':     Calculate the average NDSI value over time within each point's buffer zone, fit a GAM through these data 
 #                        and calculate when this model passes the specified NDSI threshold representing the moment of snow melt. 
@@ -29,10 +28,10 @@
 #This script is similar to the script '08-RGEE_TomVersluijs_S2_Shapefile_Points_Snowmelt'. However, in the latter script all points are 
 #analysed simultaneously. This has the restriction that it only works for rather small areas (<100km2) and that the user must load a 
 #shapefile to specify the outline of the study area in which all points of interest should be located. This works well when looking 
-#at a small area like Zackenberg. However, when points of interest are spaced further apart (like tracking data of migratory birds) 
-#the shapefile required to cover all these points is so large that this likely results in computation errors. The current script
-#circumvents this issue because no shapefile is required as input. The downside of the current script is that it might take 
-#significantly longer to run than script '08-RGEE_TomVersluijs_S2_Shapefile_Points_Snowmelt'.
+#at a small area. However, when points of interest are spaced further apart (like tracking data of migratory birds) the shapefile 
+#required to cover all these points is so large that this likely results in computation errors. The current script circumvents this 
+#issue because no shapefile is required as input. The downside of the current script is that it might take significantly longer to 
+#run than script '08-RGEE_TomVersluijs_S2_Shapefile_Points_Snowmelt'.
 
 #Copyright Tom Versluijs 2024-07-19. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
 

@@ -1,33 +1,33 @@
 #######################################################################################################################################
 
-#In this script the timing of snow melt is calculated based on Sentinel-2 data for all point locations specified in an input file. The 
-#user can specify a bufferzone (radius) to depict the area in which snow melt will be analysed per location. All locations (including 
-#buffer zone) are required to be located within a single shapefile and are then analysed simultaneously. First, clouds and permanent 
-#water bodies are filtered within the shapefile. Second, if the shapefile overlaps with multiple satellite tiles for a certain day,   
-#a composite image is created (picking the pixel with least cloudcover). Finally, snow melt is analysed for each location's buffer 
-#zone based on one of the following methods (specified by the user by setting the parameter 'method'):
+#The timing of snow melt is calculated based on Sentinel-2 data for all point locations located within a single polygon. 
+#The user can specify a buffer zone (radius) to depict the area in which snow melt will be analysed per location. All 
+#locations (including buffer zone) are required to be located within a single shapefile and are then analysed simultaneously. 
+#First, clouds and permanent water bodies are filtered within the shapefile. Second, if the shapefile overlaps with multiple 
+#satellite tiles for a certain day, a composite image is created (picking the pixel with least cloud cover). Finally, snow melt 
+#is analysed for each location's buffer zone based on one of the following methods (specified by the user by setting the 
+#parameter 'method'):
 
 # (I):  'avg_NDSI':     Calculate the average NDSI value over time within each point's buffer zone, fits a GAM through these 
-#                       data and calculates when this model passes the specified NDSI threshold defining the moment of snow melt.
-#                       In addition, time series of the average NDVI and NDMI are extracted within each point's buffer zone.
-# (II): 'snowfraction': Calculate the fraction of pixels within each buffer zone over time where NDSI > 'NDSI_threshold', fits a
-#                       GAM through these data and extract the moment when this model passes a user-specified 'Snowfraction_threshold'.
+#                       data and calculates when this model passes the specified NDSI threshold defining the moment of snow
+#                       melt. In addition, time series of the average NDVI and NDMI are extracted within each point's buffer
+#                       zone.
+# (II): 'snowfraction': Calculate the fraction of pixels within each buffer zone over time where NDSI > 'NDSI_threshold', fits 
+#                       a GAM through these data and extract the moment when this model passes a user-specified 'Snowfraction_
+#                       threshold'.
 
-#The 'snowfraction' method is preferred, because it intuitively makes sense to look a the fraction of snow-covered pixels over time.
-#It is harder to justify the 'avg_NDSI' method, because it is rather unclear what this average NDSI value entails. An even better approach 
-#is to calculate the date of snowmelt on a pixel level by fitting GAMS through pixel-level NDSI data (i.e. method = 'pixel_gam'), and to
-#use these pixel-level snowmelt dates to calculate the fraction of snow-covered pixels at each day of year. However, this approach
-#is not implemented in this script (08). Instead, it is implemented in script "06-RGEE_TomVersluijs_S2_Points_Snowmelt.R", and in script
-#"05-RGEE_TomVersluijs_S2_Pixels_Snowmelt.R". In the former script, these calculations are made for all pixels within the buffer
-#zone of point locations. In the latter script these calculates are made for all pixels within a user-specified shapefile, resulting in a 
-#pixel-level map of the timing of snowmelt. Script "10-RGEE_TomVersluijs_ExtractSnowFraction.R" can then be used to extract timeseries 
-#of the fraction of snowcover for points/polygons of interest from this map.
+#Note that snow melt is not calculated based on pixel-level GAM fits (i.e. 'pixel_gam' method is not implemented). This approach 
+#is instead implemented in script "06-RGEE_TomVersluijs_S2_Points_Snowmelt.R", and in script "05-RGEE_TomVersluijs_S2_Pixels_
+#Snowmelt.R". In the former script, these calculations are made for all pixels within the buffer zone of point locations. In the 
+#latter script these calculates are made for all pixels within a single polygon, resulting in a pixel-level map of the timing of 
+#snow melt. Script "10-RGEE_TomVersluijs_ExtractSnowFraction.R" can then be used to extract time series of the fraction of snow 
+#cover for points/polygons of interest from this map.
 
-#The current script (08) is similar to the script '06-RGEE_TomVersluijs_S2_Points_Snowmelt.R'. However, in the latter script all points  
-#are analysed consecutively using a loop, which makes that script significantly slower to run. That script does not rely on a shapefile 
-#and thus works for points spaced much further apart (i.e. tracking data of migratory birds). The current script only works for small 
-#areas of c.a. 50-100 km2 (larger areas might result in computation errors unless the spatial resolution of the analyses is decreased).
-#In addition, the 'pixel_gam' method is implemented in script "06", but not in the current script "08".
+#The current script (08) is similar to the script '06-RGEE_TomVersluijs_S2_Points_Snowmelt.R'. However, in the latter script all 
+#points are analysed consecutively using a loop, which makes that script significantly slower to run. That script does not rely 
+#on a shapefile and thus works for points spaced much further apart (i.e. tracking data of migratory birds). Script 08 only works 
+#for small areas of c.a. 50-100 km2 (larger areas might result in computation errors unless the spatial resolution of the analyses 
+#is decreased). In addition, the 'pixel_gam' method is implemented in script "06", but not in the current script "08".
 
 #Copyright Tom Versluijs 2024-07-19. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
 

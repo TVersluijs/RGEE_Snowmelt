@@ -1,21 +1,26 @@
 ##################################################################################################################################
 
-#Use Sentinel-2 data to extract time series of (I) the average fractional snowcover (FSC), (II) the average NDVI, NDMI and NDSI,
-#and (III) the fraction of snowcover, for all polygons located within a shapefile. This shapefile can be specified by creating a
-#single polygon, or multipolygon in e.g. QGIS (see manual). The fractional snowcover (FSC, I) is calculated based on two methods: 
-#following Gascoin et al 2020, and Aalstad et al 2020. This FSC is a within-pixel estimate of the fraction of snowcover, which is 
-#then averaged over all pixels per polygon. The fraction of snowcover (III) is instead estimated by calculating the fraction of 
-#pixels per polygon with an NDSI value larger than the user specified NDSI-threshold for each timestep. This corresponds to the 
-#method='snowfraction' in other scripts. The user can specify whether clouds and permanent waterbodies need to be masked, and 
-#whether a composite image per day of year needs to be generated (merging multiple satellite photos for that day). The current 
-#script requires a shapefile of a single polygon, or a multi-polygon as input. It only works for small areas of c.a. 50 km2 
-#(larger areas might result in computation errors unless the spatial resolution of the analyses is decreased).
+#The date of snow melt is calculated based on Sentinel-2 data for a single polygon, or multi-polygon located within a
+#shapefile. This shapefile can be created using e.g. QGIS (see manual). It only works for small areas of c.a. 50 km2 
+#(larger areas might result in computation errors unless the spatial resolution of the analyses is decreased). The user 
+#can specify whether clouds and permanent water bodies need to be masked. If the area of interest overlaps with multiple 
+#satellite tiles for a certain day, then a composite image can be created (picking the pixel with the least cloud cover). 
+#Snow melt is analysed within each polygon based on one of the following methods (specified by the user by setting the 
+#parameter 'method'):
+  
+  #(1) 'avg_NDSI': Calculate the average NDSI value over time within each polygon, fit a GAM through these data and calculate 
+  #     when this model passes the specified NDSI threshold representing the moment of snow melt. In addition, time series of 
+  #     the average NDVI and NDMI are extracted within each polygon. Also, timeseries of the average Fractional Snow Cover 
+  #     (FSC, a within-pixel estimate of the fraction of snow cover) are extracted within each polygon based on the formulas 
+  #     specified in Gascoin et al 2020 and Aalstad et al 2020.
+  #(2) 'snowfraction': Calculate the fraction of pixels within each buffer zone over time where NDSI > 'NDSI_threshold', fit 
+  #     a GAM through these data and extract the moment when this model passes a user-specified 'Snowfraction_threshold'. 
 
-#Note that in this script (07), snowmelt is not calculated based on pixel-level snowmelt data (i.e. 'pixel_gam' method is not 
-#implemented). This approach is instead implemented for a single polygon in script "05-RGEE_TomVersluijs_S2_Pixels_Snowmelt.R"
-#and involves fitting of GAMS through NDSI data per pixel and extracting the moment this GAM passes a user-defined NDSI-threshold.
-#This results in a pixel-level map of the date of snowmelt. Script "10-RGEE_TomVersluijs_ExtractSnowFraction.R" can then be
-#used to extract timeseries of the fraction of snowcover for points/polygons of interest from this map.
+#Note that snowmelt is not calculated based on pixel-level GAM fits (i.e. 'pixel_gam' method is not implemented). This approach 
+#is instead implemented for a single polygon in script "05-RGEE_TomVersluijs_S2_Pixels_Snowmelt.R" and involves fitting of GAMS 
+#through NDSI data per pixel and extracting the moment this GAM passes a user-defined NDSI-threshold. This results in a pixel-
+#level map of the date of snowmelt. Script "10-RGEE_TomVersluijs_ExtractSnowFraction.R" can then be used to extract timeseries 
+#of the fraction of snowcover for points/polygons of interest from this map.
 
 #Copyright Tom Versluijs 2024-07-19. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
 

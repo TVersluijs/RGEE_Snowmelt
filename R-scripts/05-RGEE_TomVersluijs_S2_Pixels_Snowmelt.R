@@ -1,11 +1,10 @@
 ##################################################################################################################################
 
-#Use Sentinel-2 data to create pixel-level maps (20m resolution) of the timing of snowmelt in for an area up to c.a. 50km2. 
-#Snowmelt is calculated per pixel by fitting a GAM through the average NDSI data and extracting the moment this GAM crosses a user 
-#specified NDSI threshold. This script requires a single shapefile of the study area as input. The user can specify whether clouds 
-#and permanent water bodies need to be masked. No composite image can be generated because this will result in computation errors.
-#After creating the snowmelt map, script "10-RGEE_TomVersluijs_ExtractSnowFraction.R" can be used to extract timeseries of the 
-#fraction of snowcover for points/polygon(s) of interest from this map.
+#Extract Sentinel-2 satellite data and calculate the date of snow melt for every 20mx20m pixel within an area up to c.a. 50km2. 
+#The user can specify whether clouds and permanent waterbodies need to be masked. Snow melt is calculated per pixel by fitting 
+#a GAM through the average NDSI data and by extracting the moment this GAM crosses a user specified NDSI threshold. After 
+#creating the snow melt map, script "10-RGEE_TomVersluijs_S2_ExtractSnowFraction.R" can be used to extract time series of the 
+#fraction of snow cover for points/polygon(s) of interest from this map.
 
 #Copyright Tom Versluijs 2024-07-19. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
 
