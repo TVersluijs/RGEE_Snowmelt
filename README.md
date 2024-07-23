@@ -184,10 +184,10 @@ This shapefile can be created using e.g. QGIS (see manual). The user can specify
 Snow melt is analysed within each polygon based on one of the following methods (specified by the user by setting the parameter 'method'):
 
 * (1) <i>'avg_NDSI'</i>: Calculate the average NDSI value over time within each polygon, fit a GAM through these data and calculate when this model passes the specified NDSI threshold representing the moment of snow melt. In addition, time series of the average NDVI and NDMI are extracted within each polygon. Also, time series of the average Fractional Snow Cover (FSC, a within-pixel estimate of the fraction of snow cover) are extracted within each polygon based on the formulas specified in Gascoin et al 2020 and Aalstad et al 2020.
-* (2) <i>'snowfraction'</i>: Calculate the fraction of pixels within each buffer zone over time where NDSI > 'NDSI_threshold', fit a GAM through these data and extract the moment when this model passes a user-specified 'Snowfraction_threshold'. 
+* (2) <i>'snowfraction'</i>: Calculate the fraction of pixels within each polygon over time where NDSI > 'NDSI_threshold', fit a GAM through these data and extract the moment when this model passes a user-specified 'Snowfraction_threshold'. 
 
 Note that snow melt is not calculated based on pixel-level GAM fits (i.e. 'pixel_gam' method is not implemented). This approach is instead 
-implemented for a single polygon in script "01-RGEE_TomVersluijs_MODIS_Pixels_Snowmelt.R" and involves fitting of GAMS through NDSI data 
+implemented for a single polygon in script "01-RGEE_TomVersluijs_MODIS_Pixels_Snowmelt.R" and involves fitting of GAMs through NDSI data 
 per pixel and extracting the moment this GAM passes a user-defined NDSI-threshold. This results in a pixel-level map of the date of 
 snow melt. Script "10-RGEE_TomVersluijs_ExtractSnowFraction.R" can then be used to extract time series of the fraction of snowcover for 
 points/polygons of interest from this map.
@@ -200,7 +200,7 @@ points/polygons of interest from this map.
 <br />
 													   
 ### *04-RGEE_TomVersluijs_MODIS_Pixels_ChangeInSnowmelt.R
-This script requires MODIS snow melt maps generated using script "02-RGEE_TomVersluijs_MODIS_Shapefile_Pixel_Snowmelt.R" as input.
+This script requires MODIS snow melt maps generated using script "01-RGEE_TomVersluijs_MODIS_Pixels_Snowmelt.R" as input.
 It imports the pixel-level maps for all analyzed years and transforms them into an image with the change in the date of snow melt 
 over the years for each pixel (i.e. slope of linear regression) and another image with the average date of snow melt over the years 
 for each pixel (i.e. intercept of linear regression).
@@ -217,7 +217,7 @@ Extract time series of the fraction of snowcover from a pixel-level snow melt ma
 to the method 'pixel_gam' in the other scripts. Input locations can either be point locations with a corresponding buffer zone, 
 or a collection of polygons in a shapefile. This script depends on a snow melt map generated for MODIS using script "01-RGEE_
 TomVersluijs_MODIS_Pixels_Snowmelt.R", or for Sentinel-2 using script "05-RGEE_TomVersluijs_S2_Pixels_Snowmelt.R". Please run 
-either script before continuing with the analysis below.
+either script before continuing with the analysis in script 10.
 
 <p float="left">
 <img align="top" src="./_pictures/10A-MODIS_Zackenberg_Image_Snowmelt_Points.png" width="42%" title="Point locations on top of snow melt map" /> 
@@ -264,7 +264,7 @@ shapefile to specify the outline of the study area in which all points of intere
 at a small area. However, when points of interest are spaced further apart (like tracking data of migratory birds) the shapefile 
 required to cover all these points is so large that this likely results in computation errors. The current script circumvents this 
 issue because no shapefile is required as input. The downside of the current script is that it might take significantly longer to 
-run than script '08-RGEE_TomVersluijs_S2_Shapefile_Points_Snowmelt'.					
+run than script 08.					
 
 <p float="left">
   <img align="top" src="./_pictures/04A-Sentinel2_Zackenberg_Locations.png" width="50%" title="Five locations at Zackenberg, each with a buffer of 250" />
@@ -276,13 +276,13 @@ run than script '08-RGEE_TomVersluijs_S2_Shapefile_Points_Snowmelt'.
 ### *07-RGEE_TomVersluijs_S2_Polygons_Snowmelt.R
 The date of snow melt is calculated based on Sentinel-2 data for a single **`polygon`**, or **`multi-polygon** specified using a shapefile. 
 This shapefile can be created using e.g. QGIS (see manual). It only works for small areas of c.a. 50 km2 (larger areas might result in 
-computation errors unless the spatial resolution of the analyses is decreased).The user can specify whether clouds and permanent water 
+computation errors unless the spatial resolution of the analyses is decreased). The user can specify whether clouds and permanent water 
 bodies need to be masked. If the area of interest overlaps with multiple satellite tiles for a certain day, then a composite image can be 
 created (picking the pixel with the least cloud cover). Snow melt is analysed within each polygon based on one of the following methods 
 (specified by the user by setting the parameter 'method'):
 
 * (1) '<i>avg_NDSI</i>': Calculate the average NDSI value over time within each polygon, fit a GAM through these data and calculate when this model passes the specified NDSI threshold representing the moment of snow melt. In addition, time series of the average NDVI and NDMI are extracted within each polygon. Also, time series of the average Fractional Snow Cover (FSC, a within-pixel estimate of the fraction of snow cover) are extracted within each polygon based on the formulas specified in Gascoin et al 2020 and Aalstad et al 2020.
-* (2) '<i>snowfraction</i>': Calculate the fraction of pixels within each buffer zone over time where NDSI > 'NDSI_threshold', fit a GAM through these data and extract the moment when this model passes a user-specified 'Snowfraction_threshold'. 
+* (2) '<i>snowfraction</i>': Calculate the fraction of pixels within each polygon over time where NDSI > 'NDSI_threshold', fit a GAM through these data and extract the moment when this model passes a user-specified 'Snowfraction_threshold'. 
 
 Note that snow melt is not calculated based on pixel-level GAM fits (i.e. 'pixel_gam' method is not implemented). This approach is instead 
 implemented for a single polygon in script "05-RGEE_TomVersluijs_S2_Pixels_Snowmelt.R" and involves fitting of GAMS through NDSI data 
@@ -345,7 +345,7 @@ Extract time series of the fraction of snowcover from a pixel-level snow melt ma
 to the method 'pixel_gam' in the other scripts. Input locations can either be point locations with a corresponding buffer zone, 
 or a collection of polygons in a shapefile. This script depends on a snow melt map generated for MODIS using script "01-RGEE_
 TomVersluijs_MODIS_Pixels_Snowmelt.R", or for Sentinel-2 using script "05-RGEE_TomVersluijs_S2_Pixels_Snowmelt.R". Please run 
-either script before continuing with the analysis below.
+either script before continuing with the analysis in script 10.
 
 <p float="left">
 <img align="top" src="./_pictures/10A-S2_Zackenberg_Image_Snowmelt_Points.png" width="43%" title="Point locations on top of snow melt map" /> 
