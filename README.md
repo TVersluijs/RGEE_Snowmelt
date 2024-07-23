@@ -207,7 +207,7 @@ for each pixel (i.e. intercept of linear regression).
 
 <p float="left">
   <img align="top" src="./_pictures/03B-MODIS_Zackenberg_Image_ChangeInSnowmelt.png" width="49%" title="Image of the change in date of snow melt (slope) for all pixels within the shapefile" /> 
-  <img align="top" src="./_pictures/03C-MODIS_Zackenberg_Image_SnowmeltIntercept.png" width="49%" title="Image of the average date of snow melt (intercept at average year) for all pixels within the shapefile" /> 
+  <img align="top" src="./_pictures/03A-MODIS_Zackenberg_Pixels_Regressions_ChangeInSnowmelt.png" width="49%" title="Linear regressions fit through time series of the date of snowmelt for all pixels within the shapefile" /> 
 </p>
 <br />
 <br />
@@ -221,7 +221,7 @@ either script before continuing with the analysis below.
 
 <p float="left">
 <img align="top" src="./_pictures/10A-MODIS_Zackenberg_Image_Snowmelt_Points.png" width="44%" title="Point locations on top of snow melt map" /> 
-  <img align="top" src="./_pictures/10C-MODIS_Zackenberg_Image_Snowmelt_Shapefile.png" width="44%" title="Shapefile polygons on top of snow melt map" /> 
+  <img align="top" src="./_pictures/10B-MODIS_Zackenberg_Points_PixelSnowfraction.png" width="44%" title="GAMs fit through time series of the fraction of snow cover within each point location" /> 
   </p>
 <br />
 <br />
@@ -348,7 +348,7 @@ either script before continuing with the analysis below.
 
 <p float="left">
 <img align="top" src="./_pictures/10A-S2_Zackenberg_Image_Snowmelt_Points.png" width="44%" title="Point locations on top of snow melt map" /> 
-<img align="top" src="./_pictures/10C-S2_Zackenberg_Image_Snowmelt_Shapefile.png" width="44%" title="Shapefile polygons on top of snow melt map" /> 
+<img align="top" src="./_pictures/10B-S2_Zackenberg_Points_PixelSnowfraction.png" width="44%" title="GAMs fit through time series of the fraction of snow cover within each point location" /> 
   </p>
 <br />
 <br />
