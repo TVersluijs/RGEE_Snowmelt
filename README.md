@@ -120,7 +120,7 @@ be a better choice. Below, you can find a few queries to aid in picking the righ
 * Date of snow melt within a single or multiple **`polygon areas`**		
 	* Script 07
 
-* Date of snow melt at multiple **`point locations`** (with or without buffer) located within a small shapefile area (<50km2)	
+* Date of snow melt at multiple point locations (with or without buffer) located within a small shapefile area (<50km2)	
 	* Script 08
 
 * Date of snow melt for all pixels within a large polygon area (< 250km2)												
@@ -154,10 +154,6 @@ creating the snow melt map, script "10-RGEE_TomVersluijs_S2_ExtractSnowFraction.
 fraction of snow cover for points/polygon(s) of interest from this map.
 
 <p float="left">
-  <img align="top" src="./_pictures/05A-Sentinel2_Zackenberg_Shapefile.png" width="49%" title="Shapefile area for Zackenberg (c.a. 50km2)" />
-  <img align="top" src="./_pictures/02A-MODIS_Zackenberg_Pixels_NDSI_GAMS.png" width="49%" title="GAMS fitted through NDSI values for each pixel within the shapefile" />
-</p>
-<p float="left">
   <img align="top" src="./_pictures/02B-MODIS_Zackenberg_Image_Snowmelt.png" width="49%" title="Image of the date of snow melt for all pixels within the shapefile (500m resolution)" /> 
 </p>
 <br />
@@ -176,12 +172,8 @@ user by setting the parameter 'method'):
 
 <p float="left">
   <img align="top" src="./_pictures/01A-MODIS_Wrangel_Locations.png" width="49%" title="Five locations at Wrangel Island, each with a buffer of 5000m" />
-  <img align="top" src="./_pictures/01B-MODIS_Wrangel_Location4_Pixels_NDSI_GAMS.png" width="49%" title="Method 3: GAMS fitted through NDSI values per pixel for a single location" /> 
- </p>
- <p float="left">
-  <img align="top" src="./_pictures/01C-MODIS_Wrangel_Location4_Image_Snowmelt.png" width="49%" title="Method 3: Image of the pixel-specific date of snow melt for a single location" />
   <img align="top" src="./_pictures/01D-MODIS_Wrangel_Locations_Snowmelt_GAMS.png" width="49%" title="Method 3: GAMS fitted through the fraction of snow-covered pixels for each location" />
-</p>
+  </p>
 <br />
 <br />
 				
@@ -213,10 +205,6 @@ over the years for each pixel (i.e. slope of linear regression) and another imag
 for each pixel (i.e. intercept of linear regression).
 
 <p float="left">
-  <img align="top" src="./_pictures/05A-Sentinel2_Zackenberg_Shapefile.png" width="49%" title="Shapefile area for Zackenberg (c.a. 50km2)" />
-  <img align="top" src="./_pictures/03A-MODIS_Zackenberg_Pixels_Regressions_ChangeInSnowmelt.png" width="49%" title="Linear regressions fitted to pixel-specific time series of the date of snow melt" />
-</p>
-<p float="left">
   <img align="top" src="./_pictures/03B-MODIS_Zackenberg_Image_ChangeInSnowmelt.png" width="49%" title="Image of the change in date of snow melt (slope) for all pixels within the shapefile" /> 
   <img align="top" src="./_pictures/03C-MODIS_Zackenberg_Image_SnowmeltIntercept.png" width="49%" title="Image of the average date of snow melt (intercept at average year) for all pixels within the shapefile" /> 
 </p>
@@ -232,12 +220,8 @@ either script before continuing with the analysis below.
 
 <p float="left">
 <img align="top" src="./_pictures/10A-MODIS_Zackenberg_Image_Snowmelt_Points.png" width="44%" title="Point locations on top of snow melt map" /> 
-  <img align="top" src="./_pictures/10B-MODIS_Zackenberg_Points_PixelSnowfraction.png" width="54%" title="GAMS fitted through fraction of snow covered pixels for each point location" />
-</p>
-<p float="left">
-<img align="top" src="./_pictures/10C-MODIS_Zackenberg_Image_Snowmelt_Shapefile.png" width="44%" title="Shapefile polygons on top of snow melt map" /> 
-  <img align="top" src="./_pictures/10D-MODIS_Zackenberg_Shapefile_PixelSnowfraction.png" width="54%" title="GAMS fitted through fraction of snow covered pixels for each shapefile polygon" />
-</p>
+  <img align="top" src="./_pictures/10C-MODIS_Zackenberg_Image_Snowmelt_Shapefile.png" width="44%" title="Shapefile polygons on top of snow melt map" /> 
+  </p>
 <br />
 <br />
 
@@ -254,7 +238,6 @@ After creating the snow melt map, script "10-RGEE_TomVersluijs_S2_ExtractSnowFra
 the fraction of snow cover for points/polygon(s) of interest from this map.
 
 <p float="left">
-  <img align="top" src="./_pictures/05A-Sentinel2_Zackenberg_Shapefile.png" width="49%" title="Shapefile area for Zackenberg (c.a. 50km2)" />
   <img align="top" src="./_pictures/08A_Sentinel2_Zackenberg_Shapefile_Image_Snowmelt.png" width="49%" title="Image of the date of snow melt at Zackenberg for all pixels within the shapefile (10m resolution)" />
 </p>								
 <br />
@@ -284,9 +267,6 @@ run than script '08-RGEE_TomVersluijs_S2_Shapefile_Points_Snowmelt'.
 <p float="left">
   <img align="top" src="./_pictures/04A-Sentinel2_Zackenberg_Locations.png" width="49%" title="Five locations at Zackenberg, each with a buffer of 250" />
   <img align="top" src="./_pictures/04B-Sentinel2_Zackenberg_Locations_NDSI_Snowmelt.png" width="49%" title="Method 1: GAMS fitted through average NDSI values per location" /> 
-</p>
-<p float="left">
-  <img align="top" src="./_pictures/04C-Sentinel2_Zackenberg_Locations_SnowFraction_Snowmelt.png" width="49%" title="Method 2: GAMS fitted through the fraction of snow-covered pixels per location" />
 </p>
 <br />
 <br />
@@ -367,12 +347,8 @@ either script before continuing with the analysis below.
 
 <p float="left">
 <img align="top" src="./_pictures/10A-S2_Zackenberg_Image_Snowmelt_Points.png" width="44%" title="Point locations on top of snow melt map" /> 
-  <img align="top" src="./_pictures/10B-S2_Zackenberg_Points_PixelSnowfraction.png" width="54%" title="GAMS fitted through fraction of snow covered pixels for each point location" />
-</p>
-<p float="left">
 <img align="top" src="./_pictures/10C-S2_Zackenberg_Image_Snowmelt_Shapefile.png" width="44%" title="Shapefile polygons on top of snow melt map" /> 
-  <img align="top" src="./_pictures/10D-S2_Zackenberg_Shapefile_PixelSnowfraction.png" width="54%" title="GAMS fitted through fraction of snow covered pixels for each shapefile polygon" />
-</p>
+  </p>
 <br />
 <br />
 												
