@@ -239,6 +239,7 @@ After creating the snow melt map, script "10-RGEE_TomVersluijs_S2_ExtractSnowFra
 the fraction of snow cover for points/polygon(s) of interest from this map.
 
 <p float="left">
+  <img align="top" src="./_pictures/05A-Sentinel2_Zackenberg_Shapefile.png" width="49%" title="Shapefile containing the outline of the study area" />
   <img align="top" src="./_pictures/08A_Sentinel2_Zackenberg_Shapefile_Image_Snowmelt.png" width="49%" title="Image of the date of snow melt at Zackenberg for all pixels within the shapefile (10m resolution)" />
 </p>								
 <br />
