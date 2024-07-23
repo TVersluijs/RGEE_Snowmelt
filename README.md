@@ -154,8 +154,8 @@ creating the snow melt map, script "10-RGEE_TomVersluijs_S2_ExtractSnowFraction.
 fraction of snow cover for points/polygon(s) of interest from this map.
 
 <p float="left">
-  <img align="top" src="./_pictures/02B-MODIS_Zackenberg_Image_Snowmelt.png" width="47%" title="Image of the date of snow melt for all pixels within the shapefile (500m resolution)" /> 
-  <img align="top" src="./_pictures/02A-MODIS_Zackenberg_Pixels_NDSI_GAMS.png" width="51%" title="GAMS fitted through NDSI values for each pixel within the shapefile" />
+  <img align="top" src="./_pictures/02B-MODIS_Zackenberg_Image_Snowmelt.png" width="46%" title="Image of the date of snow melt for all pixels within the shapefile (500m resolution)" /> 
+  <img align="top" src="./_pictures/02A-MODIS_Zackenberg_Pixels_NDSI_GAMS.png" width="52%" title="GAMS fitted through NDSI values for each pixel within the shapefile" />
 </p>
 <br />
 <br />	
@@ -173,7 +173,7 @@ user by setting the parameter 'method'):
 
 <p float="left">
   <img align="top" src="./_pictures/01A-MODIS_Wrangel_Locations.png" width="50%" title="Five locations at Wrangel Island, each with a buffer of 5000m" />
-  <img align="top" src="./_pictures/01D-MODIS_Wrangel_Locations_Snowmelt_GAMS.png" width="47%" title="Method 3: GAMS fitted through the fraction of snow-covered pixels for each location" />
+  <img align="top" src="./_pictures/01D-MODIS_Wrangel_Locations_Snowmelt_GAMS.png" width="46%" title="Method 3: GAMS fitted through the fraction of snow-covered pixels for each location" />
   </p>
 <br />
 <br />
