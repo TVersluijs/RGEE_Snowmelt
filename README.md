@@ -194,7 +194,7 @@ points/polygons of interest from this map.
 
 <p float="left">
   <img align="top" src="./_pictures/06A-Sentinel2_Zackenberg_Shapefile_SubAreas.png" width="49%" title="Shapefile area for 10 polygon areas in Zackenberg (each c.a. 5km2)" />
-  <img align="top" src="./_pictures/06B-MODIS_Zackenberg_Shapefile_SubAreas_FractionSnowCover.png" width="49%" title="GAM fitted through fraction of snowcover over time within each polygon" /> 
+  <img align="top" src="./_pictures/06B-MODIS_Zackenberg_Shapefile_SubAreas_FractionSnowCover.png" width="49%" title="Method 2: GAMs fitted through fraction of snowcover over time within each polygon" /> 
 </p>
 <br />
 <br />
@@ -220,8 +220,8 @@ TomVersluijs_MODIS_Pixels_Snowmelt.R", or for Sentinel-2 using script "05-RGEE_T
 either script before continuing with the analysis below.
 
 <p float="left">
-<img align="top" src="./_pictures/10A-MODIS_Zackenberg_Image_Snowmelt_Points.png" width="44%" title="Point locations on top of snow melt map" /> 
-  <img align="top" src="./_pictures/10B-MODIS_Zackenberg_Points_PixelSnowfraction.png" width="44%" title="GAMs fit through time series of the fraction of snow cover within each point location" /> 
+<img align="top" src="./_pictures/10A-MODIS_Zackenberg_Image_Snowmelt_Points.png" width="40%" title="Point locations on top of snow melt map" /> 
+  <img align="top" src="./_pictures/10B-MODIS_Zackenberg_Points_PixelSnowfraction.png" width="55%" title="GAMs fit through time series of the fraction of snow cover within each point location" /> 
   </p>
 <br />
 <br />
@@ -240,7 +240,7 @@ the fraction of snow cover for points/polygon(s) of interest from this map.
 
 <p float="left">
   <img align="top" src="./_pictures/05A-Sentinel2_Zackenberg_Shapefile.png" width="49%" title="Shapefile containing the outline of the study area" />
-  <img align="top" src="./_pictures/08A_Sentinel2_Zackenberg_Shapefile_Image_Snowmelt.png" width="49%" title="Image of the date of snow melt at Zackenberg for all pixels within the shapefile (10m resolution)" />
+  <img align="top" src="./_pictures/08A_Sentinel2_Zackenberg_Shapefile_Image_Snowmelt.png" width="49%" title="Image of the date of snow melt at Zackenberg for all pixels within the shapefile (20m resolution)" />
 </p>								
 <br />
 <br />
@@ -268,7 +268,7 @@ run than script '08-RGEE_TomVersluijs_S2_Shapefile_Points_Snowmelt'.
 
 <p float="left">
   <img align="top" src="./_pictures/04A-Sentinel2_Zackenberg_Locations.png" width="49%" title="Five locations at Zackenberg, each with a buffer of 250" />
-  <img align="top" src="./_pictures/04B-Sentinel2_Zackenberg_Locations_NDSI_Snowmelt.png" width="49%" title="Method 1: GAMS fitted through average NDSI values per location" /> 
+  <img align="top" src="./_pictures/04B-Sentinel2_Zackenberg_Locations_NDSI_Snowmelt.png" width="49%" title="Method 1: GAMs fitted through average NDSI values per location" /> 
 </p>
 <br />
 <br />
@@ -292,7 +292,7 @@ points/polygons of interest from this map.
 
 <p float="left">
   <img align="top" src="./_pictures/06A-Sentinel2_Zackenberg_Shapefile_SubAreas.png" width="49%" title="Shapefile area for 10 polygon areas in Zackenberg (each c.a. 5km2)" />
-  <img align="top" src="./_pictures/06B-Sentinel2_Zackenberg_Shapefile_SubAreas_FractionSnowCover.png" width="49%" title="GAM fitted through fraction of snowcover over time within each polygon" /> 
+  <img align="top" src="./_pictures/06B-Sentinel2_Zackenberg_Shapefile_SubAreas_FractionSnowCover.png" width="49%" title="Method 2: GAMs fitted through fraction of snowcover over time within each polygon" /> 
 </p>
 <br />
 <br />
@@ -321,8 +321,8 @@ and thus works for points spaced much further apart (i.e. tracking data of migra
 'pixel_gam' method is implemented in script "06", but not in the current script "08".
 	
 <p float="left">
-  <img align="top" src="./_pictures/07A-Sentinel2_Zackenberg_Shapefile_Points.png" width="49%" title="Five point locations with a buffer zone of 250m located within a shapefile area in Zackenberg" />
-  <img align="top" src="./_pictures/07B-Sentinel2_Zackenberg_Shapefile_Points_FractionSnowCover.png" width="49%" title="GAM fitted through fraction of snowcover over time within each location's buffer zone" /> 
+  <img align="top" src="./_pictures/07A-Sentinel2_Zackenberg_Shapefile_Points.png" width="47%" title="Five point locations with a buffer zone of 250m located within a shapefile area in Zackenberg" />
+  <img align="top" src="./_pictures/07B-Sentinel2_Zackenberg_Shapefile_Points_FractionSnowCover.png" width="51%" title="Method 2: GAMs fitted through fraction of snowcover over time within each location's buffer zone" /> 
 </p>
 <br />
 <br />	
@@ -337,7 +337,7 @@ to extract time series of the fraction of snow cover for points/polygon(s) of in
 
 <p float="left">
   <img align="top" src="./_pictures/09A-Sentinel2_Taymir_Shapefile_Subareas.png" width="49%" title="Shapefile split up into 4 subareas for Taymir (c.a. 250km2)" />
-  <img align="top" src="./_pictures/09B_Sentinel2_Taymir_Shapefile_Image_Snowmelt.png" width="49%" title="Image of the date of snow melt at Taymir for all pixels within the shapefile (10m resolution)" />
+  <img align="top" src="./_pictures/09B_Sentinel2_Taymir_Shapefile_Image_Snowmelt.png" width="49%" title="Image of the date of snow melt at Taymir for all pixels within the shapefile (20m resolution)" />
 </p>
 
 ### *10-RGEE_TomVersluijs_ExtractSnowFraction.R
@@ -348,8 +348,8 @@ TomVersluijs_MODIS_Pixels_Snowmelt.R", or for Sentinel-2 using script "05-RGEE_T
 either script before continuing with the analysis below.
 
 <p float="left">
-<img align="top" src="./_pictures/10A-S2_Zackenberg_Image_Snowmelt_Points.png" width="44%" title="Point locations on top of snow melt map" /> 
-<img align="top" src="./_pictures/10B-S2_Zackenberg_Points_PixelSnowfraction.png" width="44%" title="GAMs fit through time series of the fraction of snow cover within each point location" /> 
+<img align="top" src="./_pictures/10A-S2_Zackenberg_Image_Snowmelt_Points.png" width="40%" title="Point locations on top of snow melt map" /> 
+<img align="top" src="./_pictures/10B-S2_Zackenberg_Points_PixelSnowfraction.png" width="55%" title="GAMs fit through time series of the fraction of snow cover within each point location" /> 
   </p>
 <br />
 <br />
