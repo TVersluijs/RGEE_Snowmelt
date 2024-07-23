@@ -154,8 +154,8 @@ creating the snow melt map, script "10-RGEE_TomVersluijs_S2_ExtractSnowFraction.
 fraction of snow cover for points/polygon(s) of interest from this map.
 
 <p float="left">
-  <img align="top" src="./_pictures/02B-MODIS_Zackenberg_Image_Snowmelt.png" width="49%" title="Image of the date of snow melt for all pixels within the shapefile (500m resolution)" /> 
-  <img align="top" src="./_pictures/02A-MODIS_Zackenberg_Pixels_NDSI_GAMS.png" width="49%" title="GAMS fitted through NDSI values for each pixel within the shapefile" />
+  <img align="top" src="./_pictures/02B-MODIS_Zackenberg_Image_Snowmelt.png" width="47%" title="Image of the date of snow melt for all pixels within the shapefile (500m resolution)" /> 
+  <img align="top" src="./_pictures/02A-MODIS_Zackenberg_Pixels_NDSI_GAMS.png" width="51%" title="GAMS fitted through NDSI values for each pixel within the shapefile" />
 </p>
 <br />
 <br />	
@@ -172,8 +172,8 @@ user by setting the parameter 'method'):
 * (3) <i>'pixel_gam'</i>: Fit a GAM through the NDSI data for each pixel within each point's buffer zone, and calculate when this function passes NDSI_threshold. Then use these pixel-specific dates of snow melt to calculate a fraction of snowcovered pixels for each day of year. Then fit a GAM through these pixel-specific snowfraction data and extract the moment when this model passes a user-specified 'Snowfraction_threshold'. 				
 
 <p float="left">
-  <img align="top" src="./_pictures/01A-MODIS_Wrangel_Locations.png" width="49%" title="Five locations at Wrangel Island, each with a buffer of 5000m" />
-  <img align="top" src="./_pictures/01D-MODIS_Wrangel_Locations_Snowmelt_GAMS.png" width="49%" title="Method 3: GAMS fitted through the fraction of snow-covered pixels for each location" />
+  <img align="top" src="./_pictures/01A-MODIS_Wrangel_Locations.png" width="51%" title="Five locations at Wrangel Island, each with a buffer of 5000m" />
+  <img align="top" src="./_pictures/01D-MODIS_Wrangel_Locations_Snowmelt_GAMS.png" width="47%" title="Method 3: GAMS fitted through the fraction of snow-covered pixels for each location" />
   </p>
 <br />
 <br />
@@ -193,8 +193,8 @@ snow melt. Script "10-RGEE_TomVersluijs_ExtractSnowFraction.R" can then be used 
 points/polygons of interest from this map.
 
 <p float="left">
-  <img align="top" src="./_pictures/06A-Sentinel2_Zackenberg_Shapefile_SubAreas.png" width="49%" title="Shapefile area for 10 polygon areas in Zackenberg (each c.a. 5km2)" />
-  <img align="top" src="./_pictures/06B-MODIS_Zackenberg_Shapefile_SubAreas_FractionSnowCover.png" width="49%" title="Method 2: GAMs fitted through fraction of snowcover over time within each polygon" /> 
+  <img align="top" src="./_pictures/06A-Sentinel2_Zackenberg_Shapefile_SubAreas.png" width="46%" title="Shapefile area for 10 polygon areas in Zackenberg (each c.a. 5km2)" />
+  <img align="top" src="./_pictures/06B-MODIS_Zackenberg_Shapefile_SubAreas_FractionSnowCover.png" width="52%" title="Method 2: GAMs fitted through fraction of snowcover over time within each polygon" /> 
 </p>
 <br />
 <br />
@@ -206,8 +206,8 @@ over the years for each pixel (i.e. slope of linear regression) and another imag
 for each pixel (i.e. intercept of linear regression).
 
 <p float="left">
-  <img align="top" src="./_pictures/03B-MODIS_Zackenberg_Image_ChangeInSnowmelt.png" width="49%" title="Image of the change in date of snow melt (slope) for all pixels within the shapefile" /> 
-  <img align="top" src="./_pictures/03A-MODIS_Zackenberg_Pixels_Regressions_ChangeInSnowmelt.png" width="49%" title="Linear regressions fit through time series of the date of snowmelt for all pixels within the shapefile" /> 
+  <img align="top" src="./_pictures/03B-MODIS_Zackenberg_Image_ChangeInSnowmelt.png" width="47%" title="Image of the change in date of snow melt (slope) for all pixels within the shapefile" /> 
+  <img align="top" src="./_pictures/03A-MODIS_Zackenberg_Pixels_Regressions_ChangeInSnowmelt.png" width="51%" title="Linear regressions fit through time series of the date of snowmelt for all pixels within the shapefile" /> 
 </p>
 <br />
 <br />
@@ -220,8 +220,8 @@ TomVersluijs_MODIS_Pixels_Snowmelt.R", or for Sentinel-2 using script "05-RGEE_T
 either script before continuing with the analysis below.
 
 <p float="left">
-<img align="top" src="./_pictures/10A-MODIS_Zackenberg_Image_Snowmelt_Points.png" width="40%" title="Point locations on top of snow melt map" /> 
-  <img align="top" src="./_pictures/10B-MODIS_Zackenberg_Points_PixelSnowfraction.png" width="55%" title="GAMs fit through time series of the fraction of snow cover within each point location" /> 
+<img align="top" src="./_pictures/10A-MODIS_Zackenberg_Image_Snowmelt_Points.png" width="41%" title="Point locations on top of snow melt map" /> 
+  <img align="top" src="./_pictures/10B-MODIS_Zackenberg_Points_PixelSnowfraction.png" width="54%" title="GAMs fit through time series of the fraction of snow cover within each point location" /> 
   </p>
 <br />
 <br />
@@ -267,8 +267,8 @@ issue because no shapefile is required as input. The downside of the current scr
 run than script '08-RGEE_TomVersluijs_S2_Shapefile_Points_Snowmelt'.					
 
 <p float="left">
-  <img align="top" src="./_pictures/04A-Sentinel2_Zackenberg_Locations.png" width="49%" title="Five locations at Zackenberg, each with a buffer of 250" />
-  <img align="top" src="./_pictures/04B-Sentinel2_Zackenberg_Locations_NDSI_Snowmelt.png" width="49%" title="Method 1: GAMs fitted through average NDSI values per location" /> 
+  <img align="top" src="./_pictures/04A-Sentinel2_Zackenberg_Locations.png" width="51%" title="Five locations at Zackenberg, each with a buffer of 250" />
+  <img align="top" src="./_pictures/04B-Sentinel2_Zackenberg_Locations_NDSI_Snowmelt.png" width="47%" title="Method 1: GAMs fitted through average NDSI values per location" /> 
 </p>
 <br />
 <br />
@@ -291,8 +291,8 @@ snow melt. Script "10-RGEE_TomVersluijs_ExtractSnowFraction.R" can then be used 
 points/polygons of interest from this map.
 
 <p float="left">
-  <img align="top" src="./_pictures/06A-Sentinel2_Zackenberg_Shapefile_SubAreas.png" width="49%" title="Shapefile area for 10 polygon areas in Zackenberg (each c.a. 5km2)" />
-  <img align="top" src="./_pictures/06B-Sentinel2_Zackenberg_Shapefile_SubAreas_FractionSnowCover.png" width="49%" title="Method 2: GAMs fitted through fraction of snowcover over time within each polygon" /> 
+  <img align="top" src="./_pictures/06A-Sentinel2_Zackenberg_Shapefile_SubAreas.png" width="48%" title="Shapefile area for 10 polygon areas in Zackenberg (each c.a. 5km2)" />
+  <img align="top" src="./_pictures/06B-Sentinel2_Zackenberg_Shapefile_SubAreas_FractionSnowCover.png" width="50%" title="Method 2: GAMs fitted through fraction of snowcover over time within each polygon" /> 
 </p>
 <br />
 <br />
@@ -321,8 +321,8 @@ and thus works for points spaced much further apart (i.e. tracking data of migra
 'pixel_gam' method is implemented in script "06", but not in the current script "08".
 	
 <p float="left">
-  <img align="top" src="./_pictures/07A-Sentinel2_Zackenberg_Shapefile_Points.png" width="47%" title="Five point locations with a buffer zone of 250m located within a shapefile area in Zackenberg" />
-  <img align="top" src="./_pictures/07B-Sentinel2_Zackenberg_Shapefile_Points_FractionSnowCover.png" width="51%" title="Method 2: GAMs fitted through fraction of snowcover over time within each location's buffer zone" /> 
+  <img align="top" src="./_pictures/07A-Sentinel2_Zackenberg_Shapefile_Points.png" width="46%" title="Five point locations with a buffer zone of 250m located within a shapefile area in Zackenberg" />
+  <img align="top" src="./_pictures/07B-Sentinel2_Zackenberg_Shapefile_Points_FractionSnowCover.png" width="52%" title="Method 2: GAMs fitted through fraction of snowcover over time within each location's buffer zone" /> 
 </p>
 <br />
 <br />	
@@ -336,8 +336,8 @@ specified NDSI threshold. After creating the snow melt map, script "10-RGEE_TomV
 to extract time series of the fraction of snow cover for points/polygon(s) of interest from this map.
 
 <p float="left">
-  <img align="top" src="./_pictures/09A-Sentinel2_Taymir_Shapefile_Subareas.png" width="49%" title="Shapefile split up into 4 subareas for Taymir (c.a. 250km2)" />
-  <img align="top" src="./_pictures/09B_Sentinel2_Taymir_Shapefile_Image_Snowmelt.png" width="49%" title="Image of the date of snow melt at Taymir for all pixels within the shapefile (20m resolution)" />
+  <img align="top" src="./_pictures/09A-Sentinel2_Taymir_Shapefile_Subareas.png" width="51%" title="Shapefile split up into 4 subareas for Taymir (c.a. 250km2)" />
+  <img align="top" src="./_pictures/09B_Sentinel2_Taymir_Shapefile_Image_Snowmelt.png" width="47%" title="Image of the date of snow melt at Taymir for all pixels within the shapefile (20m resolution)" />
 </p>
 
 ### *10-RGEE_TomVersluijs_ExtractSnowFraction.R
@@ -348,8 +348,8 @@ TomVersluijs_MODIS_Pixels_Snowmelt.R", or for Sentinel-2 using script "05-RGEE_T
 either script before continuing with the analysis below.
 
 <p float="left">
-<img align="top" src="./_pictures/10A-S2_Zackenberg_Image_Snowmelt_Points.png" width="40%" title="Point locations on top of snow melt map" /> 
-<img align="top" src="./_pictures/10B-S2_Zackenberg_Points_PixelSnowfraction.png" width="55%" title="GAMs fit through time series of the fraction of snow cover within each point location" /> 
+<img align="top" src="./_pictures/10A-S2_Zackenberg_Image_Snowmelt_Points.png" width="42%" title="Point locations on top of snow melt map" /> 
+<img align="top" src="./_pictures/10B-S2_Zackenberg_Points_PixelSnowfraction.png" width="53%" title="GAMs fit through time series of the fraction of snow cover within each point location" /> 
   </p>
 <br />
 <br />
