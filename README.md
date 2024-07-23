@@ -170,15 +170,15 @@ this script, which allows for point locations to be spaced far apart.</i> The us
 need to be masked. Snow melt is analysed within each location's buffer zone based on one of the following methods (specified by the 
 user by setting the parameter 'method'): 
 
-	*(1) 'avg_NDSI': Calculate the average NDSI value over time within each point's buffer zone, fit a GAM through these data and calculate 
-	*	when this model passes the specified NDSI threshold representing the moment of snow melt. In addition, time series of the average NDVI 
-	*	and NDMI are extracted within each point's buffer zone. 
-	*(2) 'snowfraction': Calculate the fraction of pixels within each buffer zone over time where NDSI > 'NDSI_threshold', fit a GAM through 
-	*	these data and extract the moment when this model passes a user-specified 'Snowfraction_threshold'. 
-	*(3) 'pixel_gam': Fit a GAM through the NDSI data for each pixel within each point's buffer zone, and calculate when this function passes 
-	*	NDSI_threshold. Then use these pixel-specific dates of snow melt to calculate a fraction of snowcovered pixels for each day of year. 
-	*	Then fit a GAM through these pixel-specific snowfraction data and extract the moment when this model passes a user-specified 
-	*	'Snowfraction_threshold'. 				
+* (1) 'avg_NDSI': Calculate the average NDSI value over time within each point's buffer zone, fit a GAM through these data and calculate 
+*	   when this model passes the specified NDSI threshold representing the moment of snow melt. In addition, time series of the average NDVI 
+*	   and NDMI are extracted within each point's buffer zone. 
+* (2) 'snowfraction': Calculate the fraction of pixels within each buffer zone over time where NDSI > 'NDSI_threshold', fit a GAM through 
+*	   these data and extract the moment when this model passes a user-specified 'Snowfraction_threshold'. 
+* (3) 'pixel_gam': Fit a GAM through the NDSI data for each pixel within each point's buffer zone, and calculate when this function passes 
+*	   NDSI_threshold. Then use these pixel-specific dates of snow melt to calculate a fraction of snowcovered pixels for each day of year. 
+*	   Then fit a GAM through these pixel-specific snowfraction data and extract the moment when this model passes a user-specified 
+*	   'Snowfraction_threshold'. 				
 
 <p float="left">
   <img align="top" src="./_pictures/01A-MODIS_Wrangel_Locations.png" width="49%" title="Five locations at Wrangel Island, each with a buffer of 5000m" />
