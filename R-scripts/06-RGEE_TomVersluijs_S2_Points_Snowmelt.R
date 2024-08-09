@@ -217,7 +217,7 @@
      #Larger values result in a more precise GAM-fit, but might result in overfitting.
 
      #Specify whether plots of the GAM fit per pixel should be generated as a pdf file (only applicable when method="pixel_gam")
-     pixel_gam_plots=TRUE
+     pixel_gam_plots=FALSE #significantly increases computation time
      
    #(i): Counts of unmasked pixels
      
