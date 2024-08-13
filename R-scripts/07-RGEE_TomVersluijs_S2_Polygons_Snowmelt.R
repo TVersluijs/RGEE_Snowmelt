@@ -309,6 +309,10 @@
        
       #Clip all images to the area depicted by 'aoi_Shapefile'
        s2_col <- s2_col$map(function(img){return(img$clipToCollection(aoi_Shapefile))}) 
+       
+       #Note that we clip the imagecollection to aoi_Shapefile and not to aoi_Polygons, to prevent issues
+       #when the shapefile consists of multiple non adjacent polygons. The final calculations below are
+       #however conducted for the area depicted by 'aoi_Polygons'.
      
    #(9): Plot an RGB, NDSI and NDVI image for a single extracted satellite image (for debugging)   
          
@@ -360,7 +364,7 @@
       # #Extract bandvalues at point location (for debugging)
       #  ee_extract(x=image$select("NDSI", "FSC_Gascoin2020", "FSC_Aalstad2020"), y=coordinates_point, fun=ee$Reducer$first(), scale=resolution, sf=TRUE)
       
-    #(11) Create a timeseries gif of RGB images for the shapefile area
+    #(11) Create a timeseries gif of RGB images for aoi_Shapefile
       
       # #Check number of images in collection
       # s2_col$size()$getInfo()
@@ -448,7 +452,7 @@
         #Apply cloudmask for individual pixels
         map(Add_CloudMask)
       
-      # #Create timelapse video of the cloud filtered/masked RGB images (for debugging)
+      # #Create timelapse video of the cloud filtered/masked RGB images for aoi_Shapefile (for debugging) 
       # videoArgs <- list(dimensions=350, region=aoi_Shapefile,framesPerSecond=5, crs='EPSG:3857', bands=c("B4", "B3", "B2"), min=100, max=10000, gamma=c(1.9, 1.7, 1.7))
       # tryCatch({browseURL(s2_clouds_filtered$getVideoThumbURL(videoArgs))}, error = function(cond){return("Too many pixels. Reduce dimensions.")})
 
@@ -526,7 +530,7 @@
       #Apply the final watermask:
       s2_clouds_filtered <- s2_clouds_filtered$map(Add_WaterMask)
           
-      # #Create a timeseries GIF of RGB images of the water and cloud filtered image collection (for debugging)
+      # #Create a timeseries GIF of RGB images of the water and cloud filtered image collection for aoi_Shapefile (for debugging)
       # videoArgs <- list(dimensions=200, region=aoi_Shapefile,framesPerSecond=5, crs='EPSG:3857', bands=c("B4", "B3", "B2"), min=0, max=10000, gamma=c(1.9, 1.7, 1.7))
       # tryCatch({browseURL(s2_clouds_filtered$getVideoThumbURL(videoArgs))}, error = function(cond){return("Too many pixels. Reduce dimensions.")})
           
@@ -781,7 +785,7 @@
       
 ##################################################################################################################################
 
-#IX: Create timelapse videos of the RGB bands, and the NDSI-, NDVI-, NDMI- and NDMI-bands (Cloud and Water masked)
+#IX: Create timelapse videos of the RGB bands, and the NDSI-, NDVI-, NDMI- and NDMI-bands for aoi_Polygons (Cloud and Water masked)
 
 ##################################################################################################################################
 
@@ -789,8 +793,9 @@
   #higher resolution GIFS.
   
   # #(19): Create a timeseries GIF of RGB images
+  #     s2_col_composite_gif <- s2_col_composite$map(function(img){return(img$clipToCollection(aoi_Polygons))})
   #     videoArgs <- list(dimensions=100, region=aoi,framesPerSecond=5, crs='EPSG:3857', bands=c("B4", "B3", "B2"), min=0, max=10000, gamma=c(1.9, 1.7, 1.7))
-  #     tryCatch({browseURL(s2_col_composite$getVideoThumbURL(videoArgs))}, error = function(cond){return("Too many pixels. Reduce dimensions.")})
+  #     tryCatch({browseURL(s2_col_composite_gif$getVideoThumbURL(videoArgs))}, error = function(cond){return("Too many pixels. Reduce dimensions.")})
   #     #Note that missing pixels are actually not recorded by the satellite and are NOT caused by coding errors
   # 
   # #(20): Create a timeseries GIF of NDSI images
@@ -803,10 +808,11 @@
   #      return(img$visualize(bands='NDSI', min=-1, max=1.5, palette=palette)$
   #               copyProperties(img, img$propertyNames()))}
   #    S2_snow_masked_RGB <- s2_col_composite$map(visFun_NDSI)
+  #    S2_snow_masked_RGB_gif <- S2_snow_masked_RGB$map(function(img){return(img$clipToCollection(aoi_Polygons))})
   # 
   #    #Create a timelapse video of NDSI band
   #    videoArgs <- list(dimensions=100, region=aoi, framesPerSecond=5, crs='EPSG:3857', bands=c('vis-red', 'vis-green', 'vis-blue'), min=0, max=255)
-  #    tryCatch({browseURL(S2_snow_masked_RGB$getVideoThumbURL(videoArgs))}, error = function(cond){return("Too many pixels. Reduce dimensions.")})
+  #    tryCatch({browseURL(S2_snow_masked_RGB_gif$getVideoThumbURL(videoArgs))}, error = function(cond){return("Too many pixels. Reduce dimensions.")})
   # 
   #  #(21): Create a timeseries GIF of NDVI images
   #    palette <- c("#cccccc", "#f46d43", "#fdae61", "#fee08b", "#d9ef8b", "#a6d96a", "#66bd63", "#1a9850")
@@ -814,30 +820,33 @@
   #      return(img$visualize(bands='NDVI', min=-0.25, max=1, palette=palette)$
   #               copyProperties(img, img$propertyNames()))}
   #    S2_ndvi_masked_RGB <- s2_col_composite$map(visFun_NDVI)
+  #    S2_ndvi_masked_RGB_gif <- S2_ndvi_masked_RGB$map(function(img){return(img$clipToCollection(aoi_Polygons))})
   # 
   #    #Create a timelapse video of NDSI band
   #    videoArgs <- list(dimensions=510, region=aoi, framesPerSecond=5, crs='EPSG:3857', bands=c('vis-red', 'vis-green', 'vis-blue'), min=0, max=255)
-  #    tryCatch({browseURL(S2_ndvi_masked_RGB$getVideoThumbURL(videoArgs))}, error = function(cond){return("Too many pixels. Reduce dimensions.")})
+  #    tryCatch({browseURL(S2_ndvi_masked_RGB_gif$getVideoThumbURL(videoArgs))}, error = function(cond){return("Too many pixels. Reduce dimensions.")})
   # 
   #  #(22): Create a timeseries GIF of NDMI images
   #    palette <- c("#d73027", "#f46d43", "#fdae61", "#fee08b", "#d9ef8b", "#a6d96a", "#66bd63", "#1a9850", "#6ad99e", "#387ad9", "#003dd6")
   #    visFun_NDMI <-  function(img) {
   #      return(img$visualize(bands='NDMI', min=-0.75, max=1, palette=palette)$copyProperties(img, img$propertyNames()))}
   #    S2_ndmi_masked_RGB <- s2_col_composite$map(visFun_NDMI)
+  #    S2_ndmi_masked_RGB_gif <- S2_ndmi_masked_RGB$map(function(img){return(img$clipToCollection(aoi_Polygons))})    
   # 
   #    #Create a timelapse video of NDMI band
   #    videoArgs <- list(dimensions=510, region=aoi, framesPerSecond=5, crs='EPSG:3857', bands=c('vis-red', 'vis-green', 'vis-blue'), min=0, max=255)
-  #    tryCatch({browseURL(S2_ndmi_masked_RGB$getVideoThumbURL(videoArgs))}, error = function(cond){return("Too many pixels. Reduce dimensions.")})
+  #    tryCatch({browseURL(S2_ndmi_masked_RGB_gif$getVideoThumbURL(videoArgs))}, error = function(cond){return("Too many pixels. Reduce dimensions.")})
   # 
   #  #(23): Create a timeseries GIF of NDWI images
   #    palette <- c('000000', '0dffff', '0524ff', 'ffffff')
   #    visFun_NDWI <-  function(img) {
   #      return(img$visualize(bands='NDWI', min=-0.5, max=1, palette=palette)$copyProperties(img, img$propertyNames()))}
   #    S2_ndwi_masked_RGB <- s2_col_composite$map(visFun_NDWI)
+  #    S2_ndwi_masked_RGB_gif <- S2_ndwi_masked_RGB$map(function(img){return(img$clipToCollection(aoi_Polygons))})    
   # 
   #    #Create a timelapse video of NDWI band
   #    videoArgs <- list(dimensions=510, region=aoi, framesPerSecond=5, crs='EPSG:3857', bands=c('vis-red', 'vis-green', 'vis-blue'), min=0, max=255)
-  #    tryCatch({browseURL(S2_ndwi_masked_RGB$getVideoThumbURL(videoArgs))}, error = function(cond){return("Too many pixels. Reduce dimensions.")})
+  #    tryCatch({browseURL(S2_ndwi_masked_RGB_gif$getVideoThumbURL(videoArgs))}, error = function(cond){return("Too many pixels. Reduce dimensions.")})
   
       
 ##################################################################################################################################
