@@ -1,22 +1,22 @@
 ##################################################################################################################################
 
-#The date of snow melt is calculated based on MODIS data for a single **`polygon`**, or **`multi-polygon** specified using a 
-#shapefile. This shapefile can be created using e.g. QGIS (see manual). The user can specify whether clouds and permanent 
-#water bodies need to be masked. Snow melt is analysed within each polygon based on one of the following methods (specified 
+#The date of snow melt is calculated based on MODIS data for a single **`polygon`**, or **`multi-polygon** specified using a
+#shapefile. This shapefile can be created using e.g. QGIS (see manual). The user can specify whether clouds and permanent
+#water bodies need to be masked. Snow melt is analysed within each polygon based on one of the following methods (specified
 #by the user by setting the parameter 'method'):
-  
-  #(1) 'avg_NDSI': Calculate the average NDSI value over time within each polygon, fit a GAM through these data and calculate 
-  #     when this model passes the specified NDSI threshold representing the moment of snow melt. In addition, time series of 
-  #     the average NDVI and NDMI are extracted within each polygon. Also, time series of the average Fractional Snow Cover 
-  #     (FSC, a within-pixel estimate of the fraction of snow cover) are extracted within each polygon based on the formulas 
-  #     specified in Gascoin et al 2020 and Aalstad et al 2020.
-  #(2) 'snowfraction': Calculate the fraction of pixels within each polygon over time where NDSI > 'NDSI_threshold', fit 
-  #     a GAM through these data and extract the moment when this model passes a user-specified 'Snowfraction_threshold'. 
 
-#Note that snow melt is not calculated based on pixel-level GAM fits (i.e. 'pixel_gam' method is not implemented). This approach 
-#is instead implemented for a single polygon in script "01-RGEE_TomVersluijs_MODIS_Pixels_Snowmelt.R" and involves fitting of 
-#GAMS through NDSI data per pixel and extracting the moment this GAM passes a user-defined NDSI-threshold. This results in a 
-#pixel-level map of the date of snow melt. Script "10-RGEE_TomVersluijs_ExtractSnowFraction.R" can then be used to extract 
+  #(1) 'avg_NDSI': Calculate the average NDSI value over time within each polygon, fit a GAM through these data and calculate
+  #     when this model passes the specified NDSI threshold representing the moment of snow melt. In addition, time series of
+  #     the average NDVI and NDMI are extracted within each polygon. Also, time series of the average Fractional Snow Cover
+  #     (FSC, a within-pixel estimate of the fraction of snow cover) are extracted within each polygon based on the formulas
+  #     specified in Gascoin et al 2020 and Aalstad et al 2020.
+  #(2) 'snowfraction': Calculate the fraction of pixels within each polygon over time where NDSI > 'NDSI_threshold', fit
+  #     a GAM through these data and extract the moment when this model passes a user-specified 'Snowfraction_threshold'.
+
+#Note that snow melt is not calculated based on pixel-level GAM fits (i.e. 'pixel_gam' method is not implemented). This approach
+#is instead implemented for a single polygon in script "01-RGEE_TomVersluijs_MODIS_Pixels_Snowmelt.R" and involves fitting of
+#GAMS through NDSI data per pixel and extracting the moment this GAM passes a user-defined NDSI-threshold. This results in a
+#pixel-level map of the date of snow melt. Script "10-RGEE_TomVersluijs_ExtractSnowFraction.R" can then be used to extract
 #time series of the fraction of snow cover for points/polygons of interest from this map.
 
 #Copyright Tom Versluijs 2024-07-19. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
@@ -39,13 +39,13 @@
        reticulate::use_python(rgee_environment_dir, required=T)
        reticulate::py_config()
        }
-  
+
     #(1) Load packages
      #renv::restore() #revert to last version of R-packages used to successfully run this script (optional).
      utils::install.packages("pacman")
      library(pacman)
      p_load(sf, rgee, ggplot2, mgcv, googledrive, dplyr, tidyr, foreach, parallel, doSNOW, gridExtra)
-  
+
     #(2): Define ggplot2 plotting theme
      theme_tom <- function(){
         theme_classic() %+replace%
@@ -54,11 +54,11 @@
           legend.position = "none",
           strip.background = element_rect(fill = "white", colour = "black", linewidth = rel(2)),
           complete = TRUE)}
-  
+
     #(3): Load auxiliary functions
      source_files <- list.files(path=paste0(here(), "/Input"), full.names=TRUE, recursive = TRUE, pattern = "MODIS_AuxiliaryFunctions")
      sapply(source_files, source, chdir = TRUE) ; rm(source_files)
-  
+
     #(4): Initialize earth engine
      rgee::ee_Initialize(user = "tom.versluijs@gmail.com", drive = TRUE)
 
@@ -74,32 +74,27 @@
 
      #MODIS dataset
      MODIS_dataset <- "MODIS/061/MOD09GA"
-       
+
      #Specify resolution of images in meters
      resolution=500 #default maximum resolution for MODIS = 500m
 
-   #(b) Area of interest
+   #(b) Areas of interest
 
-     #Specify name of study area (used as prefix in output files)
-     area_name="ZAC" #max length three characters
+     #Name of Shapefiles containing either a single polygon, or a multi-polygon (located in '/Input/Shapefiles' folder)
+	   #Follow the guide "Manual_CreateShapefilePolygons.pdf" when creating these shapefiles. Specify multiple using c().
+     shapefile_vector <- "ZAC_TenEqualSizeVoronoiPolygons_EPSG4326.shp"
 
-     #Name of Shapefile containing either a single polygon, or a multi-polygon (located in '/Input/Shapefiles' folder)
-	   #Follow the guide "Manual_CreateShapefilePolygons.pdf" when creating this shapefile.
-     shapefile <- "ZAC_TenEqualSizeVoronoiPolygons_EPSG4326.shp"
-
-     #Coordinate reference system used for calculations
-     #EPSG:4326 is recommended
-     #EPSG:326XX might result in reduced computation time for areas located within a single UTM zone (i.e. planar coordinate system).
+     #Coordinate reference system used for calculations (EPSG:4326 is recommended)
      crs <- "EPSG:4326"
 
    #(c) Dates
 
-     #Specify the year of interest:
-     year_ID <- "2022"
+     #Specify the years of interest (specify multiple using c())
+     year_ID_vector <- as.character(2000:2023)
 
-     #Date range of all images considered for analysis
-     start_date <- paste0(year_ID, "-03-15") #choose date (well) before the first snowmelt occurs within the study site
-     end_date <- paste0(year_ID, "-09-15") #choose date (well) after last snowmelt occurs within the study site
+     #Date range of all images considered for analysis (format "-mm-dd")
+     start_month_day <- "-03-15" #choose date (well) before the first snowmelt occurs within the study site
+     end_month_day <- "-09-15" #choose date (well) after last snowmelt occurs within the study site
 
    #(d) Snow detection
 
@@ -109,32 +104,35 @@
      #Define the snowcover fraction for which the date of its occurrence will be calculated (specify multiple using c())
      Snowfraction_threshold_vector = c(0.25, 0.5, 0.75)
 
-     #Define the preferred method for the analysis of snowmelt
+     #Define the preferred method(s) for the snowmelt analysis
      method=c("avg_NDSI", "snowfraction") #either "avg_NDSI", "snowfraction", or a combination using c()
      #(1) "avg_NDSI":     Calculates the average FSC, NDSI, NDVI and NDMI values within each polygon over time and extracts the moment
-     #                    when the NDSI value is equal to 'NDSI_threshold'.
+     #                    when the NDSI value is equal to 'NDSI_threshold', and FSC is equal to 'Snowfraction_threshold'
      #(2) "snowfraction": Counts the fraction of pixels within each polygon with NDSI > 'NDSI_threshold' over time and extracts the moment
      #                    when this fraction is equal to 'Snowfraction_threshold'.
+
+     #Define model output for method 'avg_NDSI' (either "FSC_Gascoin2020", "FSC_Aalstad2020", "NDSI", "NDVI", and/or "NDMI")
+     method_output <- c("FSC_Gascoin2020", "FSC_Aalstad2020", "NDSI", "NDVI", "NDMI")
 
    #(e): Cloud masking
 
      #Should clouds be masked from the analysis (default=TRUE).
      mask_clouds=TRUE
-     
+
      #Define which MODIS cloud masking algorithm has been used ("PGE11", "MOD35", or "Combined)
      MODIS_cloud_masking_algorithm = 'MOD35' #default is MOD35
-     
+
      #Maximum fraction of cloud cover allowed in each image
      max_cloud_fraction=0.75
-     
-     #Specify the resolution of the QABand   
-     resolution_qaband=1000 #resolution of QA_band (MODIS=1000m)   
+
+     #Specify the resolution of the QABand
+     resolution_qaband=1000 #resolution of QA_band (MODIS=1000m)
 
    #(f): Water masking
 
      #Should permanent waterbodies be masked from the analysis using a 250m resolution Terra Land Water Mask dataset (default=TRUE).
      mask_water=TRUE
-     
+
    #(g): GAM sequential outlier filtering
 
      #parameters for auxiliary function to filter outliers from GAM using a two-step approach
@@ -152,6 +150,77 @@
      #Should counts of the number of unmasked pixels per doy within the shapefile area be conducted (increases computation time)
      pixel_counts=TRUE
 
+##################################################################################################################################
+
+ #Run the analysis for all shapefiles
+ for(shapefile in shapefile_vector){
+
+  #For debugging
+  #shapefile <- shapefile_vector[1]
+
+  #Print progress
+  cat("\n") ; cat("\n")
+  print("##########################################################################################################################")
+  print(paste0("STARTING ANALYSIS FOR SHAPEFILE: ", shapefile))
+  print("##########################################################################################################################")
+  cat("\n")
+
+  #Create empty lists to store dataframes and plots per year
+
+    #Pixelcounts
+    list_df_pixelcount <- vector('list', length(year_ID_vector))
+    list_p_pixelcounts <- vector('list', length(year_ID_vector))
+
+    #Raw data
+    list_df_Polygons_BandValues <- vector('list', length(year_ID_vector))
+    list_df_Polygons_SnowFraction <- vector('list', length(year_ID_vector))
+
+    #Snowfraction
+    list_df_Polygons_SnowFraction_GAM_predictions <- vector('list', length(year_ID_vector))
+    list_df_Polygon_Snowfraction <- vector('list', length(year_ID_vector))
+    list_p_snowfraction <- vector('list', length(year_ID_vector))
+
+    #FSC Gascoin2020
+    list_df_Polygons_FSC_Gascoin2020_GAM_predictions <- vector('list', length(year_ID_vector))
+    list_df_Polygon_FSC_Gascoin2020 <- vector('list', length(year_ID_vector))
+    list_p_fsc_gascoin2020 <- vector('list', length(year_ID_vector))
+
+    #FSC Aalstad2020
+    list_df_Polygons_FSC_Aalstad2020_GAM_predictions <- vector('list', length(year_ID_vector))
+    list_df_Polygon_FSC_Aalstad2020 <- vector('list', length(year_ID_vector))
+    list_p_fsc_aalstad2020 <- vector('list', length(year_ID_vector))
+
+    #NDSI
+    list_df_Polygons_NDSI_GAM_predictions <- vector('list', length(year_ID_vector))
+    list_df_Polygon_NDSI <- vector('list', length(year_ID_vector))
+    list_p_ndsi <- vector('list', length(year_ID_vector))
+
+    #NDVI
+    list_df_Polygons_NDVI_GAM_predictions <- vector('list', length(year_ID_vector))
+    list_p_ndvi <- vector('list', length(year_ID_vector))
+
+    #NDMI
+    list_df_Polygons_NDMI_GAM_predictions <- vector('list', length(year_ID_vector))
+    list_p_ndmi <- vector('list', length(year_ID_vector))
+
+  #Run the analysis for all years
+  for(year_ID in year_ID_vector){
+
+    #year_ID <- year_ID_vector[1]
+
+    #Print progress
+    cat("\n") ; cat("\n")
+    print("##########################################################################################################################")
+    print(paste0("STARTING ANALYSIS FOR YEAR: ", year_ID))
+    print("##########################################################################################################################")
+    cat("\n")
+
+    #Define date range of all images considered for analysis
+    start_date <- paste0(year_ID, start_month_day) #choose date (well) before the first snowmelt occurs within the study site
+    end_date <- paste0(year_ID, end_month_day) #choose date (well) after last snowmelt occurs within the study site
+
+    #Define area name (used as prefix in output files)
+    area_name <- toupper(substr(shapefile, 1, 3))
 
 ##################################################################################################################################
 
@@ -168,20 +237,22 @@
 
      #Create a timestamp variable
      timestamp <- format(Sys.time(), "%Y%m%d%H%M%S")
-     
-     #First and last day of year in dataset  
+
+     #First and last day of year in dataset
      start_date_doy <- as.numeric(strftime(start_date, format = "%j"))
-     end_date_doy <- as.numeric(strftime(end_date, format = "%j"))  
+     end_date_doy <- as.numeric(strftime(end_date, format = "%j"))
 
      #Create output folder
      if(dir.exists(paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt"))==FALSE){dir.create(paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt"), recursive = TRUE)}
-     
-     #Save all parameters and their values in the environment to a text file
-     file_conn <- file(paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Parameters.txt"), "w")
-     for (obj in setdiff(ls(), lsf.str())) {cat(paste(obj, "=", get(obj)), file = file_conn) ; cat("\n", file = file_conn)}
-     close(file_conn)
-     
-     
+
+     #Save all parameters and their values in the environment to a text file (only once, because parameters are identical between runs for different years)
+     if(year_ID == year_ID_vector[1]){
+      file_conn <- file(paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", paste0(area_name, "_MODIS_", MODIS_cloud_masking_algorithm), "_Parameters.txt"), "w")
+      for (obj in setdiff(ls(), lsf.str())) {cat(paste(obj, "=", get(obj)), file = file_conn) ; cat("\n", file = file_conn)}
+      close(file_conn)
+      }
+
+
 ##################################################################################################################################
 
 #IV: Read and display the unfiltered data
@@ -197,7 +268,11 @@
          geom_sf(data = aoi_Polygons, fill=sf.colors(nrow(aoi_Polygons)), col = "black")+
          theme_tom()+
          geom_sf_label(data = aoi_Polygons, aes(label=LocationID), colour="black")
-       ggsave(plot=p1, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Polygons.pdf"), width=10, height=8)
+
+       #Save the plot only once, because the shapefile is identical for all years
+       if(year_ID == year_ID_vector[1]){
+        ggsave(plot=p1, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_",paste0(area_name, "_MODIS_", MODIS_cloud_masking_algorithm), "_Polygons.pdf"), width=10, height=8)
+        }
 
        #Convert the shapefile to an earthengine feature collection:
        aoi_Polygons <- st_transform(aoi_Polygons, crs="EPSG:4326")
@@ -233,7 +308,7 @@
          scale= resolution,
          maxPixels= 1E13)
        paste0('Size of study area calculated using the pixel area method: ', round(ee$Number(area2$get('area'))$getInfo(),3), ' km2')
-       
+
     #(8) Extract MODIS satellite Surface Reflectance images:
 
       #Extract MODIS satellite data
@@ -241,17 +316,17 @@
        MODIS_col <- MODIS_col$
          filterBounds(aoi_Shapefile)$
          filterDate(start_date, end_date)
-       
+
        #Note that MODIS images are global composites which will always intersect with aoi_Shapefile,
        #and this full image is thus retained (i.e. filterBounds does not do anything).
-       
+
       #Clip all images to the area depicted by 'aoi_Shapefile'
        MODIS_col <- MODIS_col$map(function(img){return(img$clipToCollection(aoi_Shapefile))})
 
        #Note that we clip the imagecollection to aoi_Shapefile and not to aoi_Polygons, to prevent issues
        #when the shapefile consists of multiple non adjacent polygons. The final calculations below are
        #however conducted for the area depicted by 'aoi_Polygons'.
-       
+
     #(9) Add new bands to the clipped image collection
 
       #Map Normalized difference functions and FSC functions over the image collection
@@ -276,10 +351,10 @@
       #  ee_extract(x=image$select("NDSI", "FSC_Gascoin2020", "FSC_Aalstad2020"), y=coordinates_point, fun=ee$Reducer$first(), scale=resolution, sf=TRUE)
 
     #(10) Create a timeseries gif of RGB and NDSI images for aoi_Shapefile
-      
+
       # #Check number of images in collection
       #  MODIS_col$size()$getInfo()
-      
+
       # #Create a timelapse video of RGB band
       #  videoArgs <- list(dimensions=300, region=aoi_Shapefile$geometry(),framesPerSecond=5, crs='EPSG:3857', bands=c("sur_refl_b01", "sur_refl_b04", "sur_refl_b03"),
       #                    min=0, max=12000, gamma=c(1.9, 1.7, 1.7))
@@ -294,7 +369,7 @@
       #  videoArgs <- list(dimensions=200, region=aoi_Shapefile$geometry(), framesPerSecond=5, crs='EPSG:3857', bands=c('vis-red', 'vis-green', 'vis-blue'), min=0, max=255)
       #  tryCatch({browseURL(MODIS_snow_RGB$getVideoThumbURL(videoArgs)) }, error = function(cond){return("Too many pixels. Reduce dimensions.")})
 
-      
+
 ##################################################################################################################################
 
 #V: Filter and mask clouds within the image collection
@@ -338,26 +413,26 @@
        # PGE11_clouds_Fraction <- unlist(MODIS_col$aggregate_array('PGE11_clouds_Fraction')$getInfo())
        # MOD35_clouds_Fraction <- unlist(MODIS_col$aggregate_array('MOD35_clouds_Fraction')$getInfo())
        # doy <- unlist(MODIS_col$aggregate_array('doy')$getInfo())
-       # 
+       #
        # #Replace -9999 values by NA (for debugging)
        # Combined_clouds_Fraction[Combined_clouds_Fraction < -9000] <- NA
        # PGE11_clouds_Fraction[PGE11_clouds_Fraction < -9000] <- NA
        # MOD35_clouds_Fraction[MOD35_clouds_Fraction < -9000] <- NA
        # doy[doy < -9000] <- NA
-       # 
+       #
        # #Combine all cloud fraction measures in a single dataframe (for debugging)
        # clouds_MODIS <- data.frame(doy=doy,
        #                            Combined_clouds_Fraction=Combined_clouds_Fraction,
        #                            PGE11_clouds_Fraction=PGE11_clouds_Fraction,
        #                            MOD35_clouds_Fraction=MOD35_clouds_Fraction)
-       # 
+       #
        # #Assess relationship between both cloud algorithms (for debugging)
        # ggplot()+
        #   geom_line(aes(x=doy, y=MOD35_clouds_Fraction), col="red", lwd=1)+
        #   geom_line(aes(x=doy, y=PGE11_clouds_Fraction), col="black", lwd=1)+
        #   #geom_line(aes(x=doy, y=Combined_clouds_Fraction), col="blue", lwd=1)+
        #   theme_tom()
-       # 
+       #
        # #Correlation between MOD35 and PGE11 (for debugging)
        # ggplot()+
        #   geom_point(aes(x=MOD35_clouds_Fraction, y=PGE11_clouds_Fraction), col="black")+
@@ -521,7 +596,9 @@
                                   total=max(df_pixelcount$total))
      df_pixelcount <- rbind(df_pixelcount, df_doy_missing)
      df_pixelcount <- df_pixelcount[order(df_pixelcount$doy),]
-     write.csv(df_pixelcount, file=paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Data_Pixel_Counts_polygon.csv"), quote=FALSE, row.names=FALSE)
+     df_pixelcount$location <- area_name
+     df_pixelcount$year <- year_ID
+     #write.csv(df_pixelcount, file=paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Data_Pixel_Counts_polygon.csv"), quote=FALSE, row.names=FALSE)
 
     #(E): Create barplot with the pixel counts per day of year within aoi_Shapefile
      df_pixelcount$masked <- df_pixelcount$total - df_pixelcount$unmasked
@@ -533,15 +610,16 @@
       scale_fill_manual(values = c("black", "#FFA52C"))+
       xlab("Time (day of year)")+
       ylab("Pixel count")+
+      ggtitle(paste0("Year: ", year_ID))+
       theme_classic()
 
-    #(F): Save barplot
-     pdf(paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Plot_Pixel_Counts_polygon.pdf"), width=12, height=8)
-     print(p_pixelcounts)
-     dev.off()
+    # #(F): Save barplot
+    #  pdf(paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Plot_Pixel_Counts_polygon.pdf"), width=12, height=8)
+    #  print(p_pixelcounts)
+    #  dev.off()
 
   }
-  
+
 ##################################################################################################################################
 
 #VIII: Create timelapse videos of the RGB bands, and the NDSI-, NDVI-, NDMI- and NDMI-bands for aoi_Polygons (Cloud and Water masked)
@@ -553,9 +631,9 @@
   #    videoArgs <- list(dimensions=280, region=aoi_Shapefile$geometry(),framesPerSecond=5, crs='EPSG:3857', bands=c("sur_refl_b01", "sur_refl_b04", "sur_refl_b03"), min=0, max=8000, gamma=c(1.9, 1.7, 1.7))
   #    tryCatch({browseURL(MODIS_col_gif$getVideoThumbURL(videoArgs))}, error = function(cond){return("Too many pixels. Reduce dimensions.")})
   #    #Note that missing pixels are actually not recorded by the satellite and are NOT caused by coding errors
-  # 
+  #
   # #(20): Create a timeseries GIF of NDSI images
-  # 
+  #
   #    #Map a visualization function over the image collection. This function converts each image to an RGB image (i.e. a red, green and blue
   #    #colour band with min and max values of 0 and 255 respectively). In the function it can be specified which data band needs to be converted,
   #    #what min and max values of the original band should correspond to 0 and 255 in the RGB image, and which colour pallete should be used.
@@ -565,11 +643,11 @@
   #               copyProperties(img, img$propertyNames()))}
   #    S2_snow_masked_RGB <- MODIS_clouds_filtered$map(visFun_NDSI)
   #    S2_snow_masked_RGB_gif <- S2_snow_masked_RGB$map(function(img){return(img$clipToCollection(aoi_Polygons))})
-  # 
+  #
   #    #Create a timelapse video of NDSI band
   #    videoArgs <- list(dimensions=280, region=aoi_Shapefile$geometry(), framesPerSecond=5, crs='EPSG:3857', bands=c('vis-red', 'vis-green', 'vis-blue'), min=0, max=255)
   #    tryCatch({browseURL(S2_snow_masked_RGB_gif$getVideoThumbURL(videoArgs))}, error = function(cond){return("Too many pixels. Reduce dimensions.")})
-  # 
+  #
   #  #(21): Create a timeseries GIF of NDVI images
   #    palette <- c("#cccccc", "#f46d43", "#fdae61", "#fee08b", "#d9ef8b", "#a6d96a", "#66bd63", "#1a9850")
   #    visFun_NDVI <-  function(img) {
@@ -577,29 +655,29 @@
   #               copyProperties(img, img$propertyNames()))}
   #    S2_ndvi_masked_RGB <- MODIS_clouds_filtered$map(visFun_NDVI)
   #    S2_ndvi_masked_RGB_gif <- S2_ndvi_masked_RGB$map(function(img){return(img$clipToCollection(aoi_Polygons))})
-  # 
+  #
   #    #Create a timelapse video of NDSI band
   #    videoArgs <- list(dimensions=280, region=aoi_Shapefile$geometry(), framesPerSecond=5, crs='EPSG:3857', bands=c('vis-red', 'vis-green', 'vis-blue'), min=0, max=255)
   #    tryCatch({browseURL(S2_ndvi_masked_RGB_gif$getVideoThumbURL(videoArgs))}, error = function(cond){return("Too many pixels. Reduce dimensions.")})
-  # 
+  #
   #  #(22): Create a timeseries GIF of NDMI images
   #    palette <- c("#d73027", "#f46d43", "#fdae61", "#fee08b", "#d9ef8b", "#a6d96a", "#66bd63", "#1a9850", "#6ad99e", "#387ad9", "#003dd6")
   #    visFun_NDMI <-  function(img) {
   #      return(img$visualize(bands='NDMI', min=-0.75, max=1, palette=palette)$copyProperties(img, img$propertyNames()))}
   #    S2_ndmi_masked_RGB <- MODIS_clouds_filtered$map(visFun_NDMI)
   #    S2_ndmi_masked_RGB_gif <- S2_ndmi_masked_RGB$map(function(img){return(img$clipToCollection(aoi_Polygons))})
-  # 
+  #
   #    #Create a timelapse video of NDMI band
   #    videoArgs <- list(dimensions=280, region=aoi_Shapefile$geometry(), framesPerSecond=5, crs='EPSG:3857', bands=c('vis-red', 'vis-green', 'vis-blue'), min=0, max=255)
   #    tryCatch({browseURL(S2_ndmi_masked_RGB_gif$getVideoThumbURL(videoArgs))}, error = function(cond){return("Too many pixels. Reduce dimensions.")})
-  # 
+  #
   #  #(23): Create a timeseries GIF of NDWI images
   #    palette <- c('000000', '0dffff', '0524ff', 'ffffff')
   #    visFun_NDWI <-  function(img) {
   #      return(img$visualize(bands='NDWI', min=-0.5, max=1, palette=palette)$copyProperties(img, img$propertyNames()))}
   #    S2_ndwi_masked_RGB <- MODIS_clouds_filtered$map(visFun_NDWI)
   #    S2_ndwi_masked_RGB_gif <- S2_ndwi_masked_RGB$map(function(img){return(img$clipToCollection(aoi_Polygons))})
-  # 
+  #
   #    #Create a timelapse video of NDWI band
   #    videoArgs <- list(dimensions=280, region=aoi_Shapefile$geometry(), framesPerSecond=5, crs='EPSG:3857', bands=c('vis-red', 'vis-green', 'vis-blue'), min=0, max=255)
   #    tryCatch({browseURL(S2_ndwi_masked_RGB_gif$getVideoThumbURL(videoArgs))}, error = function(cond){return("Too many pixels. Reduce dimensions.")})
@@ -620,11 +698,11 @@
     print(paste0("METHOD: 'avg_NDSI' - CALCULATING THE AVERAGE FSC, NDSI, NDVI AND NDMI per Polygon"))
     print("--------------------------------------------------------------------------------------------------------------------------")
 
-    #Create an iteration function that we will use to iterate through all images of the image collection. For each image, 
-    #the value of certain bands is extracted for each feature (i.e. Polygon) within the feature collection aoi_Polygons. 
+    #Create an iteration function that we will use to iterate through all images of the image collection. For each image,
+    #the value of certain bands is extracted for each feature (i.e. Polygon) within the feature collection aoi_Polygons.
     #The resulting band values are added as a property to each feature (i.e. Polygon). This results in an updated feature
     #collection specific for the current image. This feature collection is then appended to a list of feature collections
-    #from previous image iterations. After iterating through n-images, the result is thus a feature collection list of 
+    #from previous image iterations. After iterating through n-images, the result is thus a feature collection list of
     #length n * the number of features within the feature collection.
 
     #Thus, at each iteration we extract band values of interest for all Polygons within the current image, store this as a
@@ -685,8 +763,12 @@
        index <- with(df_Polygons_BandValues, order(Polygon, doy))
        df_Polygons_BandValues <- df_Polygons_BandValues[index,]
 
+      #Add LocationID and Year
+       df_Polygons_BandValues$location <- area_name
+       df_Polygons_BandValues$year <- year_ID
+
       #Store dataframe with average bandValues and Snowfraction for all polygons
-       write.csv(df_Polygons_BandValues, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Data_MeanBandValues.csv"), row.names = FALSE)
+       #write.csv(df_Polygons_BandValues, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Data_MeanBandValues.csv"), row.names = FALSE)
        #df_Polygons_BandValues <- read.csv(paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Data_MeanBandValues.csv"), header=T)
 
   }
@@ -741,7 +823,7 @@
        #Extract fraction of snowcover within each polygon for each MODIS image
 
            #Create a function that iterates over the image collection, extracts the fraction of snowcover within all Polygons
-           #of each image image, stores this as a feature collection and adds this to an expanding list of feature collections 
+           #of each image image, stores this as a feature collection and adds this to an expanding list of feature collections
            #from previous iterations.
 
            #Create an empty FeatureCollection list. This list is used as input for the first iteration of the iteration function below.
@@ -838,8 +920,12 @@
 
          }
 
+    #Add LocationID and year
+    df_Polygons_SnowFraction$location <- area_name
+    df_Polygons_SnowFraction$year <- year_ID
+
     #Store dataframe with Snowfraction data for all polygons for all levels of NDSI_threshold
-    write.csv(df_Polygons_SnowFraction, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Data_SnowFraction.csv"), row.names = FALSE)
+    #write.csv(df_Polygons_SnowFraction, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Data_SnowFraction.csv"), row.names = FALSE)
     #df_Polygons_SnowFraction <- read.csv(paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Data_SnowFraction.csv"), header=T)
 
   }
@@ -920,49 +1006,49 @@
 
               #If there are at least two datapoints, then continue to fit the GAM
               if(nrow(df_Polygon_SnowFraction_GAM_new) > 1){
-              
+
                 #Fit a GAM through the Polygon-specific SnowFraction ~ doy data and employ sequential outlier removal
                 df_Polygon_SnowFraction_GAM_new <- f_gam_SeqRemOutliers(data=df_Polygon_SnowFraction_GAM_new, y="SnowFraction", x="doy", outlier_removal=outlier_removal,
                                                                         outlier_thresh_1=outlier_thresh_1, outlier_thresh_2=outlier_thresh_2,
                                                                         default_k=gam_k_outlier)
-  
+
                 #Sort df_Polygon_SnowFraction_GAM_new by doy:
                 df_Polygon_SnowFraction_GAM_new <- df_Polygon_SnowFraction_GAM_new[order(df_Polygon_SnowFraction_GAM_new$doy),]
-  
+
                 #Bind the Polygon-specific dataframe with outlier-filtered GAM estimates to the dataframe containing all dataframes from previous iterations
                  df_Polygons_SnowFraction_GAM <- rbind(df_Polygons_SnowFraction_GAM, df_Polygon_SnowFraction_GAM_new)
-  
+
                 #Create more detailed predictions (not only at the doy present in the dataframe) to plot more smooth curves
-  
+
                   #Refit GAM through data
                    index <- which(df_Polygon_SnowFraction_GAM_new$outliers==FALSE)
                    mod_gam <- with(df_Polygon_SnowFraction_GAM_new[index,], mgcv::gam(SnowFraction ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
-  
+
                   #Use GAM to make predictions on a more detailed (1-day) day of year interval
                    df_Polygon_SnowFraction_GAM_predictions_new <- data.frame(Polygon=i, NDSI_threshold=j, doy=seq(min(df_Polygon_SnowFraction_GAM_new$doy), max(df_Polygon_SnowFraction_GAM_new$doy), 0.01))
                    df_Polygon_SnowFraction_GAM_predictions_new$SnowFraction_gam_predict <- stats::predict(mod_gam, newdata=df_Polygon_SnowFraction_GAM_predictions_new, type="response")
                    df_Polygon_SnowFraction_GAM_predictions_new <- df_Polygon_SnowFraction_GAM_predictions_new[order(df_Polygon_SnowFraction_GAM_predictions_new$doy),]
-  
+
                   #Add predictions to df_Polygons_SnowFraction_GAM_predictions dataframe:
                    df_Polygons_SnowFraction_GAM_predictions <- rbind(df_Polygons_SnowFraction_GAM_predictions, df_Polygon_SnowFraction_GAM_predictions_new)
-  
+
                   }
-                 
+
               #If there are less than two datapoints, then append empty dataframes
               if(nrow(df_Polygon_SnowFraction_GAM_new) < 2){
-                
+
                 #Bind the empty dataframe to the dataframe containing all dataframes from previous iterations
                 if(nrow(df_Polygon_SnowFraction_GAM_new) < 1){df_Polygon_SnowFraction_GAM_new <- data.frame(NDSI_threshold=j, SnowFraction=NA, Date=NA, doy=NA, Polygon=i, outliers=NA)}
                 if(nrow(df_Polygon_SnowFraction_GAM_new) > 0){df_Polygon_SnowFraction_GAM_new$outliers <- NA}
                 df_Polygons_SnowFraction_GAM <- rbind(df_Polygons_SnowFraction_GAM, df_Polygon_SnowFraction_GAM_new)
-                
+
                 #Add empty GAM predictions to df_Polygons_SnowFraction_GAM_predictions dataframe:
                 df_Polygon_SnowFraction_GAM_predictions_new <- df_Polygon_SnowFraction_GAM_new[,c("Polygon", "NDSI_threshold", "doy")]
                 df_Polygon_SnowFraction_GAM_predictions_new$SnowFraction_gam_predict <- NA
                 df_Polygons_SnowFraction_GAM_predictions <- rbind(df_Polygons_SnowFraction_GAM_predictions, df_Polygon_SnowFraction_GAM_predictions_new)
-                
+
                 }
-              
+
               }
 
             }
@@ -971,9 +1057,13 @@
           df_Polygons_SnowFraction_GAM$Polygon <- as.factor(as.character(df_Polygons_SnowFraction_GAM$Polygon))
           df_Polygons_SnowFraction_GAM_predictions$Polygon <- as.factor(as.character(df_Polygons_SnowFraction_GAM_predictions$Polygon))
 
+          #Add LocationID and year
+          df_Polygons_SnowFraction_GAM_predictions$location <- area_name
+          df_Polygons_SnowFraction_GAM_predictions$year <- year_ID
+
           #Save dataframe with GAM fits for SnowFraction
           #write.csv(df_Polygons_SnowFraction_GAM, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Data_SnowFraction_GAM.csv"), row.names = FALSE)
-          write.csv(df_Polygons_SnowFraction_GAM_predictions, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_GAM_Predictions_SnowFraction.csv"), row.names = FALSE)
+          #write.csv(df_Polygons_SnowFraction_GAM_predictions, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_GAM_Predictions_SnowFraction.csv"), row.names = FALSE)
 
       #(3) Plot the raw Snowfraction datapoints and gam predictions for each Polygon:
 
@@ -1011,7 +1101,7 @@
 
             #If this results in an empty dataframe due to filtering of NAs then we return the original dataframe (required for threshold detection function below)
             if(nrow(df_Polygon_gam) < 1){df_Polygon_gam <- df_Polygons_SnowFraction_GAM_predictions[df_Polygons_SnowFraction_GAM_predictions$Polygon==i,]}
-            
+
             #Use the function f_detect_threshold_date_parallel to extract the moments the GAM predictions cross the thresholds in Snowfraction_threshold_vector (per level of NDSI_threshold)
             results <- f_detect_threshold_date_parallel(subset=1, #data subset (not relevant here, set to 1)
                                                         pixelIDs_split = list(NDSI_threshold_vector), #levels of NDSI_threshold (input needs to be a list)
@@ -1042,18 +1132,22 @@
           #Change column Polygon to a factor:
           df_Polygon_Snowfraction$Polygon <- as.factor(as.character(df_Polygon_Snowfraction$Polygon))
 
+          #Add LocationID and year
+          df_Polygon_Snowfraction$location <- area_name
+          df_Polygon_Snowfraction$year <- year_ID
+
           #Save dates of snowmelt per polygon per SnowFraction threshold as a .csv file
-          write.csv(df_Polygon_Snowfraction, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Snowmelt_Snowfraction.csv"), row.names = FALSE)
+          #write.csv(df_Polygon_Snowfraction, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Snowmelt_Snowfraction.csv"), row.names = FALSE)
 
       #(5): Create a separate plot with GAM predictions per polygon and NDSI_threshold:
 
           #Create an empty list to store plots
           list_plots_snowfraction <- vector('list', length(unique(df_Polygons_SnowFraction_GAM_predictions$NDSI_threshold)))
-          
+
           #Loop through all levels of NDSI_threshold
           for(i in unique(df_Polygons_SnowFraction_GAM_predictions$NDSI_threshold)){
 
-            #i=unique(df_Polygons_SnowFraction_GAM_predictions$NDSI_threshold)[2]
+            #i=unique(df_Polygons_SnowFraction_GAM_predictions$NDSI_threshold)[1]
 
             #Create an index variable for parameter i
             i_index <- which( unique(df_Polygons_SnowFraction_GAM_predictions$NDSI_threshold) == i)
@@ -1084,19 +1178,19 @@
                 geom_hline(yintercept = Snowfraction_threshold_vector, colour="grey", lty=2)+
                 xlab(paste0("Day of year (starting at 01-01-", year_ID, ")")) +
                 ylab("Fraction of snow-covered pixels") +
-                ggtitle(paste0("NDSI: ", i, ", Polygon: ", j))+
+                ggtitle(paste0("Year: ", year_ID, ", Polygon: ", j, ", NDSI: ", i))+
                 theme_tom()
 
                }
 
             #Plot SnowFraction and model predictions in a separate plot per Polygon per NDSI_threshold
-            plots_snowfraction <- list_plots_snowfraction[i_index]
-            plots_per_page = 25
-            plots_snowfraction <- lapply(plots_snowfraction, function(x){split(x, ceiling(seq_along(plots_snowfraction[[1]])/plots_per_page))})
-            plots_snowfraction <- unname(unlist(plots_snowfraction, recursive = F))
-            pdf(paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI_threshold_", NDSI_threshold_char, "_Polygons_Plot_Snowfraction.pdf"), width=20, height=16, onefile = TRUE)
-            for (k in seq(length(plots_snowfraction))) { do.call("grid.arrange", plots_snowfraction[[k]]) }
-            dev.off()
+            # plots_snowfraction <- list_plots_snowfraction[i_index]
+            # plots_per_page = 25
+            # plots_snowfraction <- lapply(plots_snowfraction, function(x){split(x, ceiling(seq_along(plots_snowfraction[[1]])/plots_per_page))})
+            # plots_snowfraction <- unname(unlist(plots_snowfraction, recursive = F))
+            # pdf(paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI_threshold_", NDSI_threshold_char, "_Polygons_Plot_Snowfraction.pdf"), width=20, height=16, onefile = TRUE)
+            # for (k in seq(length(plots_snowfraction))) { do.call("grid.arrange", plots_snowfraction[[k]]) }
+            # dev.off()
 
           }
 
@@ -1110,804 +1204,852 @@
 
 ########################################################################################################################################################################################
 
-    #(A): FSC_Gascoin2020 - Fit a Generalized Additive Model (GAM) through the FSC_Gascoin2020 data within each polygon
+      #(A): FSC_Gascoin2020 - Fit a Generalized Additive Model (GAM) through the FSC_Gascoin2020 data within each polygon
+      if("FSC_Gascoin2020" %in% method_output){
 
-      #(A.0) Print message
-        cat("\n")
-        print("--------------------------------------------------------------------------------------------------------------------------")
-        print(paste0("FIT A GAM THROUGH THE AVERAGE FSC_GASCOIN2020 DATA PER POLYGON"))
-        print("--------------------------------------------------------------------------------------------------------------------------")
-
-      #(A.1) Create an empty dataframe
-        df_Polygons_FSC_Gascoin2020_GAM <- data.frame(FSC_Gascoin2020=numeric(),
-                                                      Date=factor(),
-                                                      doy=numeric(),
-                                                      Polygon=factor(),
-                                                      outliers=logical())
-
-        df_Polygons_FSC_Gascoin2020_GAM_predictions <- data.frame(Polygon=character(),
-                                                                  doy=numeric(),
-                                                                  FSC_Gascoin2020_gam_predict=numeric(),
-                                                                  stringsAsFactors=FALSE)
-
-      #(A.2) Loop through all Polygons and fit a separate GAM (with sequential outlier removal) to the Polygon-specific FSC_Gascoin2020 data
-        for(i in unique(df_Polygons_BandValues$Polygon)){
-
-          #For debugging
-          #i=unique(df_Polygons_BandValues$Polygon)[2]
-
-          #Select Polygon-specific subset of data:
-          df_Polygon_FSC_Gascoin2020_GAM_new <- df_Polygons_BandValues[df_Polygons_BandValues$Polygon==i &
-                                                                       !is.na(df_Polygons_BandValues$FSC_Gascoin2020),
-                                                                       c("FSC_Gascoin2020", "Date", "doy", "Polygon")]
-
-          #If there are at least two datapoints, then continue to fit the GAM
-          if(nrow(df_Polygon_FSC_Gascoin2020_GAM_new) > 1){ 
-          
-            #Fit a gam through the Polygon-specific FSC_Gascoin2020 ~ doy data and emply sequential outlier removal
-            df_Polygon_FSC_Gascoin2020_GAM_new <- f_gam_SeqRemOutliers(data=df_Polygon_FSC_Gascoin2020_GAM_new, y="FSC_Gascoin2020", x="doy", outlier_removal=outlier_removal,
-                                                                       outlier_thresh_1=outlier_thresh_1, outlier_thresh_2=outlier_thresh_2,
-                                                                       default_k=gam_k_outlier)
-  
-            #Sort df_Polygon_FSC_Gascoin2020_GAM_new by doy:
-            df_Polygon_FSC_Gascoin2020_GAM_new <- df_Polygon_FSC_Gascoin2020_GAM_new[order(df_Polygon_FSC_Gascoin2020_GAM_new$doy),]
-  
-            #Bind the Polygon-specific dataframe with outlier-filtered GAM estimates to the dataframe containing all dataframes from previous iterations
-             df_Polygons_FSC_Gascoin2020_GAM <- rbind(df_Polygons_FSC_Gascoin2020_GAM, df_Polygon_FSC_Gascoin2020_GAM_new)
-  
-            #Create more detailed predictions (not only at the doy present in the datframe) at a 1-day interval to plot more smooth curves
-  
-              #Refit GAM through data
-               index <- which(df_Polygon_FSC_Gascoin2020_GAM_new$outliers==FALSE)
-               mod_gam <- with(df_Polygon_FSC_Gascoin2020_GAM_new[index,], mgcv::gam(FSC_Gascoin2020 ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
-  
-              #Use gam to make predictions on a more detailed interval
-               df_Polygon_FSC_Gascoin2020_GAM_predictions_new <- data.frame(Polygon=i, doy=seq(min(df_Polygon_FSC_Gascoin2020_GAM_new$doy), max(df_Polygon_FSC_Gascoin2020_GAM_new$doy), 0.01))
-               df_Polygon_FSC_Gascoin2020_GAM_predictions_new$FSC_Gascoin2020_gam_predict <- stats::predict(mod_gam, newdata=df_Polygon_FSC_Gascoin2020_GAM_predictions_new, type="response")
-               df_Polygon_FSC_Gascoin2020_GAM_predictions_new <- df_Polygon_FSC_Gascoin2020_GAM_predictions_new[order(df_Polygon_FSC_Gascoin2020_GAM_predictions_new$doy),]
-  
-              #Add predictions to df_Polygons_FSC_Gascoin2020_GAM_predictions dataframe:
-               df_Polygons_FSC_Gascoin2020_GAM_predictions <- rbind(df_Polygons_FSC_Gascoin2020_GAM_predictions, df_Polygon_FSC_Gascoin2020_GAM_predictions_new)
-
-             }
-              
-          #If there are less than two datapoints, then append empty dataframes
-          if(nrow(df_Polygon_FSC_Gascoin2020_GAM_new) < 2){
-            
-            #Bind the empty dataframe to the dataframe containing all dataframes from previous iterations
-            if(nrow(df_Polygon_FSC_Gascoin2020_GAM_new) < 1){df_Polygon_FSC_Gascoin2020_GAM_new <- data.frame(FSC_Gascoin2020=NA, Date=NA, doy=NA, Polygon=i, outliers=NA)}
-            if(nrow(df_Polygon_FSC_Gascoin2020_GAM_new) > 0){df_Polygon_FSC_Gascoin2020_GAM_new$outliers <- NA}
-            df_Polygons_FSC_Gascoin2020_GAM <- rbind(df_Polygons_FSC_Gascoin2020_GAM, df_Polygon_FSC_Gascoin2020_GAM_new)
-            
-            #Add empty GAM predictions to df_Polygons_FSC_Gascoin2020_GAM_predictions dataframe:
-            df_Polygon_FSC_Gascoin2020_GAM_predictions_new <- df_Polygon_FSC_Gascoin2020_GAM_new[,c("Polygon", "doy")]
-            df_Polygon_FSC_Gascoin2020_GAM_predictions_new$FSC_Gascoin2020_gam_predict <- NA
-            df_Polygons_FSC_Gascoin2020_GAM_predictions <- rbind(df_Polygons_FSC_Gascoin2020_GAM_predictions, df_Polygon_FSC_Gascoin2020_GAM_predictions_new)
-            
-          }
-          
-          }
-
-        #Change Polygon column to factor
-        df_Polygons_FSC_Gascoin2020_GAM$Polygon <- as.factor(as.character(df_Polygons_FSC_Gascoin2020_GAM$Polygon))
-        df_Polygons_FSC_Gascoin2020_GAM_predictions$Polygon <- as.factor(as.character(df_Polygons_FSC_Gascoin2020_GAM_predictions$Polygon))
-
-        #Save dataframe with GAM fits for FSC_Gascoin2020
-        #write.csv(df_Polygons_FSC_Gascoin2020_GAM, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Data_FSCGascoin2020_GAM.csv"), row.names = FALSE)
-        write.csv(df_Polygons_FSC_Gascoin2020_GAM_predictions, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_GAM_Predictions_FSCGascoin2020.csv"), row.names = FALSE)
-
-      #(A.3) Plot the raw FSC_Gascoin2020 datapoints and gam predictions for each Polygon:
-
-         #Plot FSC_Gascoin2020 and model predictions for all Polygons in a single plot
-          p_Polygon_FSC_Gascoin2020 = ggplot()+
-            geom_point(data=df_Polygons_FSC_Gascoin2020_GAM, aes(x=doy, y=FSC_Gascoin2020, fill=Polygon, col=Polygon))+
-            geom_line(data=df_Polygons_FSC_Gascoin2020_GAM_predictions, aes(x=doy, y=FSC_Gascoin2020_gam_predict, col=Polygon)) +
-            geom_hline(yintercept = Snowfraction_threshold_vector, colour="grey", lty=2)+
-            xlab(paste0("Day of year (starting at 01-01-", year_ID, ")")) +
-            ylab("FSC_Gascoin2020") +
-            theme_tom()
-
-      #(A.4): Calculate at which day of year the FSC_Gascoin2020 value is equal to Snowfraction_threshold for each Polygon using predictions from mod_gam
-
-          #Setup parallel processing
-          numCores <- detectCores()
-          cl <- makePSOCKcluster(numCores)
-          registerDoSNOW(cl)
-
-          #Use the function f_detect_threshold_date_parallel to extract the moments the GAM predictions cross the thresholds in Snowfraction_threshold_vector
-          results <- f_detect_threshold_date_parallel(subset=1, #data subset (not relevant here, set to 1)
-                                                      pixelIDs_split = list(unique(df_Polygons_FSC_Gascoin2020_GAM_predictions$Polygon)), #levels of Polygon (input needs to be a list)
-                                                      df_pixel_y = df_Polygons_FSC_Gascoin2020_GAM_predictions, #dataframe containing GAM predictions
-                                                      pixel_ID_column="Polygon", #Grouping column
-                                                      y="FSC_Gascoin2020_gam_predict", #response variable in GAM
-                                                      x="doy", #predictor variable in GAM
-                                                      pixel_gam_plots = FALSE, #Should GAM plots be created
-                                                      y_threshold = Snowfraction_threshold_vector) #Which threshold values for 'y' should be calculated
-
-          #Turn parallel processing off and run sequentially again after this point
-          stopCluster(cl)
-          registerDoSEQ()
-
-          #Store dates of snowmelt per Polygon
-          df_Polygon_FSC_Gascoin2020 <- results[[1]]
-          df_Polygon_FSC_Gascoin2020 <- as.data.frame(do.call(rbind, df_Polygon_FSC_Gascoin2020))
-          colnames(df_Polygon_FSC_Gascoin2020)[colnames(df_Polygon_FSC_Gascoin2020)=="pixel_ID"] <- "Polygon"
-          colnames(df_Polygon_FSC_Gascoin2020)[colnames(df_Polygon_FSC_Gascoin2020)=="x_threshold"] <- "doy"
-          colnames(df_Polygon_FSC_Gascoin2020)[colnames(df_Polygon_FSC_Gascoin2020)=="y_threshold"] <- "Snowfraction_threshold"
-
-          #Change column Polygon to a factor:
-          df_Polygon_FSC_Gascoin2020$Polygon <- as.factor(as.character(df_Polygon_FSC_Gascoin2020$Polygon))
-
-          #Save dates of snowmelt per polygon per FSC_Gascoin2020 threshold as a .csv file
-          write.csv(df_Polygon_FSC_Gascoin2020, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Snowmelt_FSCGascoin2020.csv"), row.names = FALSE)
-
-      #(A.5): Create a separate plot with GAM predictions per polygon
-
-          #Create an empty list to store plots
-          list_plots_fsc_gascoin2020 <- vector('list', length(unique(df_Polygons_FSC_Gascoin2020_GAM_predictions$Polygon)))
-
-          #Loop through all Polygons
-          for(i in unique(df_Polygons_FSC_Gascoin2020_GAM_predictions$Polygon)){
-
-            #i=unique(df_Polygons_FSC_Gascoin2020_GAM_predictions$Polygon)[1]
-
-            #Create an index variable for parameter i
-            i_index <- which( unique(df_Polygons_FSC_Gascoin2020_GAM_predictions$Polygon) == i)
-
-            #select datasets for current Snowfraction_threshold and Polygon:
-            df_Polygon_FSC_Gascoin2020_GAM <- df_Polygons_FSC_Gascoin2020_GAM[df_Polygons_FSC_Gascoin2020_GAM$Polygon==i,]
-            df_Polygon_FSC_Gascoin2020_GAM_predictions <- df_Polygons_FSC_Gascoin2020_GAM_predictions[df_Polygons_FSC_Gascoin2020_GAM_predictions$Polygon==i,]
-            df_Polygon_FSC_Gascoin2020_snowmelt <- df_Polygon_FSC_Gascoin2020[df_Polygon_FSC_Gascoin2020$Polygon==i,]
-
-            #create plot for current Polygon and store it in list_plots_fsc_gascoin2020:
-            list_plots_fsc_gascoin2020[[i_index]] <- ggplot()+
-              geom_point(data=df_Polygon_FSC_Gascoin2020_GAM[df_Polygon_FSC_Gascoin2020_GAM$outliers==FALSE,], aes(x=doy, y=FSC_Gascoin2020))+
-              geom_point(data=df_Polygon_FSC_Gascoin2020_GAM[df_Polygon_FSC_Gascoin2020_GAM$outliers==TRUE,], aes(x=doy, y=FSC_Gascoin2020), col="black", pch=16, alpha=0.2)+
-              geom_line(data=df_Polygon_FSC_Gascoin2020_GAM_predictions, aes(x=doy, y=FSC_Gascoin2020_gam_predict), col="#1620de", lwd=1.25)+
-              geom_point(data=df_Polygon_FSC_Gascoin2020_snowmelt[!is.na(df_Polygon_FSC_Gascoin2020_snowmelt$doy),], aes(x=doy, y=Snowfraction_threshold), col="red", size=3)+
-              geom_vline(xintercept = 150, colour="grey", lty=2)+
-              geom_hline(yintercept = Snowfraction_threshold_vector, colour="grey", lty=2)+
-              xlab(paste0("Day of year (starting at 01-01-", year_ID, ")")) +
-              ylab("FSC_Gascoin2020") +
-              ggtitle(paste0("Polygon: ", i))+
-              theme_tom()
-
-            }
-
-          #Plot FSC_Gascoin2020 and model predictions in a separate plot per Polygon
-          plots_fsc_gascoin2020 <- list(list_plots_fsc_gascoin2020)
-          plots_per_page = 25
-          plots_fsc_gascoin2020 <- lapply(plots_fsc_gascoin2020, function(x){split(x, ceiling(seq_along(plots_fsc_gascoin2020[[1]])/plots_per_page))})
-          plots_fsc_gascoin2020 <- unname(unlist(plots_fsc_gascoin2020, recursive = F))
-          pdf(paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Plot_FSCGascoin2020.pdf"), width=20, height=16, onefile = TRUE)
-          for (k in seq(length(plots_fsc_gascoin2020))) { do.call("grid.arrange", plots_fsc_gascoin2020[[k]]) }
-          dev.off()
-
-########################################################################################################################################################################################
-
-    #(B): FSC_Aalstad2020 - Fit a Generalized Additive Model (GAM) through the FSC_Aalstad2020 data within each polygon
-
-      #(B.0) Print message
-        cat("\n")
-        print("--------------------------------------------------------------------------------------------------------------------------")
-        print(paste0("FIT A GAM THROUGH THE AVERAGE FSC_AALSTAD2020 DATA PER POLYGON"))
-        print("--------------------------------------------------------------------------------------------------------------------------")
-
-      #(B.1) Create an empty dataframe
-        df_Polygons_FSC_Aalstad2020_GAM <- data.frame(FSC_Aalstad2020=numeric(),
-                                                      Date=factor(),
-                                                      doy=numeric(),
-                                                      Polygon=factor(),
-                                                      outliers=logical())
-
-        df_Polygons_FSC_Aalstad2020_GAM_predictions <- data.frame(Polygon=character(),
-                                                                  doy=numeric(),
-                                                                  FSC_Aalstad2020_gam_predict=numeric(),
-                                                                  stringsAsFactors=FALSE)
-
-      #(B.2) Loop through all Polygons and fit a separate GAM (with sequential outlier removal) to the Polygon-specific FSC_Aalstad2020 data
-        for(i in unique(df_Polygons_BandValues$Polygon)){
-
-          #For debugging
-          #i=unique(df_Polygons_BandValues$Polygon)[1]
-
-          #Select Polygon-specific subset of data:
-          df_Polygon_FSC_Aalstad2020_GAM_new <- df_Polygons_BandValues[df_Polygons_BandValues$Polygon==i &
-                                                                       !is.na(df_Polygons_BandValues$FSC_Aalstad2020),
-                                                                       c("FSC_Aalstad2020", "Date", "doy", "Polygon")]
-
-          #If there are at least two datapoints, then continue to fit the GAM
-          if(nrow(df_Polygon_FSC_Aalstad2020_GAM_new) > 1){
-          
-            #Fit a gam through the Polygon-specific FSC_Aalstad2020 ~ doy data and emply sequential outlier removal
-            df_Polygon_FSC_Aalstad2020_GAM_new <- f_gam_SeqRemOutliers(data=df_Polygon_FSC_Aalstad2020_GAM_new, y="FSC_Aalstad2020", x="doy", outlier_removal=outlier_removal,
-                                                                       outlier_thresh_1=outlier_thresh_1, outlier_thresh_2=outlier_thresh_2,
-                                                                       default_k=gam_k_outlier)
-  
-            #Sort df_Polygon_FSC_Aalstad2020_GAM_new by doy:
-            df_Polygon_FSC_Aalstad2020_GAM_new <- df_Polygon_FSC_Aalstad2020_GAM_new[order(df_Polygon_FSC_Aalstad2020_GAM_new$doy),]
-  
-            #Bind the Polygon-specific dataframe with outlier-filtered GAM estimates to the dataframe containing all dataframes from previous iterations
-            df_Polygons_FSC_Aalstad2020_GAM <- rbind(df_Polygons_FSC_Aalstad2020_GAM, df_Polygon_FSC_Aalstad2020_GAM_new)
-  
-            #Create more detailed predictions (not only at the doy present in the datframe) at a 1-day interval to plot more smooth curves
-  
-              #Refit GAM through data
-               index <- which(df_Polygon_FSC_Aalstad2020_GAM_new$outliers==FALSE)
-               mod_gam <- with(df_Polygon_FSC_Aalstad2020_GAM_new[index,], mgcv::gam(FSC_Aalstad2020 ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
-  
-              #Use gam to make predictions on a more detailed interval
-               df_Polygon_FSC_Aalstad2020_GAM_predictions_new <- data.frame(Polygon=i, doy=seq(min(df_Polygon_FSC_Aalstad2020_GAM_new$doy), max(df_Polygon_FSC_Aalstad2020_GAM_new$doy), 0.01))
-               df_Polygon_FSC_Aalstad2020_GAM_predictions_new$FSC_Aalstad2020_gam_predict <- stats::predict(mod_gam, newdata=df_Polygon_FSC_Aalstad2020_GAM_predictions_new, type="response")
-               df_Polygon_FSC_Aalstad2020_GAM_predictions_new <- df_Polygon_FSC_Aalstad2020_GAM_predictions_new[order(df_Polygon_FSC_Aalstad2020_GAM_predictions_new$doy),]
-  
-              #Add predictions to df_Polygons_FSC_Aalstad2020_GAM_predictions dataframe:
-               df_Polygons_FSC_Aalstad2020_GAM_predictions <- rbind(df_Polygons_FSC_Aalstad2020_GAM_predictions, df_Polygon_FSC_Aalstad2020_GAM_predictions_new)
-            
-            }
-          
-          #If there are less than two datapoints, then append empty dataframes
-          if(nrow(df_Polygon_FSC_Aalstad2020_GAM_new) < 2){
-            
-            #Bind the empty dataframe to the dataframe containing all dataframes from previous iterations
-            if(nrow(df_Polygon_FSC_Aalstad2020_GAM_new) < 1){df_Polygon_FSC_Aalstad2020_GAM_new <- data.frame(FSC_Aalstad2020=NA, Date=NA, doy=NA, Polygon=i, outliers=NA)}
-            if(nrow(df_Polygon_FSC_Aalstad2020_GAM_new) > 0){df_Polygon_FSC_Aalstad2020_GAM_new$outliers <- NA}
-            df_Polygons_FSC_Aalstad2020_GAM <- rbind(df_Polygons_FSC_Aalstad2020_GAM, df_Polygon_FSC_Aalstad2020_GAM_new)
-            
-            #Add empty GAM predictions to df_Polygons_FSC_Aalstad2020_GAM_predictions dataframe:
-            df_Polygon_FSC_Aalstad2020_GAM_predictions_new <- df_Polygon_FSC_Aalstad2020_GAM_new[,c("Polygon", "doy")]
-            df_Polygon_FSC_Aalstad2020_GAM_predictions_new$FSC_Aalstad2020_gam_predict <- NA
-            df_Polygons_FSC_Aalstad2020_GAM_predictions <- rbind(df_Polygons_FSC_Aalstad2020_GAM_predictions, df_Polygon_FSC_Aalstad2020_GAM_predictions_new)
-            
-          }
-          
-          }
-
-        #Change Polygon column to factor
-        df_Polygons_FSC_Aalstad2020_GAM$Polygon <- as.factor(as.character(df_Polygons_FSC_Aalstad2020_GAM$Polygon))
-        df_Polygons_FSC_Aalstad2020_GAM_predictions$Polygon <- as.factor(as.character(df_Polygons_FSC_Aalstad2020_GAM_predictions$Polygon))
-
-        #Save dataframe with GAM fits for FSC_Aalstad2020
-        #write.csv(df_Polygons_FSC_Aalstad2020_GAM, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Data_FSCAalstad2020_GAM.csv"), row.names = FALSE)
-        write.csv(df_Polygons_FSC_Aalstad2020_GAM_predictions, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_GAM_Predictions_FSCAalstad2020.csv"), row.names = FALSE)
-
-      #(B.3) Plot the raw FSC_Aalstad2020 datapoints and gam predictions for each Polygon:
-
-         #Plot FSC_Aalstad2020 and model predictions for all Polygons in a single plot
-          p_Polygon_FSC_Aalstad2020 = ggplot()+
-            geom_point(data=df_Polygons_FSC_Aalstad2020_GAM, aes(x=doy, y=FSC_Aalstad2020, fill=Polygon, col=Polygon))+
-            geom_line(data=df_Polygons_FSC_Aalstad2020_GAM_predictions, aes(x=doy, y=FSC_Aalstad2020_gam_predict, col=Polygon)) +
-            geom_hline(yintercept = Snowfraction_threshold_vector, colour="grey", lty=2)+
-            xlab(paste0("Day of year (starting at 01-01-", year_ID, ")")) +
-            ylab("FSC_Aalstad2020") +
-            theme_tom()
-
-      #(B.4): Calculate at which day of year the FSC_Aalstad2020 value is equal to Snowfraction_threshold for each Polygon using predictions from mod_gam
-
-          #Setup parallel processing
-          numCores <- detectCores()
-          cl <- makePSOCKcluster(numCores)
-          registerDoSNOW(cl)
-
-          #Use the function f_detect_threshold_date_parallel to extract the moments the GAM predictions cross the thresholds in Snowfraction_threshold_vector
-          results <- f_detect_threshold_date_parallel(subset=1, #data subset (not relevant here, set to 1)
-                                                      pixelIDs_split = list(unique(df_Polygons_FSC_Aalstad2020_GAM_predictions$Polygon)), #levels of Polygon (input needs to be a list)
-                                                      df_pixel_y = df_Polygons_FSC_Aalstad2020_GAM_predictions, #dataframe containing GAM predictions
-                                                      pixel_ID_column="Polygon", #Grouping column
-                                                      y="FSC_Aalstad2020_gam_predict", #response variable in GAM
-                                                      x="doy", #predictor variable in GAM
-                                                      pixel_gam_plots = FALSE, #Should GAM plots be created
-                                                      y_threshold = Snowfraction_threshold_vector) #Which threshold values for 'y' should be calculated
-
-          #Turn parallel processing off and run sequentially again after this point
-          stopCluster(cl)
-          registerDoSEQ()
-
-          #Store dates of snowmelt per Polygon
-          df_Polygon_FSC_Aalstad2020 <- results[[1]]
-          df_Polygon_FSC_Aalstad2020 <- as.data.frame(do.call(rbind, df_Polygon_FSC_Aalstad2020))
-          colnames(df_Polygon_FSC_Aalstad2020)[colnames(df_Polygon_FSC_Aalstad2020)=="pixel_ID"] <- "Polygon"
-          colnames(df_Polygon_FSC_Aalstad2020)[colnames(df_Polygon_FSC_Aalstad2020)=="x_threshold"] <- "doy"
-          colnames(df_Polygon_FSC_Aalstad2020)[colnames(df_Polygon_FSC_Aalstad2020)=="y_threshold"] <- "Snowfraction_threshold"
-
-          #Change column Polygon to a factor:
-          df_Polygon_FSC_Aalstad2020$Polygon <- as.factor(as.character(df_Polygon_FSC_Aalstad2020$Polygon))
-
-          #Save dates of snowmelt per polygon per FSC_Aalstad2020 threshold as a .csv file
-          write.csv(df_Polygon_FSC_Aalstad2020, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Snowmelt_FSCAalstad2020.csv"), row.names = FALSE)
-
-      #(B.5): Create a separate plot with GAM predictions per polygon
-
-          #Create an empty list to store plots
-          list_plots_fsc_aalstad2020 <- vector('list', length(unique(df_Polygons_FSC_Aalstad2020_GAM_predictions$Polygon)))
-
-          #Loop through all Polygons
-          for(i in unique(df_Polygons_FSC_Aalstad2020_GAM_predictions$Polygon)){
-
-            #i=unique(df_Polygons_FSC_Aalstad2020_GAM_predictions$Polygon)[1]
-
-            #Create an index variable for parameter i
-            i_index <- which( unique(df_Polygons_FSC_Aalstad2020_GAM_predictions$Polygon) == i)
-
-            #select datasets for current Snowfraction_threshold and Polygon:
-            df_Polygon_FSC_Aalstad2020_GAM <- df_Polygons_FSC_Aalstad2020_GAM[df_Polygons_FSC_Aalstad2020_GAM$Polygon==i,]
-            df_Polygon_FSC_Aalstad2020_GAM_predictions <- df_Polygons_FSC_Aalstad2020_GAM_predictions[df_Polygons_FSC_Aalstad2020_GAM_predictions$Polygon==i,]
-            df_Polygon_FSC_Aalstad2020_snowmelt <- df_Polygon_FSC_Aalstad2020[df_Polygon_FSC_Aalstad2020$Polygon==i,]
-
-            #create plot for current Polygon and store it in list_plots_fsc_aalstad2020:
-            list_plots_fsc_aalstad2020[[i_index]] <- ggplot()+
-              geom_point(data=df_Polygon_FSC_Aalstad2020_GAM[df_Polygon_FSC_Aalstad2020_GAM$outliers==FALSE,], aes(x=doy, y=FSC_Aalstad2020))+
-              geom_point(data=df_Polygon_FSC_Aalstad2020_GAM[df_Polygon_FSC_Aalstad2020_GAM$outliers==TRUE,], aes(x=doy, y=FSC_Aalstad2020), col="black", pch=16, alpha=0.2)+
-              geom_line(data=df_Polygon_FSC_Aalstad2020_GAM_predictions, aes(x=doy, y=FSC_Aalstad2020_gam_predict), col="#1620de", lwd=1.25)+
-              geom_point(data=df_Polygon_FSC_Aalstad2020_snowmelt[!is.na(df_Polygon_FSC_Aalstad2020_snowmelt$doy),], aes(x=doy, y=Snowfraction_threshold), col="red", size=3)+
-              geom_vline(xintercept = 150, colour="grey", lty=2)+
-              geom_hline(yintercept = Snowfraction_threshold_vector, colour="grey", lty=2)+
-              xlab(paste0("Day of year (starting at 01-01-", year_ID, ")")) +
-              ylab("FSC_Aalstad2020") +
-              ggtitle(paste0("Polygon: ", i))+
-              theme_tom()
-
-            }
-
-          #Plot FSC_Aalstad2020 and model predictions in a separate plot per Polygon
-          plots_fsc_aalstad2020 <- list(list_plots_fsc_aalstad2020)
-          plots_per_page = 25
-          plots_fsc_aalstad2020 <- lapply(plots_fsc_aalstad2020, function(x){split(x, ceiling(seq_along(plots_fsc_aalstad2020[[1]])/plots_per_page))})
-          plots_fsc_aalstad2020 <- unname(unlist(plots_fsc_aalstad2020, recursive = F))
-          pdf(paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Plot_FSCAalstad2020.pdf"), width=20, height=16, onefile = TRUE)
-          for (k in seq(length(plots_fsc_aalstad2020))) { do.call("grid.arrange", plots_fsc_aalstad2020[[k]]) }
-          dev.off()
-
-########################################################################################################################################################################################
-
-    #(C): NDSI - Fit a Generalized Additive Model (GAM) through the NDSI data within each polygon
-
-        #(C.0) Print message
+        #(A.0) Print message
           cat("\n")
           print("--------------------------------------------------------------------------------------------------------------------------")
-          print(paste0("FIT A GAM THROUGH THE AVERAGE NDSI DATA PER POLYGON"))
+          print(paste0("FIT A GAM THROUGH THE AVERAGE FSC_GASCOIN2020 DATA PER POLYGON"))
           print("--------------------------------------------------------------------------------------------------------------------------")
 
-        #(C.1) Create an empty dataframe
-          df_Polygons_NDSI_GAM <- data.frame(NDSI=numeric(),
-                                             Date=factor(),
-                                             doy=numeric(),
-                                             Polygon=factor(),
-                                             outliers=logical())
+        #(A.1) Create an empty dataframe
+          df_Polygons_FSC_Gascoin2020_GAM <- data.frame(FSC_Gascoin2020=numeric(),
+                                                        Date=factor(),
+                                                        doy=numeric(),
+                                                        Polygon=factor(),
+                                                        outliers=logical())
 
-          df_Polygons_NDSI_GAM_predictions <- data.frame(Polygon=character(),
-                                                         doy=numeric(),
-                                                         NDSI_gam_predict=numeric(),
-                                                         stringsAsFactors=FALSE)
+          df_Polygons_FSC_Gascoin2020_GAM_predictions <- data.frame(Polygon=character(),
+                                                                    doy=numeric(),
+                                                                    FSC_Gascoin2020_gam_predict=numeric(),
+                                                                    stringsAsFactors=FALSE)
 
-        #(C.2) Loop through all Polygons and fit a separate GAM (with sequential outlier removal) to the Polygon-specific NDSI data
+        #(A.2) Loop through all Polygons and fit a separate GAM (with sequential outlier removal) to the Polygon-specific FSC_Gascoin2020 data
           for(i in unique(df_Polygons_BandValues$Polygon)){
 
             #For debugging
             #i=unique(df_Polygons_BandValues$Polygon)[2]
 
             #Select Polygon-specific subset of data:
-            df_Polygon_NDSI_GAM_new <- df_Polygons_BandValues[df_Polygons_BandValues$Polygon==i &
-                                                              !is.na(df_Polygons_BandValues$NDSI),
-                                                              c("NDSI", "Date", "doy", "Polygon")]
+            df_Polygon_FSC_Gascoin2020_GAM_new <- df_Polygons_BandValues[df_Polygons_BandValues$Polygon==i &
+                                                                         !is.na(df_Polygons_BandValues$FSC_Gascoin2020),
+                                                                         c("FSC_Gascoin2020", "Date", "doy", "Polygon")]
 
             #If there are at least two datapoints, then continue to fit the GAM
-            if(nrow(df_Polygon_NDSI_GAM_new) > 1){
-            
-              #Fit a gam through the Polygon-specific NDSI ~ doy data and emply sequential outlier removal
-              df_Polygon_NDSI_GAM_new <- f_gam_SeqRemOutliers(data=df_Polygon_NDSI_GAM_new, y="NDSI", x="doy", outlier_removal=outlier_removal,
-                                                               outlier_thresh_1=outlier_thresh_1, outlier_thresh_2=outlier_thresh_2,
-                                                               default_k=gam_k_outlier)
-  
-              #Sort df_Polygon_NDSI_GAM_new by doy:
-              df_Polygon_NDSI_GAM_new <- df_Polygon_NDSI_GAM_new[order(df_Polygon_NDSI_GAM_new$doy),]
-  
-              #Bind the Polygon-specific dataframe with outlier-filtered GAM estimates to the dataframe containing all dataframes from previous iterations
-               df_Polygons_NDSI_GAM <- rbind(df_Polygons_NDSI_GAM, df_Polygon_NDSI_GAM_new)
-  
-              #Create more detailed predictions (not only at the doy present in the datframe) at a 1-day interval to plot more smooth curves
-  
-                #Refit GAM through data
-                 index <- which(df_Polygon_NDSI_GAM_new$outliers==FALSE)
-                 mod_gam <- with(df_Polygon_NDSI_GAM_new[index,], mgcv::gam(NDSI ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
-  
-                #Use gam to make predictions on a more detailed interval
-                 df_Polygon_NDSI_GAM_predictions_new <- data.frame(Polygon=i, doy=seq(min(df_Polygon_NDSI_GAM_new$doy), max(df_Polygon_NDSI_GAM_new$doy), 0.01))
-                 df_Polygon_NDSI_GAM_predictions_new$NDSI_gam_predict <- stats::predict(mod_gam, newdata=df_Polygon_NDSI_GAM_predictions_new, type="response")
-                 df_Polygon_NDSI_GAM_predictions_new <- df_Polygon_NDSI_GAM_predictions_new[order(df_Polygon_NDSI_GAM_predictions_new$doy),]
-  
-                #Add predictions to df_Polygons_NDSI_GAM_predictions dataframe:
-                 df_Polygons_NDSI_GAM_predictions <- rbind(df_Polygons_NDSI_GAM_predictions, df_Polygon_NDSI_GAM_predictions_new)
+            if(nrow(df_Polygon_FSC_Gascoin2020_GAM_new) > 1){
 
-              }
-            
+              #Fit a gam through the Polygon-specific FSC_Gascoin2020 ~ doy data and emply sequential outlier removal
+              df_Polygon_FSC_Gascoin2020_GAM_new <- f_gam_SeqRemOutliers(data=df_Polygon_FSC_Gascoin2020_GAM_new, y="FSC_Gascoin2020", x="doy", outlier_removal=outlier_removal,
+                                                                         outlier_thresh_1=outlier_thresh_1, outlier_thresh_2=outlier_thresh_2,
+                                                                         default_k=gam_k_outlier)
+
+              #Sort df_Polygon_FSC_Gascoin2020_GAM_new by doy:
+              df_Polygon_FSC_Gascoin2020_GAM_new <- df_Polygon_FSC_Gascoin2020_GAM_new[order(df_Polygon_FSC_Gascoin2020_GAM_new$doy),]
+
+              #Bind the Polygon-specific dataframe with outlier-filtered GAM estimates to the dataframe containing all dataframes from previous iterations
+               df_Polygons_FSC_Gascoin2020_GAM <- rbind(df_Polygons_FSC_Gascoin2020_GAM, df_Polygon_FSC_Gascoin2020_GAM_new)
+
+              #Create more detailed predictions (not only at the doy present in the datframe) at a 1-day interval to plot more smooth curves
+
+                #Refit GAM through data
+                 index <- which(df_Polygon_FSC_Gascoin2020_GAM_new$outliers==FALSE)
+                 mod_gam <- with(df_Polygon_FSC_Gascoin2020_GAM_new[index,], mgcv::gam(FSC_Gascoin2020 ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
+
+                #Use gam to make predictions on a more detailed interval
+                 df_Polygon_FSC_Gascoin2020_GAM_predictions_new <- data.frame(Polygon=i, doy=seq(min(df_Polygon_FSC_Gascoin2020_GAM_new$doy), max(df_Polygon_FSC_Gascoin2020_GAM_new$doy), 0.01))
+                 df_Polygon_FSC_Gascoin2020_GAM_predictions_new$FSC_Gascoin2020_gam_predict <- stats::predict(mod_gam, newdata=df_Polygon_FSC_Gascoin2020_GAM_predictions_new, type="response")
+                 df_Polygon_FSC_Gascoin2020_GAM_predictions_new <- df_Polygon_FSC_Gascoin2020_GAM_predictions_new[order(df_Polygon_FSC_Gascoin2020_GAM_predictions_new$doy),]
+
+                #Add predictions to df_Polygons_FSC_Gascoin2020_GAM_predictions dataframe:
+                 df_Polygons_FSC_Gascoin2020_GAM_predictions <- rbind(df_Polygons_FSC_Gascoin2020_GAM_predictions, df_Polygon_FSC_Gascoin2020_GAM_predictions_new)
+
+               }
+
             #If there are less than two datapoints, then append empty dataframes
-            if(nrow(df_Polygon_NDSI_GAM_new) < 2){
-              
+            if(nrow(df_Polygon_FSC_Gascoin2020_GAM_new) < 2){
+
               #Bind the empty dataframe to the dataframe containing all dataframes from previous iterations
-              if(nrow(df_Polygon_NDSI_GAM_new) < 1){df_Polygon_NDSI_GAM_new <- data.frame(NDSI=NA, Date=NA, doy=NA, Polygon=i, outliers=NA)}
-              if(nrow(df_Polygon_NDSI_GAM_new) > 0){df_Polygon_NDSI_GAM_new$outliers <- NA}
-              df_Polygons_NDSI_GAM <- rbind(df_Polygons_NDSI_GAM, df_Polygon_NDSI_GAM_new)
-              
-              #Add empty GAM predictions to df_Polygons_NDSI_GAM_predictions dataframe:
-              df_Polygon_NDSI_GAM_predictions_new <- df_Polygon_NDSI_GAM_new[,c("Polygon", "doy")]
-              df_Polygon_NDSI_GAM_predictions_new$NDSI_gam_predict <- NA
-              df_Polygons_NDSI_GAM_predictions <- rbind(df_Polygons_NDSI_GAM_predictions, df_Polygon_NDSI_GAM_predictions_new)
-              
-              }
-            
+              if(nrow(df_Polygon_FSC_Gascoin2020_GAM_new) < 1){df_Polygon_FSC_Gascoin2020_GAM_new <- data.frame(FSC_Gascoin2020=NA, Date=NA, doy=NA, Polygon=i, outliers=NA)}
+              if(nrow(df_Polygon_FSC_Gascoin2020_GAM_new) > 0){df_Polygon_FSC_Gascoin2020_GAM_new$outliers <- NA}
+              df_Polygons_FSC_Gascoin2020_GAM <- rbind(df_Polygons_FSC_Gascoin2020_GAM, df_Polygon_FSC_Gascoin2020_GAM_new)
+
+              #Add empty GAM predictions to df_Polygons_FSC_Gascoin2020_GAM_predictions dataframe:
+              df_Polygon_FSC_Gascoin2020_GAM_predictions_new <- df_Polygon_FSC_Gascoin2020_GAM_new[,c("Polygon", "doy")]
+              df_Polygon_FSC_Gascoin2020_GAM_predictions_new$FSC_Gascoin2020_gam_predict <- NA
+              df_Polygons_FSC_Gascoin2020_GAM_predictions <- rbind(df_Polygons_FSC_Gascoin2020_GAM_predictions, df_Polygon_FSC_Gascoin2020_GAM_predictions_new)
+
+            }
+
             }
 
           #Change Polygon column to factor
-          df_Polygons_NDSI_GAM$Polygon <- as.factor(as.character(df_Polygons_NDSI_GAM$Polygon))
-          df_Polygons_NDSI_GAM_predictions$Polygon <- as.factor(as.character(df_Polygons_NDSI_GAM_predictions$Polygon))
+          df_Polygons_FSC_Gascoin2020_GAM$Polygon <- as.factor(as.character(df_Polygons_FSC_Gascoin2020_GAM$Polygon))
+          df_Polygons_FSC_Gascoin2020_GAM_predictions$Polygon <- as.factor(as.character(df_Polygons_FSC_Gascoin2020_GAM_predictions$Polygon))
 
-          #Save dataframe with GAM fits for NDSI
-          #write.csv(df_Polygons_NDSI_GAM, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Data_NDSI_GAM.csv"), row.names = FALSE)
-          write.csv(df_Polygons_NDSI_GAM_predictions, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_GAM_Predictions_NDSI.csv"), row.names = FALSE)
+          #Add LocationID and year
+          df_Polygons_FSC_Gascoin2020_GAM_predictions$location <- area_name
+          df_Polygons_FSC_Gascoin2020_GAM_predictions$year <- year_ID
 
-        #(C.3) Plot the raw NDSI datapoints and gam predictions for each Polygon:
+          #Save dataframe with GAM fits for FSC_Gascoin2020
+          #write.csv(df_Polygons_FSC_Gascoin2020_GAM, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Data_FSCGascoin2020_GAM.csv"), row.names = FALSE)
+          #write.csv(df_Polygons_FSC_Gascoin2020_GAM_predictions, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_GAM_Predictions_FSCGascoin2020.csv"), row.names = FALSE)
 
-           #Plot NDSI and model predictions for all Polygons in a single plot
-            p_Polygon_NDSI = ggplot()+
-              geom_point(data=df_Polygons_NDSI_GAM, aes(x=doy, y=NDSI, fill=Polygon, col=Polygon))+
-              geom_line(data=df_Polygons_NDSI_GAM_predictions, aes(x=doy, y=NDSI_gam_predict, col=Polygon)) +
-              geom_hline(yintercept = NDSI_threshold_vector, colour="grey", lty=2)+
+        #(A.3) Plot the raw FSC_Gascoin2020 datapoints and gam predictions for each Polygon:
+
+           #Plot FSC_Gascoin2020 and model predictions for all Polygons in a single plot
+            p_Polygon_FSC_Gascoin2020 = ggplot()+
+              geom_point(data=df_Polygons_FSC_Gascoin2020_GAM, aes(x=doy, y=FSC_Gascoin2020, fill=Polygon, col=Polygon))+
+              geom_line(data=df_Polygons_FSC_Gascoin2020_GAM_predictions, aes(x=doy, y=FSC_Gascoin2020_gam_predict, col=Polygon)) +
+              geom_hline(yintercept = Snowfraction_threshold_vector, colour="grey", lty=2)+
               xlab(paste0("Day of year (starting at 01-01-", year_ID, ")")) +
-              ylab("NDSI") +
+              ylab("FSC_Gascoin2020") +
               theme_tom()
 
-        #(C.4): Calculate at which day of year the NDSI value is equal to NDSI_threshold for each Polygon using predictions from mod_gam
+        #(A.4): Calculate at which day of year the FSC_Gascoin2020 value is equal to Snowfraction_threshold for each Polygon using predictions from mod_gam
 
             #Setup parallel processing
             numCores <- detectCores()
             cl <- makePSOCKcluster(numCores)
             registerDoSNOW(cl)
 
-            #Use the function f_detect_threshold_date_parallel to extract the moments the GAM predictions cross the thresholds in NDSI_threshold_vector
+            #Use the function f_detect_threshold_date_parallel to extract the moments the GAM predictions cross the thresholds in Snowfraction_threshold_vector
             results <- f_detect_threshold_date_parallel(subset=1, #data subset (not relevant here, set to 1)
-                                                        pixelIDs_split = list(unique(df_Polygons_NDSI_GAM_predictions$Polygon)), #levels of NDSI_threshold (input needs to be a list)
-                                                        df_pixel_y = df_Polygons_NDSI_GAM_predictions, #dataframe containing GAM predictions
+                                                        pixelIDs_split = list(unique(df_Polygons_FSC_Gascoin2020_GAM_predictions$Polygon)), #levels of Polygon (input needs to be a list)
+                                                        df_pixel_y = df_Polygons_FSC_Gascoin2020_GAM_predictions, #dataframe containing GAM predictions
                                                         pixel_ID_column="Polygon", #Grouping column
-                                                        y="NDSI_gam_predict", #response variable in GAM
+                                                        y="FSC_Gascoin2020_gam_predict", #response variable in GAM
                                                         x="doy", #predictor variable in GAM
                                                         pixel_gam_plots = FALSE, #Should GAM plots be created
-                                                        y_threshold = NDSI_threshold_vector) #Which threshold values for 'y' should be calculated
+                                                        y_threshold = Snowfraction_threshold_vector) #Which threshold values for 'y' should be calculated
 
             #Turn parallel processing off and run sequentially again after this point
             stopCluster(cl)
             registerDoSEQ()
 
             #Store dates of snowmelt per Polygon
-            df_Polygon_NDSI <- results[[1]]
-            df_Polygon_NDSI <- as.data.frame(do.call(rbind, df_Polygon_NDSI))
-            colnames(df_Polygon_NDSI)[colnames(df_Polygon_NDSI)=="pixel_ID"] <- "Polygon"
-            colnames(df_Polygon_NDSI)[colnames(df_Polygon_NDSI)=="x_threshold"] <- "doy"
-            colnames(df_Polygon_NDSI)[colnames(df_Polygon_NDSI)=="y_threshold"] <- "NDSI_threshold"
+            df_Polygon_FSC_Gascoin2020 <- results[[1]]
+            df_Polygon_FSC_Gascoin2020 <- as.data.frame(do.call(rbind, df_Polygon_FSC_Gascoin2020))
+            colnames(df_Polygon_FSC_Gascoin2020)[colnames(df_Polygon_FSC_Gascoin2020)=="pixel_ID"] <- "Polygon"
+            colnames(df_Polygon_FSC_Gascoin2020)[colnames(df_Polygon_FSC_Gascoin2020)=="x_threshold"] <- "doy"
+            colnames(df_Polygon_FSC_Gascoin2020)[colnames(df_Polygon_FSC_Gascoin2020)=="y_threshold"] <- "Snowfraction_threshold"
 
             #Change column Polygon to a factor:
-            df_Polygon_NDSI$Polygon <- as.factor(as.character(df_Polygon_NDSI$Polygon))
+            df_Polygon_FSC_Gascoin2020$Polygon <- as.factor(as.character(df_Polygon_FSC_Gascoin2020$Polygon))
 
-            #Save dates of snowmelt per polygon per NDSI threshold as a .csv file
-            write.csv(df_Polygon_NDSI, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Snowmelt_NDSI.csv"), row.names = FALSE)
+            #Add LocationID and year
+            df_Polygon_FSC_Gascoin2020$location <- area_name
+            df_Polygon_FSC_Gascoin2020$year <- year_ID
 
-        #(C.5): Create a separate plot with GAM predictions per polygon
+            #Save dates of snowmelt per polygon per FSC_Gascoin2020 threshold as a .csv file
+            #write.csv(df_Polygon_FSC_Gascoin2020, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Snowmelt_FSCGascoin2020.csv"), row.names = FALSE)
+
+        #(A.5): Create a separate plot with GAM predictions per polygon
 
             #Create an empty list to store plots
-            list_plots_ndsi <- vector('list', length(unique(df_Polygons_NDSI_GAM_predictions$Polygon)))
+            list_plots_fsc_gascoin2020 <- vector('list', length(unique(df_Polygons_FSC_Gascoin2020_GAM_predictions$Polygon)))
 
             #Loop through all Polygons
-            for(i in unique(df_Polygons_NDSI_GAM_predictions$Polygon)){
+            for(i in unique(df_Polygons_FSC_Gascoin2020_GAM_predictions$Polygon)){
 
-              #i=unique(df_Polygons_NDSI_GAM_predictions$Polygon)[1]
+              #i=unique(df_Polygons_FSC_Gascoin2020_GAM_predictions$Polygon)[1]
 
               #Create an index variable for parameter i
-              i_index <- which( unique(df_Polygons_NDSI_GAM_predictions$Polygon) == i)
+              i_index <- which( unique(df_Polygons_FSC_Gascoin2020_GAM_predictions$Polygon) == i)
 
-              #select datasets for current NDSI_threshold and Polygon:
-              df_Polygon_NDSI_GAM <- df_Polygons_NDSI_GAM[df_Polygons_NDSI_GAM$Polygon==i,]
-              df_Polygon_NDSI_GAM_predictions <- df_Polygons_NDSI_GAM_predictions[df_Polygons_NDSI_GAM_predictions$Polygon==i,]
-              df_Polygon_NDSI_snowmelt <- df_Polygon_NDSI[df_Polygon_NDSI$Polygon==i,]
+              #select datasets for current Snowfraction_threshold and Polygon:
+              df_Polygon_FSC_Gascoin2020_GAM <- df_Polygons_FSC_Gascoin2020_GAM[df_Polygons_FSC_Gascoin2020_GAM$Polygon==i,]
+              df_Polygon_FSC_Gascoin2020_GAM_predictions <- df_Polygons_FSC_Gascoin2020_GAM_predictions[df_Polygons_FSC_Gascoin2020_GAM_predictions$Polygon==i,]
+              df_Polygon_FSC_Gascoin2020_snowmelt <- df_Polygon_FSC_Gascoin2020[df_Polygon_FSC_Gascoin2020$Polygon==i,]
 
-              #create plot for current Polygon and store it in list_plots_ndsi:
-              list_plots_ndsi[[i_index]] <- ggplot()+
-                geom_point(data=df_Polygon_NDSI_GAM[df_Polygon_NDSI_GAM$outliers==FALSE,], aes(x=doy, y=NDSI))+
-                geom_point(data=df_Polygon_NDSI_GAM[df_Polygon_NDSI_GAM$outliers==TRUE,], aes(x=doy, y=NDSI), col="black", pch=16, alpha=0.2)+
-                geom_line(data=df_Polygon_NDSI_GAM_predictions, aes(x=doy, y=NDSI_gam_predict), col="#1620de", lwd=1.25)+
-                geom_point(data=df_Polygon_NDSI_snowmelt[!is.na(df_Polygon_NDSI_snowmelt$doy),], aes(x=doy, y=NDSI_threshold), col="red", size=3)+
+              #create plot for current Polygon and store it in list_plots_fsc_gascoin2020:
+              list_plots_fsc_gascoin2020[[i_index]] <- ggplot()+
+                geom_point(data=df_Polygon_FSC_Gascoin2020_GAM[df_Polygon_FSC_Gascoin2020_GAM$outliers==FALSE,], aes(x=doy, y=FSC_Gascoin2020))+
+                geom_point(data=df_Polygon_FSC_Gascoin2020_GAM[df_Polygon_FSC_Gascoin2020_GAM$outliers==TRUE,], aes(x=doy, y=FSC_Gascoin2020), col="black", pch=16, alpha=0.2)+
+                geom_line(data=df_Polygon_FSC_Gascoin2020_GAM_predictions, aes(x=doy, y=FSC_Gascoin2020_gam_predict), col="#1620de", lwd=1.25)+
+                geom_point(data=df_Polygon_FSC_Gascoin2020_snowmelt[!is.na(df_Polygon_FSC_Gascoin2020_snowmelt$doy),], aes(x=doy, y=Snowfraction_threshold), col="red", size=3)+
                 geom_vline(xintercept = 150, colour="grey", lty=2)+
+                geom_hline(yintercept = Snowfraction_threshold_vector, colour="grey", lty=2)+
+                xlab(paste0("Day of year (starting at 01-01-", year_ID, ")")) +
+                ylab("FSC_Gascoin2020") +
+                ggtitle(paste0("Year: ", year_ID, ", Polygon: ", i))+
+                theme_tom()
+
+              }
+
+            #Plot FSC_Gascoin2020 and model predictions in a separate plot per Polygon
+            # plots_fsc_gascoin2020 <- list(list_plots_fsc_gascoin2020)
+            # plots_per_page = 25
+            # plots_fsc_gascoin2020 <- lapply(plots_fsc_gascoin2020, function(x){split(x, ceiling(seq_along(plots_fsc_gascoin2020[[1]])/plots_per_page))})
+            # plots_fsc_gascoin2020 <- unname(unlist(plots_fsc_gascoin2020, recursive = F))
+            # pdf(paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Plot_FSCGascoin2020.pdf"), width=20, height=16, onefile = TRUE)
+            # for (k in seq(length(plots_fsc_gascoin2020))) { do.call("grid.arrange", plots_fsc_gascoin2020[[k]]) }
+            # dev.off()
+
+      }
+
+########################################################################################################################################################################################
+
+      #(B): FSC_Aalstad2020 - Fit a Generalized Additive Model (GAM) through the FSC_Aalstad2020 data within each polygon
+      if("FSC_Aalstad2020" %in% method_output){
+
+        #(B.0) Print message
+          cat("\n")
+          print("--------------------------------------------------------------------------------------------------------------------------")
+          print(paste0("FIT A GAM THROUGH THE AVERAGE FSC_AALSTAD2020 DATA PER POLYGON"))
+          print("--------------------------------------------------------------------------------------------------------------------------")
+
+        #(B.1) Create an empty dataframe
+          df_Polygons_FSC_Aalstad2020_GAM <- data.frame(FSC_Aalstad2020=numeric(),
+                                                        Date=factor(),
+                                                        doy=numeric(),
+                                                        Polygon=factor(),
+                                                        outliers=logical())
+
+          df_Polygons_FSC_Aalstad2020_GAM_predictions <- data.frame(Polygon=character(),
+                                                                    doy=numeric(),
+                                                                    FSC_Aalstad2020_gam_predict=numeric(),
+                                                                    stringsAsFactors=FALSE)
+
+        #(B.2) Loop through all Polygons and fit a separate GAM (with sequential outlier removal) to the Polygon-specific FSC_Aalstad2020 data
+          for(i in unique(df_Polygons_BandValues$Polygon)){
+
+            #For debugging
+            #i=unique(df_Polygons_BandValues$Polygon)[1]
+
+            #Select Polygon-specific subset of data:
+            df_Polygon_FSC_Aalstad2020_GAM_new <- df_Polygons_BandValues[df_Polygons_BandValues$Polygon==i &
+                                                                         !is.na(df_Polygons_BandValues$FSC_Aalstad2020),
+                                                                         c("FSC_Aalstad2020", "Date", "doy", "Polygon")]
+
+            #If there are at least two datapoints, then continue to fit the GAM
+            if(nrow(df_Polygon_FSC_Aalstad2020_GAM_new) > 1){
+
+              #Fit a gam through the Polygon-specific FSC_Aalstad2020 ~ doy data and emply sequential outlier removal
+              df_Polygon_FSC_Aalstad2020_GAM_new <- f_gam_SeqRemOutliers(data=df_Polygon_FSC_Aalstad2020_GAM_new, y="FSC_Aalstad2020", x="doy", outlier_removal=outlier_removal,
+                                                                         outlier_thresh_1=outlier_thresh_1, outlier_thresh_2=outlier_thresh_2,
+                                                                         default_k=gam_k_outlier)
+
+              #Sort df_Polygon_FSC_Aalstad2020_GAM_new by doy:
+              df_Polygon_FSC_Aalstad2020_GAM_new <- df_Polygon_FSC_Aalstad2020_GAM_new[order(df_Polygon_FSC_Aalstad2020_GAM_new$doy),]
+
+              #Bind the Polygon-specific dataframe with outlier-filtered GAM estimates to the dataframe containing all dataframes from previous iterations
+              df_Polygons_FSC_Aalstad2020_GAM <- rbind(df_Polygons_FSC_Aalstad2020_GAM, df_Polygon_FSC_Aalstad2020_GAM_new)
+
+              #Create more detailed predictions (not only at the doy present in the datframe) at a 1-day interval to plot more smooth curves
+
+                #Refit GAM through data
+                 index <- which(df_Polygon_FSC_Aalstad2020_GAM_new$outliers==FALSE)
+                 mod_gam <- with(df_Polygon_FSC_Aalstad2020_GAM_new[index,], mgcv::gam(FSC_Aalstad2020 ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
+
+                #Use gam to make predictions on a more detailed interval
+                 df_Polygon_FSC_Aalstad2020_GAM_predictions_new <- data.frame(Polygon=i, doy=seq(min(df_Polygon_FSC_Aalstad2020_GAM_new$doy), max(df_Polygon_FSC_Aalstad2020_GAM_new$doy), 0.01))
+                 df_Polygon_FSC_Aalstad2020_GAM_predictions_new$FSC_Aalstad2020_gam_predict <- stats::predict(mod_gam, newdata=df_Polygon_FSC_Aalstad2020_GAM_predictions_new, type="response")
+                 df_Polygon_FSC_Aalstad2020_GAM_predictions_new <- df_Polygon_FSC_Aalstad2020_GAM_predictions_new[order(df_Polygon_FSC_Aalstad2020_GAM_predictions_new$doy),]
+
+                #Add predictions to df_Polygons_FSC_Aalstad2020_GAM_predictions dataframe:
+                 df_Polygons_FSC_Aalstad2020_GAM_predictions <- rbind(df_Polygons_FSC_Aalstad2020_GAM_predictions, df_Polygon_FSC_Aalstad2020_GAM_predictions_new)
+
+              }
+
+            #If there are less than two datapoints, then append empty dataframes
+            if(nrow(df_Polygon_FSC_Aalstad2020_GAM_new) < 2){
+
+              #Bind the empty dataframe to the dataframe containing all dataframes from previous iterations
+              if(nrow(df_Polygon_FSC_Aalstad2020_GAM_new) < 1){df_Polygon_FSC_Aalstad2020_GAM_new <- data.frame(FSC_Aalstad2020=NA, Date=NA, doy=NA, Polygon=i, outliers=NA)}
+              if(nrow(df_Polygon_FSC_Aalstad2020_GAM_new) > 0){df_Polygon_FSC_Aalstad2020_GAM_new$outliers <- NA}
+              df_Polygons_FSC_Aalstad2020_GAM <- rbind(df_Polygons_FSC_Aalstad2020_GAM, df_Polygon_FSC_Aalstad2020_GAM_new)
+
+              #Add empty GAM predictions to df_Polygons_FSC_Aalstad2020_GAM_predictions dataframe:
+              df_Polygon_FSC_Aalstad2020_GAM_predictions_new <- df_Polygon_FSC_Aalstad2020_GAM_new[,c("Polygon", "doy")]
+              df_Polygon_FSC_Aalstad2020_GAM_predictions_new$FSC_Aalstad2020_gam_predict <- NA
+              df_Polygons_FSC_Aalstad2020_GAM_predictions <- rbind(df_Polygons_FSC_Aalstad2020_GAM_predictions, df_Polygon_FSC_Aalstad2020_GAM_predictions_new)
+
+            }
+
+            }
+
+          #Change Polygon column to factor
+          df_Polygons_FSC_Aalstad2020_GAM$Polygon <- as.factor(as.character(df_Polygons_FSC_Aalstad2020_GAM$Polygon))
+          df_Polygons_FSC_Aalstad2020_GAM_predictions$Polygon <- as.factor(as.character(df_Polygons_FSC_Aalstad2020_GAM_predictions$Polygon))
+
+          #Add LocationID and year
+          df_Polygons_FSC_Aalstad2020_GAM_predictions$location <- area_name
+          df_Polygons_FSC_Aalstad2020_GAM_predictions$year <- year_ID
+
+          #Save dataframe with GAM fits for FSC_Aalstad2020
+          #write.csv(df_Polygons_FSC_Aalstad2020_GAM, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Data_FSCAalstad2020_GAM.csv"), row.names = FALSE)
+          #write.csv(df_Polygons_FSC_Aalstad2020_GAM_predictions, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_GAM_Predictions_FSCAalstad2020.csv"), row.names = FALSE)
+
+        #(B.3) Plot the raw FSC_Aalstad2020 datapoints and gam predictions for each Polygon:
+
+           #Plot FSC_Aalstad2020 and model predictions for all Polygons in a single plot
+            p_Polygon_FSC_Aalstad2020 = ggplot()+
+              geom_point(data=df_Polygons_FSC_Aalstad2020_GAM, aes(x=doy, y=FSC_Aalstad2020, fill=Polygon, col=Polygon))+
+              geom_line(data=df_Polygons_FSC_Aalstad2020_GAM_predictions, aes(x=doy, y=FSC_Aalstad2020_gam_predict, col=Polygon)) +
+              geom_hline(yintercept = Snowfraction_threshold_vector, colour="grey", lty=2)+
+              xlab(paste0("Day of year (starting at 01-01-", year_ID, ")")) +
+              ylab("FSC_Aalstad2020") +
+              theme_tom()
+
+        #(B.4): Calculate at which day of year the FSC_Aalstad2020 value is equal to Snowfraction_threshold for each Polygon using predictions from mod_gam
+
+            #Setup parallel processing
+            numCores <- detectCores()
+            cl <- makePSOCKcluster(numCores)
+            registerDoSNOW(cl)
+
+            #Use the function f_detect_threshold_date_parallel to extract the moments the GAM predictions cross the thresholds in Snowfraction_threshold_vector
+            results <- f_detect_threshold_date_parallel(subset=1, #data subset (not relevant here, set to 1)
+                                                        pixelIDs_split = list(unique(df_Polygons_FSC_Aalstad2020_GAM_predictions$Polygon)), #levels of Polygon (input needs to be a list)
+                                                        df_pixel_y = df_Polygons_FSC_Aalstad2020_GAM_predictions, #dataframe containing GAM predictions
+                                                        pixel_ID_column="Polygon", #Grouping column
+                                                        y="FSC_Aalstad2020_gam_predict", #response variable in GAM
+                                                        x="doy", #predictor variable in GAM
+                                                        pixel_gam_plots = FALSE, #Should GAM plots be created
+                                                        y_threshold = Snowfraction_threshold_vector) #Which threshold values for 'y' should be calculated
+
+            #Turn parallel processing off and run sequentially again after this point
+            stopCluster(cl)
+            registerDoSEQ()
+
+            #Store dates of snowmelt per Polygon
+            df_Polygon_FSC_Aalstad2020 <- results[[1]]
+            df_Polygon_FSC_Aalstad2020 <- as.data.frame(do.call(rbind, df_Polygon_FSC_Aalstad2020))
+            colnames(df_Polygon_FSC_Aalstad2020)[colnames(df_Polygon_FSC_Aalstad2020)=="pixel_ID"] <- "Polygon"
+            colnames(df_Polygon_FSC_Aalstad2020)[colnames(df_Polygon_FSC_Aalstad2020)=="x_threshold"] <- "doy"
+            colnames(df_Polygon_FSC_Aalstad2020)[colnames(df_Polygon_FSC_Aalstad2020)=="y_threshold"] <- "Snowfraction_threshold"
+
+            #Change column Polygon to a factor:
+            df_Polygon_FSC_Aalstad2020$Polygon <- as.factor(as.character(df_Polygon_FSC_Aalstad2020$Polygon))
+
+            #Add LocationID and year
+            df_Polygon_FSC_Aalstad2020$location <- area_name
+            df_Polygon_FSC_Aalstad2020$year <- year_ID
+
+            #Save dates of snowmelt per polygon per FSC_Aalstad2020 threshold as a .csv file
+            #write.csv(df_Polygon_FSC_Aalstad2020, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Snowmelt_FSCAalstad2020.csv"), row.names = FALSE)
+
+        #(B.5): Create a separate plot with GAM predictions per polygon
+
+            #Create an empty list to store plots
+            list_plots_fsc_aalstad2020 <- vector('list', length(unique(df_Polygons_FSC_Aalstad2020_GAM_predictions$Polygon)))
+
+            #Loop through all Polygons
+            for(i in unique(df_Polygons_FSC_Aalstad2020_GAM_predictions$Polygon)){
+
+              #i=unique(df_Polygons_FSC_Aalstad2020_GAM_predictions$Polygon)[1]
+
+              #Create an index variable for parameter i
+              i_index <- which( unique(df_Polygons_FSC_Aalstad2020_GAM_predictions$Polygon) == i)
+
+              #select datasets for current Snowfraction_threshold and Polygon:
+              df_Polygon_FSC_Aalstad2020_GAM <- df_Polygons_FSC_Aalstad2020_GAM[df_Polygons_FSC_Aalstad2020_GAM$Polygon==i,]
+              df_Polygon_FSC_Aalstad2020_GAM_predictions <- df_Polygons_FSC_Aalstad2020_GAM_predictions[df_Polygons_FSC_Aalstad2020_GAM_predictions$Polygon==i,]
+              df_Polygon_FSC_Aalstad2020_snowmelt <- df_Polygon_FSC_Aalstad2020[df_Polygon_FSC_Aalstad2020$Polygon==i,]
+
+              #create plot for current Polygon and store it in list_plots_fsc_aalstad2020:
+              list_plots_fsc_aalstad2020[[i_index]] <- ggplot()+
+                geom_point(data=df_Polygon_FSC_Aalstad2020_GAM[df_Polygon_FSC_Aalstad2020_GAM$outliers==FALSE,], aes(x=doy, y=FSC_Aalstad2020))+
+                geom_point(data=df_Polygon_FSC_Aalstad2020_GAM[df_Polygon_FSC_Aalstad2020_GAM$outliers==TRUE,], aes(x=doy, y=FSC_Aalstad2020), col="black", pch=16, alpha=0.2)+
+                geom_line(data=df_Polygon_FSC_Aalstad2020_GAM_predictions, aes(x=doy, y=FSC_Aalstad2020_gam_predict), col="#1620de", lwd=1.25)+
+                geom_point(data=df_Polygon_FSC_Aalstad2020_snowmelt[!is.na(df_Polygon_FSC_Aalstad2020_snowmelt$doy),], aes(x=doy, y=Snowfraction_threshold), col="red", size=3)+
+                geom_vline(xintercept = 150, colour="grey", lty=2)+
+                geom_hline(yintercept = Snowfraction_threshold_vector, colour="grey", lty=2)+
+                xlab(paste0("Day of year (starting at 01-01-", year_ID, ")")) +
+                ylab("FSC_Aalstad2020") +
+                ggtitle(paste0("Year: ", year_ID, ", Polygon: ", i))+
+                theme_tom()
+
+              }
+
+            #Plot FSC_Aalstad2020 and model predictions in a separate plot per Polygon
+            # plots_fsc_aalstad2020 <- list(list_plots_fsc_aalstad2020)
+            # plots_per_page = 25
+            # plots_fsc_aalstad2020 <- lapply(plots_fsc_aalstad2020, function(x){split(x, ceiling(seq_along(plots_fsc_aalstad2020[[1]])/plots_per_page))})
+            # plots_fsc_aalstad2020 <- unname(unlist(plots_fsc_aalstad2020, recursive = F))
+            # pdf(paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Plot_FSCAalstad2020.pdf"), width=20, height=16, onefile = TRUE)
+            # for (k in seq(length(plots_fsc_aalstad2020))) { do.call("grid.arrange", plots_fsc_aalstad2020[[k]]) }
+            # dev.off()
+
+      }
+
+########################################################################################################################################################################################
+
+      #(C): NDSI - Fit a Generalized Additive Model (GAM) through the NDSI data within each polygon
+      if("NDSI" %in% method_output){
+
+          #(C.0) Print message
+            cat("\n")
+            print("--------------------------------------------------------------------------------------------------------------------------")
+            print(paste0("FIT A GAM THROUGH THE AVERAGE NDSI DATA PER POLYGON"))
+            print("--------------------------------------------------------------------------------------------------------------------------")
+
+          #(C.1) Create an empty dataframe
+            df_Polygons_NDSI_GAM <- data.frame(NDSI=numeric(),
+                                               Date=factor(),
+                                               doy=numeric(),
+                                               Polygon=factor(),
+                                               outliers=logical())
+
+            df_Polygons_NDSI_GAM_predictions <- data.frame(Polygon=character(),
+                                                           doy=numeric(),
+                                                           NDSI_gam_predict=numeric(),
+                                                           stringsAsFactors=FALSE)
+
+          #(C.2) Loop through all Polygons and fit a separate GAM (with sequential outlier removal) to the Polygon-specific NDSI data
+            for(i in unique(df_Polygons_BandValues$Polygon)){
+
+              #For debugging
+              #i=unique(df_Polygons_BandValues$Polygon)[2]
+
+              #Select Polygon-specific subset of data:
+              df_Polygon_NDSI_GAM_new <- df_Polygons_BandValues[df_Polygons_BandValues$Polygon==i &
+                                                                !is.na(df_Polygons_BandValues$NDSI),
+                                                                c("NDSI", "Date", "doy", "Polygon")]
+
+              #If there are at least two datapoints, then continue to fit the GAM
+              if(nrow(df_Polygon_NDSI_GAM_new) > 1){
+
+                #Fit a gam through the Polygon-specific NDSI ~ doy data and emply sequential outlier removal
+                df_Polygon_NDSI_GAM_new <- f_gam_SeqRemOutliers(data=df_Polygon_NDSI_GAM_new, y="NDSI", x="doy", outlier_removal=outlier_removal,
+                                                                 outlier_thresh_1=outlier_thresh_1, outlier_thresh_2=outlier_thresh_2,
+                                                                 default_k=gam_k_outlier)
+
+                #Sort df_Polygon_NDSI_GAM_new by doy:
+                df_Polygon_NDSI_GAM_new <- df_Polygon_NDSI_GAM_new[order(df_Polygon_NDSI_GAM_new$doy),]
+
+                #Bind the Polygon-specific dataframe with outlier-filtered GAM estimates to the dataframe containing all dataframes from previous iterations
+                 df_Polygons_NDSI_GAM <- rbind(df_Polygons_NDSI_GAM, df_Polygon_NDSI_GAM_new)
+
+                #Create more detailed predictions (not only at the doy present in the datframe) at a 1-day interval to plot more smooth curves
+
+                  #Refit GAM through data
+                   index <- which(df_Polygon_NDSI_GAM_new$outliers==FALSE)
+                   mod_gam <- with(df_Polygon_NDSI_GAM_new[index,], mgcv::gam(NDSI ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
+
+                  #Use gam to make predictions on a more detailed interval
+                   df_Polygon_NDSI_GAM_predictions_new <- data.frame(Polygon=i, doy=seq(min(df_Polygon_NDSI_GAM_new$doy), max(df_Polygon_NDSI_GAM_new$doy), 0.01))
+                   df_Polygon_NDSI_GAM_predictions_new$NDSI_gam_predict <- stats::predict(mod_gam, newdata=df_Polygon_NDSI_GAM_predictions_new, type="response")
+                   df_Polygon_NDSI_GAM_predictions_new <- df_Polygon_NDSI_GAM_predictions_new[order(df_Polygon_NDSI_GAM_predictions_new$doy),]
+
+                  #Add predictions to df_Polygons_NDSI_GAM_predictions dataframe:
+                   df_Polygons_NDSI_GAM_predictions <- rbind(df_Polygons_NDSI_GAM_predictions, df_Polygon_NDSI_GAM_predictions_new)
+
+                }
+
+              #If there are less than two datapoints, then append empty dataframes
+              if(nrow(df_Polygon_NDSI_GAM_new) < 2){
+
+                #Bind the empty dataframe to the dataframe containing all dataframes from previous iterations
+                if(nrow(df_Polygon_NDSI_GAM_new) < 1){df_Polygon_NDSI_GAM_new <- data.frame(NDSI=NA, Date=NA, doy=NA, Polygon=i, outliers=NA)}
+                if(nrow(df_Polygon_NDSI_GAM_new) > 0){df_Polygon_NDSI_GAM_new$outliers <- NA}
+                df_Polygons_NDSI_GAM <- rbind(df_Polygons_NDSI_GAM, df_Polygon_NDSI_GAM_new)
+
+                #Add empty GAM predictions to df_Polygons_NDSI_GAM_predictions dataframe:
+                df_Polygon_NDSI_GAM_predictions_new <- df_Polygon_NDSI_GAM_new[,c("Polygon", "doy")]
+                df_Polygon_NDSI_GAM_predictions_new$NDSI_gam_predict <- NA
+                df_Polygons_NDSI_GAM_predictions <- rbind(df_Polygons_NDSI_GAM_predictions, df_Polygon_NDSI_GAM_predictions_new)
+
+                }
+
+              }
+
+            #Change Polygon column to factor
+            df_Polygons_NDSI_GAM$Polygon <- as.factor(as.character(df_Polygons_NDSI_GAM$Polygon))
+            df_Polygons_NDSI_GAM_predictions$Polygon <- as.factor(as.character(df_Polygons_NDSI_GAM_predictions$Polygon))
+
+            #Add LocationID and year
+            df_Polygons_NDSI_GAM_predictions$location <- area_name
+            df_Polygons_NDSI_GAM_predictions$year <- year_ID
+
+            #Save dataframe with GAM fits for NDSI
+            #write.csv(df_Polygons_NDSI_GAM, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Data_NDSI_GAM.csv"), row.names = FALSE)
+            #write.csv(df_Polygons_NDSI_GAM_predictions, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_GAM_Predictions_NDSI.csv"), row.names = FALSE)
+
+          #(C.3) Plot the raw NDSI datapoints and gam predictions for each Polygon:
+
+             #Plot NDSI and model predictions for all Polygons in a single plot
+              p_Polygon_NDSI = ggplot()+
+                geom_point(data=df_Polygons_NDSI_GAM, aes(x=doy, y=NDSI, fill=Polygon, col=Polygon))+
+                geom_line(data=df_Polygons_NDSI_GAM_predictions, aes(x=doy, y=NDSI_gam_predict, col=Polygon)) +
                 geom_hline(yintercept = NDSI_threshold_vector, colour="grey", lty=2)+
                 xlab(paste0("Day of year (starting at 01-01-", year_ID, ")")) +
                 ylab("NDSI") +
-                ggtitle(paste0("Polygon: ", i))+
                 theme_tom()
 
-              }
+          #(C.4): Calculate at which day of year the NDSI value is equal to NDSI_threshold for each Polygon using predictions from mod_gam
 
-            #Plot NDSI and model predictions in a separate plot per Polygon
-            plots_ndsi <- list(list_plots_ndsi)
-            plots_per_page = 25
-            plots_ndsi <- lapply(plots_ndsi, function(x){split(x, ceiling(seq_along(plots_ndsi[[1]])/plots_per_page))})
-            plots_ndsi <- unname(unlist(plots_ndsi, recursive = F))
-            pdf(paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Plot_NDSI.pdf"), width=20, height=16, onefile = TRUE)
-            for (k in seq(length(plots_ndsi))) { do.call("grid.arrange", plots_ndsi[[k]]) }
-            dev.off()
+              #Setup parallel processing
+              numCores <- detectCores()
+              cl <- makePSOCKcluster(numCores)
+              registerDoSNOW(cl)
+
+              #Use the function f_detect_threshold_date_parallel to extract the moments the GAM predictions cross the thresholds in NDSI_threshold_vector
+              results <- f_detect_threshold_date_parallel(subset=1, #data subset (not relevant here, set to 1)
+                                                          pixelIDs_split = list(unique(df_Polygons_NDSI_GAM_predictions$Polygon)), #levels of NDSI_threshold (input needs to be a list)
+                                                          df_pixel_y = df_Polygons_NDSI_GAM_predictions, #dataframe containing GAM predictions
+                                                          pixel_ID_column="Polygon", #Grouping column
+                                                          y="NDSI_gam_predict", #response variable in GAM
+                                                          x="doy", #predictor variable in GAM
+                                                          pixel_gam_plots = FALSE, #Should GAM plots be created
+                                                          y_threshold = NDSI_threshold_vector) #Which threshold values for 'y' should be calculated
+
+              #Turn parallel processing off and run sequentially again after this point
+              stopCluster(cl)
+              registerDoSEQ()
+
+              #Store dates of snowmelt per Polygon
+              df_Polygon_NDSI <- results[[1]]
+              df_Polygon_NDSI <- as.data.frame(do.call(rbind, df_Polygon_NDSI))
+              colnames(df_Polygon_NDSI)[colnames(df_Polygon_NDSI)=="pixel_ID"] <- "Polygon"
+              colnames(df_Polygon_NDSI)[colnames(df_Polygon_NDSI)=="x_threshold"] <- "doy"
+              colnames(df_Polygon_NDSI)[colnames(df_Polygon_NDSI)=="y_threshold"] <- "NDSI_threshold"
+
+              #Change column Polygon to a factor:
+              df_Polygon_NDSI$Polygon <- as.factor(as.character(df_Polygon_NDSI$Polygon))
+
+              #Add LocationID and year
+              df_Polygon_NDSI$location <- area_name
+              df_Polygon_NDSI$year <- year_ID
+
+              #Save dates of snowmelt per polygon per NDSI threshold as a .csv file
+              #write.csv(df_Polygon_NDSI, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Snowmelt_NDSI.csv"), row.names = FALSE)
+
+          #(C.5): Create a separate plot with GAM predictions per polygon
+
+              #Create an empty list to store plots
+              list_plots_ndsi <- vector('list', length(unique(df_Polygons_NDSI_GAM_predictions$Polygon)))
+
+              #Loop through all Polygons
+              for(i in unique(df_Polygons_NDSI_GAM_predictions$Polygon)){
+
+                #i=unique(df_Polygons_NDSI_GAM_predictions$Polygon)[1]
+
+                #Create an index variable for parameter i
+                i_index <- which( unique(df_Polygons_NDSI_GAM_predictions$Polygon) == i)
+
+                #select datasets for current NDSI_threshold and Polygon:
+                df_Polygon_NDSI_GAM <- df_Polygons_NDSI_GAM[df_Polygons_NDSI_GAM$Polygon==i,]
+                df_Polygon_NDSI_GAM_predictions <- df_Polygons_NDSI_GAM_predictions[df_Polygons_NDSI_GAM_predictions$Polygon==i,]
+                df_Polygon_NDSI_snowmelt <- df_Polygon_NDSI[df_Polygon_NDSI$Polygon==i,]
+
+                #create plot for current Polygon and store it in list_plots_ndsi:
+                list_plots_ndsi[[i_index]] <- ggplot()+
+                  geom_point(data=df_Polygon_NDSI_GAM[df_Polygon_NDSI_GAM$outliers==FALSE,], aes(x=doy, y=NDSI))+
+                  geom_point(data=df_Polygon_NDSI_GAM[df_Polygon_NDSI_GAM$outliers==TRUE,], aes(x=doy, y=NDSI), col="black", pch=16, alpha=0.2)+
+                  geom_line(data=df_Polygon_NDSI_GAM_predictions, aes(x=doy, y=NDSI_gam_predict), col="#1620de", lwd=1.25)+
+                  geom_point(data=df_Polygon_NDSI_snowmelt[!is.na(df_Polygon_NDSI_snowmelt$doy),], aes(x=doy, y=NDSI_threshold), col="red", size=3)+
+                  geom_vline(xintercept = 150, colour="grey", lty=2)+
+                  geom_hline(yintercept = NDSI_threshold_vector, colour="grey", lty=2)+
+                  xlab(paste0("Day of year (starting at 01-01-", year_ID, ")")) +
+                  ylab("NDSI") +
+                  ggtitle(paste0("Year: ", year_ID, ", Polygon: ", i))+
+                  theme_tom()
+
+                }
+
+              #Plot NDSI and model predictions in a separate plot per Polygon
+              # plots_ndsi <- list(list_plots_ndsi)
+              # plots_per_page = 25
+              # plots_ndsi <- lapply(plots_ndsi, function(x){split(x, ceiling(seq_along(plots_ndsi[[1]])/plots_per_page))})
+              # plots_ndsi <- unname(unlist(plots_ndsi, recursive = F))
+              # pdf(paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Plot_NDSI.pdf"), width=20, height=16, onefile = TRUE)
+              # for (k in seq(length(plots_ndsi))) { do.call("grid.arrange", plots_ndsi[[k]]) }
+              # dev.off()
+
+      }
 
 ########################################################################################################################################################################################
 
-    #(D): NDVI - Fit a Generalized Additive Model (GAM) through the NDVI data within each polygon
+      #(D): NDVI - Fit a Generalized Additive Model (GAM) through the NDVI data within each polygon
+      if("NDVI" %in% method_output){
 
-        #(D.0) Print message
-          cat("\n")
-          print("--------------------------------------------------------------------------------------------------------------------------")
-          print(paste0("FIT A GAM THROUGH THE AVERAGE NDVI DATA PER POLYGON"))
-          print("--------------------------------------------------------------------------------------------------------------------------")
+          #(D.0) Print message
+            cat("\n")
+            print("--------------------------------------------------------------------------------------------------------------------------")
+            print(paste0("FIT A GAM THROUGH THE AVERAGE NDVI DATA PER POLYGON"))
+            print("--------------------------------------------------------------------------------------------------------------------------")
 
-        #(D.1) Create an empty dataframe
-          df_Polygons_NDVI_GAM <- data.frame(NDVI=numeric(),
-                                             Date=factor(),
-                                             doy=numeric(),
-                                             Polygon=factor(),
-                                             outliers=logical())
+          #(D.1) Create an empty dataframe
+            df_Polygons_NDVI_GAM <- data.frame(NDVI=numeric(),
+                                               Date=factor(),
+                                               doy=numeric(),
+                                               Polygon=factor(),
+                                               outliers=logical())
 
-          df_Polygons_NDVI_GAM_predictions <- data.frame(Polygon=character(),
-                                                         doy=numeric(),
-                                                         NDVI_gam_predict=numeric(),
-                                                         stringsAsFactors=FALSE)
+            df_Polygons_NDVI_GAM_predictions <- data.frame(Polygon=character(),
+                                                           doy=numeric(),
+                                                           NDVI_gam_predict=numeric(),
+                                                           stringsAsFactors=FALSE)
 
-        #(D.2) Loop through all Polygons and fit a separate GAM (with sequential outlier removal) to the Polygon-specific NDVI data
-          for(i in unique(df_Polygons_BandValues$Polygon)){
+          #(D.2) Loop through all Polygons and fit a separate GAM (with sequential outlier removal) to the Polygon-specific NDVI data
+            for(i in unique(df_Polygons_BandValues$Polygon)){
 
-            #For debugging
-            #i=unique(df_Polygons_BandValues$Polygon)[1]
+              #For debugging
+              #i=unique(df_Polygons_BandValues$Polygon)[1]
 
-            #Select Polygon-specific subset of data:
-            df_Polygon_NDVI_GAM_new <- df_Polygons_BandValues[df_Polygons_BandValues$Polygon==i &
-                                                              !is.na(df_Polygons_BandValues$NDVI),
-                                                              c("NDVI", "Date", "doy", "Polygon")]
+              #Select Polygon-specific subset of data:
+              df_Polygon_NDVI_GAM_new <- df_Polygons_BandValues[df_Polygons_BandValues$Polygon==i &
+                                                                !is.na(df_Polygons_BandValues$NDVI),
+                                                                c("NDVI", "Date", "doy", "Polygon")]
 
-            #If there are at least two datapoints, then continue to fit the GAM
-            if(nrow(df_Polygon_NDVI_GAM_new) > 1){ 
-            
-              #Fit a gam through the Polygon-specific NDVI ~ doy data and emply sequential outlier removal
-              df_Polygon_NDVI_GAM_new <- f_gam_SeqRemOutliers(data=df_Polygon_NDVI_GAM_new, y="NDVI", x="doy", outlier_removal=outlier_removal,
-                                                               outlier_thresh_1=outlier_thresh_1, outlier_thresh_2=outlier_thresh_2,
-                                                               default_k=gam_k_outlier)
-  
-              #Sort df_Polygon_NDVI_GAM_new by doy:
-              df_Polygon_NDVI_GAM_new <- df_Polygon_NDVI_GAM_new[order(df_Polygon_NDVI_GAM_new$doy),]
-  
-              #Bind the Polygon-specific dataframe with outlier-filtered GAM estimates to the dataframe containing all dataframes from previous iterations
-               df_Polygons_NDVI_GAM <- rbind(df_Polygons_NDVI_GAM, df_Polygon_NDVI_GAM_new)
-  
-              #Create more detailed predictions (not only at the doy present in the datframe) at a 1-day interval to plot more smooth curves
-  
-                #Refit GAM through data
-                 index <- which(df_Polygon_NDVI_GAM_new$outliers==FALSE)
-                 mod_gam <- with(df_Polygon_NDVI_GAM_new[index,], mgcv::gam(NDVI ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
-  
-                #Use gam to make predictions on a more detailed (1-day) day of year interval
-                 df_Polygon_NDVI_GAM_predictions_new <- data.frame(Polygon=i, doy=seq(min(df_Polygon_NDVI_GAM_new$doy), max(df_Polygon_NDVI_GAM_new$doy), 0.01))
-                 df_Polygon_NDVI_GAM_predictions_new$NDVI_gam_predict <- stats::predict(mod_gam, newdata=df_Polygon_NDVI_GAM_predictions_new, type="response")
-                 df_Polygon_NDVI_GAM_predictions_new <- df_Polygon_NDVI_GAM_predictions_new[order(df_Polygon_NDVI_GAM_predictions_new$doy),]
-  
-                #Add predictions to df_Polygons_NDVI_GAM_predictions dataframe:
-                 df_Polygons_NDVI_GAM_predictions <- rbind(df_Polygons_NDVI_GAM_predictions, df_Polygon_NDVI_GAM_predictions_new)
+              #If there are at least two datapoints, then continue to fit the GAM
+              if(nrow(df_Polygon_NDVI_GAM_new) > 1){
+
+                #Fit a gam through the Polygon-specific NDVI ~ doy data and emply sequential outlier removal
+                df_Polygon_NDVI_GAM_new <- f_gam_SeqRemOutliers(data=df_Polygon_NDVI_GAM_new, y="NDVI", x="doy", outlier_removal=outlier_removal,
+                                                                 outlier_thresh_1=outlier_thresh_1, outlier_thresh_2=outlier_thresh_2,
+                                                                 default_k=gam_k_outlier)
+
+                #Sort df_Polygon_NDVI_GAM_new by doy:
+                df_Polygon_NDVI_GAM_new <- df_Polygon_NDVI_GAM_new[order(df_Polygon_NDVI_GAM_new$doy),]
+
+                #Bind the Polygon-specific dataframe with outlier-filtered GAM estimates to the dataframe containing all dataframes from previous iterations
+                 df_Polygons_NDVI_GAM <- rbind(df_Polygons_NDVI_GAM, df_Polygon_NDVI_GAM_new)
+
+                #Create more detailed predictions (not only at the doy present in the datframe) at a 1-day interval to plot more smooth curves
+
+                  #Refit GAM through data
+                   index <- which(df_Polygon_NDVI_GAM_new$outliers==FALSE)
+                   mod_gam <- with(df_Polygon_NDVI_GAM_new[index,], mgcv::gam(NDVI ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
+
+                  #Use gam to make predictions on a more detailed (1-day) day of year interval
+                   df_Polygon_NDVI_GAM_predictions_new <- data.frame(Polygon=i, doy=seq(min(df_Polygon_NDVI_GAM_new$doy), max(df_Polygon_NDVI_GAM_new$doy), 0.01))
+                   df_Polygon_NDVI_GAM_predictions_new$NDVI_gam_predict <- stats::predict(mod_gam, newdata=df_Polygon_NDVI_GAM_predictions_new, type="response")
+                   df_Polygon_NDVI_GAM_predictions_new <- df_Polygon_NDVI_GAM_predictions_new[order(df_Polygon_NDVI_GAM_predictions_new$doy),]
+
+                  #Add predictions to df_Polygons_NDVI_GAM_predictions dataframe:
+                   df_Polygons_NDVI_GAM_predictions <- rbind(df_Polygons_NDVI_GAM_predictions, df_Polygon_NDVI_GAM_predictions_new)
+
+                }
+
+              #If there are less than two datapoints, then append empty dataframes
+              if(nrow(df_Polygon_NDVI_GAM_new) < 2){
+
+                #Bind the empty dataframe to the dataframe containing all dataframes from previous iterations
+                if(nrow(df_Polygon_NDVI_GAM_new) < 1){df_Polygon_NDVI_GAM_new <- data.frame(NDVI=NA, Date=NA, doy=NA, Polygon=i, outliers=NA)}
+                if(nrow(df_Polygon_NDVI_GAM_new) > 0){df_Polygon_NDVI_GAM_new$outliers <- NA}
+                df_Polygons_NDVI_GAM <- rbind(df_Polygons_NDVI_GAM, df_Polygon_NDVI_GAM_new)
+
+                #Add empty GAM predictions to df_Polygons_NDVI_GAM_predictions dataframe:
+                df_Polygon_NDVI_GAM_predictions_new <- df_Polygon_NDVI_GAM_new[,c("Polygon", "doy")]
+                df_Polygon_NDVI_GAM_predictions_new$NDVI_gam_predict <- NA
+                df_Polygons_NDVI_GAM_predictions <- rbind(df_Polygons_NDVI_GAM_predictions, df_Polygon_NDVI_GAM_predictions_new)
+
+                }
 
               }
-            
-            #If there are less than two datapoints, then append empty dataframes
-            if(nrow(df_Polygon_NDVI_GAM_new) < 2){
-              
-              #Bind the empty dataframe to the dataframe containing all dataframes from previous iterations
-              if(nrow(df_Polygon_NDVI_GAM_new) < 1){df_Polygon_NDVI_GAM_new <- data.frame(NDVI=NA, Date=NA, doy=NA, Polygon=i, outliers=NA)}
-              if(nrow(df_Polygon_NDVI_GAM_new) > 0){df_Polygon_NDVI_GAM_new$outliers <- NA}
-              df_Polygons_NDVI_GAM <- rbind(df_Polygons_NDVI_GAM, df_Polygon_NDVI_GAM_new)
-              
-              #Add empty GAM predictions to df_Polygons_NDVI_GAM_predictions dataframe:
-              df_Polygon_NDVI_GAM_predictions_new <- df_Polygon_NDVI_GAM_new[,c("Polygon", "doy")]
-              df_Polygon_NDVI_GAM_predictions_new$NDVI_gam_predict <- NA
-              df_Polygons_NDVI_GAM_predictions <- rbind(df_Polygons_NDVI_GAM_predictions, df_Polygon_NDVI_GAM_predictions_new)
-              
-              }
-            
-            }
 
-          #Change Polygon column to factor
-          df_Polygons_NDVI_GAM$Polygon <- as.factor(as.character(df_Polygons_NDVI_GAM$Polygon))
-          df_Polygons_NDVI_GAM_predictions$Polygon <- as.factor(as.character(df_Polygons_NDVI_GAM_predictions$Polygon))
+            #Change Polygon column to factor
+            df_Polygons_NDVI_GAM$Polygon <- as.factor(as.character(df_Polygons_NDVI_GAM$Polygon))
+            df_Polygons_NDVI_GAM_predictions$Polygon <- as.factor(as.character(df_Polygons_NDVI_GAM_predictions$Polygon))
 
-          #Save dataframe with GAM fits for NDVI
-          #write.csv(df_Polygons_NDVI_GAM, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Data_NDVI_GAM.csv"), row.names = FALSE)
-          write.csv(df_Polygons_NDVI_GAM_predictions, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_GAM_Predictions_NDVI.csv"), row.names = FALSE)
+            #Add LocationID and year
+            df_Polygons_NDVI_GAM_predictions$location <- area_name
+            df_Polygons_NDVI_GAM_predictions$year <- year_ID
 
-        #(D.3) Plot the raw NDVI datapoints and gam predictions for each Polygon:
+            #Save dataframe with GAM fits for NDVI
+            #write.csv(df_Polygons_NDVI_GAM, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Data_NDVI_GAM.csv"), row.names = FALSE)
+            #write.csv(df_Polygons_NDVI_GAM_predictions, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_GAM_Predictions_NDVI.csv"), row.names = FALSE)
 
-           #Plot NDVI and model predictions for all Polygons in a single plot
-            p_Polygon_NDVI = ggplot()+
-              geom_point(data=df_Polygons_NDVI_GAM, aes(x=doy, y=NDVI, fill=Polygon, col=Polygon))+
-              geom_line(data=df_Polygons_NDVI_GAM_predictions, aes(x=doy, y=NDVI_gam_predict, col=Polygon)) +
-              xlab(paste0("Day of year (starting at 01-01-", year_ID, ")")) +
-              ylab("NDVI") +
-              theme_tom()
+          #(D.3) Plot the raw NDVI datapoints and gam predictions for each Polygon:
 
-        #(D.4): Create a separate plot with GAM predictions per polygon
-
-            #Create an empty list to store plots
-            list_plots_ndvi <- vector('list', length(unique(df_Polygons_NDVI_GAM_predictions$Polygon)))
-
-            #Loop through all Polygons
-            for(i in unique(df_Polygons_NDVI_GAM_predictions$Polygon)){
-
-              #i=unique(df_Polygons_NDVI_GAM_predictions$Polygon)[1]
-
-              #Create an index variable for parameter i
-              i_index <- which( unique(df_Polygons_NDVI_GAM_predictions$Polygon) == i)
-
-              #select datasets for current NDVI_threshold and Polygon:
-              df_Polygon_NDVI_GAM <- df_Polygons_NDVI_GAM[df_Polygons_NDVI_GAM$Polygon==i,]
-              df_Polygon_NDVI_GAM_predictions <- df_Polygons_NDVI_GAM_predictions[df_Polygons_NDVI_GAM_predictions$Polygon==i,]
-
-              #create plot for current Polygon and store it in list_plots_ndvi:
-              list_plots_ndvi[[i_index]] <- ggplot()+
-                geom_point(data=df_Polygon_NDVI_GAM[df_Polygon_NDVI_GAM$outliers==FALSE,], aes(x=doy, y=NDVI))+
-                geom_point(data=df_Polygon_NDVI_GAM[df_Polygon_NDVI_GAM$outliers==TRUE,], aes(x=doy, y=NDVI), col="black", pch=16, alpha=0.2)+
-                geom_line(data=df_Polygon_NDVI_GAM_predictions, aes(x=doy, y=NDVI_gam_predict), col="#08a31a", lwd=1.25)+
-                geom_vline(xintercept = 150, colour="grey", lty=2)+
+             #Plot NDVI and model predictions for all Polygons in a single plot
+              p_Polygon_NDVI = ggplot()+
+                geom_point(data=df_Polygons_NDVI_GAM, aes(x=doy, y=NDVI, fill=Polygon, col=Polygon))+
+                geom_line(data=df_Polygons_NDVI_GAM_predictions, aes(x=doy, y=NDVI_gam_predict, col=Polygon)) +
                 xlab(paste0("Day of year (starting at 01-01-", year_ID, ")")) +
                 ylab("NDVI") +
-                ggtitle(paste0("Polygon: ", i))+
                 theme_tom()
 
-            }
+          #(D.4): Create a separate plot with GAM predictions per polygon
 
-            #Plot NDVI and model predictions in a separate plot per Polygon
-            plots_ndvi <- list(list_plots_ndvi)
-            plots_per_page = 25
-            plots_ndvi <- lapply(plots_ndvi, function(x){split(x, ceiling(seq_along(plots_ndvi[[1]])/plots_per_page))})
-            plots_ndvi <- unname(unlist(plots_ndvi, recursive = F))
-            pdf(paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Plot_NDVI.pdf"), width=20, height=16, onefile = TRUE)
-            for (k in seq(length(plots_ndvi))) { do.call("grid.arrange", plots_ndvi[[k]]) }
-            dev.off()
+              #Create an empty list to store plots
+              list_plots_ndvi <- vector('list', length(unique(df_Polygons_NDVI_GAM_predictions$Polygon)))
+
+              #Loop through all Polygons
+              for(i in unique(df_Polygons_NDVI_GAM_predictions$Polygon)){
+
+                #i=unique(df_Polygons_NDVI_GAM_predictions$Polygon)[1]
+
+                #Create an index variable for parameter i
+                i_index <- which( unique(df_Polygons_NDVI_GAM_predictions$Polygon) == i)
+
+                #select datasets for current NDVI_threshold and Polygon:
+                df_Polygon_NDVI_GAM <- df_Polygons_NDVI_GAM[df_Polygons_NDVI_GAM$Polygon==i,]
+                df_Polygon_NDVI_GAM_predictions <- df_Polygons_NDVI_GAM_predictions[df_Polygons_NDVI_GAM_predictions$Polygon==i,]
+
+                #create plot for current Polygon and store it in list_plots_ndvi:
+                list_plots_ndvi[[i_index]] <- ggplot()+
+                  geom_point(data=df_Polygon_NDVI_GAM[df_Polygon_NDVI_GAM$outliers==FALSE,], aes(x=doy, y=NDVI))+
+                  geom_point(data=df_Polygon_NDVI_GAM[df_Polygon_NDVI_GAM$outliers==TRUE,], aes(x=doy, y=NDVI), col="black", pch=16, alpha=0.2)+
+                  geom_line(data=df_Polygon_NDVI_GAM_predictions, aes(x=doy, y=NDVI_gam_predict), col="#08a31a", lwd=1.25)+
+                  geom_vline(xintercept = 150, colour="grey", lty=2)+
+                  xlab(paste0("Day of year (starting at 01-01-", year_ID, ")")) +
+                  ylab("NDVI") +
+                  ggtitle(paste0("Year: ", year_ID, ", Polygon: ", i))+
+                  theme_tom()
+
+                }
+
+              #Plot NDVI and model predictions in a separate plot per Polygon
+              # plots_ndvi <- list(list_plots_ndvi)
+              # plots_per_page = 25
+              # plots_ndvi <- lapply(plots_ndvi, function(x){split(x, ceiling(seq_along(plots_ndvi[[1]])/plots_per_page))})
+              # plots_ndvi <- unname(unlist(plots_ndvi, recursive = F))
+              # pdf(paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Plot_NDVI.pdf"), width=20, height=16, onefile = TRUE)
+              # for (k in seq(length(plots_ndvi))) { do.call("grid.arrange", plots_ndvi[[k]]) }
+              # dev.off()
+
+      }
 
 ########################################################################################################################################################################################
 
-    #(E): NDMI - Fit a Generalized Additive Model (GAM) through the NDMI data within each polygon
+      #(E): NDMI - Fit a Generalized Additive Model (GAM) through the NDMI data within each polygon
+      if("NDMI" %in% method_output){
 
-        #(E.0) Print message
-          cat("\n")
-          print("--------------------------------------------------------------------------------------------------------------------------")
-          print(paste0("FIT A GAM THROUGH THE AVERAGE NDMI DATA PER POLYGON"))
-          print("--------------------------------------------------------------------------------------------------------------------------")
+          #(E.0) Print message
+            cat("\n")
+            print("--------------------------------------------------------------------------------------------------------------------------")
+            print(paste0("FIT A GAM THROUGH THE AVERAGE NDMI DATA PER POLYGON"))
+            print("--------------------------------------------------------------------------------------------------------------------------")
 
-        #(E.1) Create an empty dataframe
-          df_Polygons_NDMI_GAM <- data.frame(NDMI=numeric(),
-                                             Date=factor(),
-                                             doy=numeric(),
-                                             Polygon=factor(),
-                                             outliers=logical())
+          #(E.1) Create an empty dataframe
+            df_Polygons_NDMI_GAM <- data.frame(NDMI=numeric(),
+                                               Date=factor(),
+                                               doy=numeric(),
+                                               Polygon=factor(),
+                                               outliers=logical())
 
-          df_Polygons_NDMI_GAM_predictions <- data.frame(Polygon=character(),
-                                                         doy=numeric(),
-                                                         NDMI_gam_predict=numeric(),
-                                                         stringsAsFactors=FALSE)
+            df_Polygons_NDMI_GAM_predictions <- data.frame(Polygon=character(),
+                                                           doy=numeric(),
+                                                           NDMI_gam_predict=numeric(),
+                                                           stringsAsFactors=FALSE)
 
-        #(E.2) Loop through all Polygons and fit a separate GAM (with sequential outlier removal) to the Polygon-specific NDMI data
-          for(i in unique(df_Polygons_BandValues$Polygon)){
+          #(E.2) Loop through all Polygons and fit a separate GAM (with sequential outlier removal) to the Polygon-specific NDMI data
+            for(i in unique(df_Polygons_BandValues$Polygon)){
 
-            #For debugging
-            #i=unique(df_Polygons_BandValues$Polygon)[1]
+              #For debugging
+              #i=unique(df_Polygons_BandValues$Polygon)[1]
 
-            #Select Polygon-specific subset of data:
-            df_Polygon_NDMI_GAM_new <- df_Polygons_BandValues[df_Polygons_BandValues$Polygon==i &
-                                                              !is.na(df_Polygons_BandValues$NDMI),
-                                                              c("NDMI", "Date", "doy", "Polygon")]
+              #Select Polygon-specific subset of data:
+              df_Polygon_NDMI_GAM_new <- df_Polygons_BandValues[df_Polygons_BandValues$Polygon==i &
+                                                                !is.na(df_Polygons_BandValues$NDMI),
+                                                                c("NDMI", "Date", "doy", "Polygon")]
 
-            #If there are at least two datapoints, then continue to fit the GAM
-            if(nrow(df_Polygon_NDMI_GAM_new) > 1){
-            
-              #Fit a gam through the Polygon-specific NDMI ~ doy data and emply sequential outlier removal
-              df_Polygon_NDMI_GAM_new <- f_gam_SeqRemOutliers(data=df_Polygon_NDMI_GAM_new, y="NDMI", x="doy", outlier_removal=outlier_removal,
-                                                               outlier_thresh_1=outlier_thresh_1, outlier_thresh_2=outlier_thresh_2,
-                                                               default_k=gam_k_outlier)
-  
-              #Sort df_Polygon_NDMI_GAM_new by doy:
-              df_Polygon_NDMI_GAM_new <- df_Polygon_NDMI_GAM_new[order(df_Polygon_NDMI_GAM_new$doy),]
-  
-              #Bind the Polygon-specific dataframe with outlier-filtered GAM estimates to the dataframe containing all dataframes from previous iterations
-               df_Polygons_NDMI_GAM <- rbind(df_Polygons_NDMI_GAM, df_Polygon_NDMI_GAM_new)
-  
-              #Create more detailed predictions (not only at the doy present in the datframe) at a 1-day interval to plot more smooth curves
-  
-                #Refit GAM through data
-                 index <- which(df_Polygon_NDMI_GAM_new$outliers==FALSE)
-                 mod_gam <- with(df_Polygon_NDMI_GAM_new[index,], mgcv::gam(NDMI ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
-  
-                #Use gam to make predictions on a more detailed (1-day) day of year interval
-                 df_Polygon_NDMI_GAM_predictions_new <- data.frame(Polygon=i, doy=seq(min(df_Polygon_NDMI_GAM_new$doy), max(df_Polygon_NDMI_GAM_new$doy), 0.01))
-                 df_Polygon_NDMI_GAM_predictions_new$NDMI_gam_predict <- stats::predict(mod_gam, newdata=df_Polygon_NDMI_GAM_predictions_new, type="response")
-                 df_Polygon_NDMI_GAM_predictions_new <- df_Polygon_NDMI_GAM_predictions_new[order(df_Polygon_NDMI_GAM_predictions_new$doy),]
-  
-                #Add predictions to df_Polygons_NDMI_GAM_predictions dataframe:
-                 df_Polygons_NDMI_GAM_predictions <- rbind(df_Polygons_NDMI_GAM_predictions, df_Polygon_NDMI_GAM_predictions_new)
+              #If there are at least two datapoints, then continue to fit the GAM
+              if(nrow(df_Polygon_NDMI_GAM_new) > 1){
+
+                #Fit a gam through the Polygon-specific NDMI ~ doy data and emply sequential outlier removal
+                df_Polygon_NDMI_GAM_new <- f_gam_SeqRemOutliers(data=df_Polygon_NDMI_GAM_new, y="NDMI", x="doy", outlier_removal=outlier_removal,
+                                                                 outlier_thresh_1=outlier_thresh_1, outlier_thresh_2=outlier_thresh_2,
+                                                                 default_k=gam_k_outlier)
+
+                #Sort df_Polygon_NDMI_GAM_new by doy:
+                df_Polygon_NDMI_GAM_new <- df_Polygon_NDMI_GAM_new[order(df_Polygon_NDMI_GAM_new$doy),]
+
+                #Bind the Polygon-specific dataframe with outlier-filtered GAM estimates to the dataframe containing all dataframes from previous iterations
+                 df_Polygons_NDMI_GAM <- rbind(df_Polygons_NDMI_GAM, df_Polygon_NDMI_GAM_new)
+
+                #Create more detailed predictions (not only at the doy present in the datframe) at a 1-day interval to plot more smooth curves
+
+                  #Refit GAM through data
+                   index <- which(df_Polygon_NDMI_GAM_new$outliers==FALSE)
+                   mod_gam <- with(df_Polygon_NDMI_GAM_new[index,], mgcv::gam(NDMI ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
+
+                  #Use gam to make predictions on a more detailed (1-day) day of year interval
+                   df_Polygon_NDMI_GAM_predictions_new <- data.frame(Polygon=i, doy=seq(min(df_Polygon_NDMI_GAM_new$doy), max(df_Polygon_NDMI_GAM_new$doy), 0.01))
+                   df_Polygon_NDMI_GAM_predictions_new$NDMI_gam_predict <- stats::predict(mod_gam, newdata=df_Polygon_NDMI_GAM_predictions_new, type="response")
+                   df_Polygon_NDMI_GAM_predictions_new <- df_Polygon_NDMI_GAM_predictions_new[order(df_Polygon_NDMI_GAM_predictions_new$doy),]
+
+                  #Add predictions to df_Polygons_NDMI_GAM_predictions dataframe:
+                   df_Polygons_NDMI_GAM_predictions <- rbind(df_Polygons_NDMI_GAM_predictions, df_Polygon_NDMI_GAM_predictions_new)
+
+                }
+
+              #If there are less than two datapoints, then append empty dataframes
+              if(nrow(df_Polygon_NDMI_GAM_new) < 2){
+
+                #Bind the empty dataframe to the dataframe containing all dataframes from previous iterations
+                if(nrow(df_Polygon_NDMI_GAM_new) < 1){df_Polygon_NDMI_GAM_new <- data.frame(NDMI=NA, Date=NA, doy=NA, Polygon=i, outliers=NA)}
+                if(nrow(df_Polygon_NDMI_GAM_new) > 0){df_Polygon_NDMI_GAM_new$outliers <- NA}
+                df_Polygons_NDMI_GAM <- rbind(df_Polygons_NDMI_GAM, df_Polygon_NDMI_GAM_new)
+
+                #Add empty GAM predictions to df_Polygons_NDMI_GAM_predictions dataframe:
+                df_Polygon_NDMI_GAM_predictions_new <- df_Polygon_NDMI_GAM_new[,c("Polygon", "doy")]
+                df_Polygon_NDMI_GAM_predictions_new$NDMI_gam_predict <- NA
+                df_Polygons_NDMI_GAM_predictions <- rbind(df_Polygons_NDMI_GAM_predictions, df_Polygon_NDMI_GAM_predictions_new)
+
+                }
 
               }
-            
-            #If there are less than two datapoints, then append empty dataframes
-            if(nrow(df_Polygon_NDMI_GAM_new) < 2){
-              
-              #Bind the empty dataframe to the dataframe containing all dataframes from previous iterations
-              if(nrow(df_Polygon_NDMI_GAM_new) < 1){df_Polygon_NDMI_GAM_new <- data.frame(NDMI=NA, Date=NA, doy=NA, Polygon=i, outliers=NA)}
-              if(nrow(df_Polygon_NDMI_GAM_new) > 0){df_Polygon_NDMI_GAM_new$outliers <- NA}
-              df_Polygons_NDMI_GAM <- rbind(df_Polygons_NDMI_GAM, df_Polygon_NDMI_GAM_new)
-              
-              #Add empty GAM predictions to df_Polygons_NDMI_GAM_predictions dataframe:
-              df_Polygon_NDMI_GAM_predictions_new <- df_Polygon_NDMI_GAM_new[,c("Polygon", "doy")]
-              df_Polygon_NDMI_GAM_predictions_new$NDMI_gam_predict <- NA
-              df_Polygons_NDMI_GAM_predictions <- rbind(df_Polygons_NDMI_GAM_predictions, df_Polygon_NDMI_GAM_predictions_new)
-              
-              }
-            
-            }
 
-          #Change Polygon column to factor
-          df_Polygons_NDMI_GAM$Polygon <- as.factor(as.character(df_Polygons_NDMI_GAM$Polygon))
-          df_Polygons_NDMI_GAM_predictions$Polygon <- as.factor(as.character(df_Polygons_NDMI_GAM_predictions$Polygon))
+            #Change Polygon column to factor
+            df_Polygons_NDMI_GAM$Polygon <- as.factor(as.character(df_Polygons_NDMI_GAM$Polygon))
+            df_Polygons_NDMI_GAM_predictions$Polygon <- as.factor(as.character(df_Polygons_NDMI_GAM_predictions$Polygon))
 
-          #Save dataframe with GAM fits for NDMI
-          #write.csv(df_Polygons_NDMI_GAM, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Data_NDMI_GAM.csv"), row.names = FALSE)
-          write.csv(df_Polygons_NDMI_GAM_predictions, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_GAM_Predictions_NDMI.csv"), row.names = FALSE)
+            #Add LocationID and year
+            df_Polygons_NDMI_GAM_predictions$location <- area_name
+            df_Polygons_NDMI_GAM_predictions$year <- year_ID
 
-        #(E.3) Plot the raw NDMI datapoints and gam predictions for each Polygon:
+            #Save dataframe with GAM fits for NDMI
+            #write.csv(df_Polygons_NDMI_GAM, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Data_NDMI_GAM.csv"), row.names = FALSE)
+            #write.csv(df_Polygons_NDMI_GAM_predictions, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_GAM_Predictions_NDMI.csv"), row.names = FALSE)
 
-           #Plot NDMI and model predictions for all Polygons in a single plot
-            p_Polygon_NDMI = ggplot()+
-              geom_point(data=df_Polygons_NDMI_GAM, aes(x=doy, y=NDMI, fill=Polygon, col=Polygon))+
-              geom_line(data=df_Polygons_NDMI_GAM_predictions, aes(x=doy, y=NDMI_gam_predict, col=Polygon)) +
-              xlab(paste0("Day of year (starting at 01-01-", year_ID, ")")) +
-              ylab("NDMI") +
-              theme_tom()
+          #(E.3) Plot the raw NDMI datapoints and gam predictions for each Polygon:
 
-        #(E.4): Create a separate plot with GAM predictions per polygon
-
-            #Create an empty list to store plots
-            list_plots_ndmi <- vector('list', length(unique(df_Polygons_NDMI_GAM_predictions$Polygon)))
-
-            #Loop through all Polygons
-            for(i in unique(df_Polygons_NDMI_GAM_predictions$Polygon)){
-
-              #i=unique(df_Polygons_NDMI_GAM_predictions$Polygon)[1]
-
-              #Create an index variable for parameter i
-              i_index <- which( unique(df_Polygons_NDMI_GAM_predictions$Polygon) == i)
-
-              #select datasets for current NDMI_threshold and Polygon:
-              df_Polygon_NDMI_GAM <- df_Polygons_NDMI_GAM[df_Polygons_NDMI_GAM$Polygon==i,]
-              df_Polygon_NDMI_GAM_predictions <- df_Polygons_NDMI_GAM_predictions[df_Polygons_NDMI_GAM_predictions$Polygon==i,]
-
-              #create plot for current Polygon and store it in list_plots_ndmi:
-              list_plots_ndmi[[i_index]] <- ggplot()+
-                geom_point(data=df_Polygon_NDMI_GAM[df_Polygon_NDMI_GAM$outliers==FALSE,], aes(x=doy, y=NDMI))+
-                geom_point(data=df_Polygon_NDMI_GAM[df_Polygon_NDMI_GAM$outliers==TRUE,], aes(x=doy, y=NDMI), col="black", pch=16, alpha=0.2)+
-                geom_line(data=df_Polygon_NDMI_GAM_predictions, aes(x=doy, y=NDMI_gam_predict), col="#16acde", lwd=1.25)+
-                geom_vline(xintercept = 150, colour="grey", lty=2)+
+             #Plot NDMI and model predictions for all Polygons in a single plot
+              p_Polygon_NDMI = ggplot()+
+                geom_point(data=df_Polygons_NDMI_GAM, aes(x=doy, y=NDMI, fill=Polygon, col=Polygon))+
+                geom_line(data=df_Polygons_NDMI_GAM_predictions, aes(x=doy, y=NDMI_gam_predict, col=Polygon)) +
                 xlab(paste0("Day of year (starting at 01-01-", year_ID, ")")) +
                 ylab("NDMI") +
-                ggtitle(paste0("Polygon: ", i))+
                 theme_tom()
 
-            }
+          #(E.4): Create a separate plot with GAM predictions per polygon
 
-            #Plot NDMI and model predictions in a separate plot per Polygon
-            plots_ndmi <- list(list_plots_ndmi)
-            plots_per_page = 25
-            plots_ndmi <- lapply(plots_ndmi, function(x){split(x, ceiling(seq_along(plots_ndmi[[1]])/plots_per_page))})
-            plots_ndmi <- unname(unlist(plots_ndmi, recursive = F))
-            pdf(paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Plot_NDMI.pdf"), width=20, height=16, onefile = TRUE)
-            for (k in seq(length(plots_ndmi))) { do.call("grid.arrange", plots_ndmi[[k]]) }
-            dev.off()
+              #Create an empty list to store plots
+              list_plots_ndmi <- vector('list', length(unique(df_Polygons_NDMI_GAM_predictions$Polygon)))
 
-    #(F) Plot NDSI, NDVI and NDMI together in a plot per Polygon
+              #Loop through all Polygons
+              for(i in unique(df_Polygons_NDMI_GAM_predictions$Polygon)){
+
+                #i=unique(df_Polygons_NDMI_GAM_predictions$Polygon)[1]
+
+                #Create an index variable for parameter i
+                i_index <- which( unique(df_Polygons_NDMI_GAM_predictions$Polygon) == i)
+
+                #select datasets for current NDMI_threshold and Polygon:
+                df_Polygon_NDMI_GAM <- df_Polygons_NDMI_GAM[df_Polygons_NDMI_GAM$Polygon==i,]
+                df_Polygon_NDMI_GAM_predictions <- df_Polygons_NDMI_GAM_predictions[df_Polygons_NDMI_GAM_predictions$Polygon==i,]
+
+                #create plot for current Polygon and store it in list_plots_ndmi:
+                list_plots_ndmi[[i_index]] <- ggplot()+
+                  geom_point(data=df_Polygon_NDMI_GAM[df_Polygon_NDMI_GAM$outliers==FALSE,], aes(x=doy, y=NDMI))+
+                  geom_point(data=df_Polygon_NDMI_GAM[df_Polygon_NDMI_GAM$outliers==TRUE,], aes(x=doy, y=NDMI), col="black", pch=16, alpha=0.2)+
+                  geom_line(data=df_Polygon_NDMI_GAM_predictions, aes(x=doy, y=NDMI_gam_predict), col="#16acde", lwd=1.25)+
+                  geom_vline(xintercept = 150, colour="grey", lty=2)+
+                  xlab(paste0("Day of year (starting at 01-01-", year_ID, ")")) +
+                  ylab("NDMI") +
+                  ggtitle(paste0("Year: ", year_ID, ", Polygon: ", i))+
+                  theme_tom()
+
+              }
+
+              #Plot NDMI and model predictions in a separate plot per Polygon
+              # plots_ndmi <- list(list_plots_ndmi)
+              # plots_per_page = 25
+              # plots_ndmi <- lapply(plots_ndmi, function(x){split(x, ceiling(seq_along(plots_ndmi[[1]])/plots_per_page))})
+              # plots_ndmi <- unname(unlist(plots_ndmi, recursive = F))
+              # pdf(paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Plot_NDMI.pdf"), width=20, height=16, onefile = TRUE)
+              # for (k in seq(length(plots_ndmi))) { do.call("grid.arrange", plots_ndmi[[k]]) }
+              # dev.off()
+      }
+
+########################################################################################################################################################################################
+
+      #(F) Plot NDSI, NDVI and NDMI together in a plot per Polygon
 
         # #Plot:
         #  p_Polygon_BANDS_grid <- ggplot()+
@@ -1932,6 +2074,323 @@
 
 
 ########################################################################################################################################################################################
-##################################################################################################################################
+
+  #Store dataframes and plots in a separate list element per year
+
+    #(1): Pixelcounts
+    if(pixel_counts==TRUE){
+      list_df_pixelcount[[which(year_ID==year_ID_vector)]] <- df_pixelcount
+      list_p_pixelcounts[[which(year_ID==year_ID_vector)]] <- p_pixelcounts
+      }
+
+    #(2): Raw data
+    if("avg_NDSI" %in% method){
+      list_df_Polygons_BandValues[[which(year_ID==year_ID_vector)]] <- df_Polygons_BandValues
+      }
+    if("snowfraction" %in% method){
+      list_df_Polygons_SnowFraction[[which(year_ID==year_ID_vector)]] <- df_Polygons_SnowFraction
+      }
+
+    #(3): Snowfraction
+    if("snowfraction" %in% method){
+      list_df_Polygons_SnowFraction_GAM_predictions[[which(year_ID==year_ID_vector)]] <- df_Polygons_SnowFraction_GAM_predictions
+      list_df_Polygon_Snowfraction[[which(year_ID==year_ID_vector)]] <- df_Polygon_Snowfraction
+      list_p_snowfraction[[which(year_ID==year_ID_vector)]] <- list_plots_snowfraction
+      }
+
+    #(4): FSC Gascoin2020
+    if(("avg_NDSI" %in% method) & ("FSC_Gascoin2020" %in% method_output)){
+      list_df_Polygons_FSC_Gascoin2020_GAM_predictions[[which(year_ID==year_ID_vector)]] <- df_Polygons_FSC_Gascoin2020_GAM_predictions
+      list_df_Polygon_FSC_Gascoin2020[[which(year_ID==year_ID_vector)]] <- df_Polygon_FSC_Gascoin2020
+      list_p_fsc_gascoin2020[[which(year_ID==year_ID_vector)]] <- list(list_plots_fsc_gascoin2020)
+      }
+
+    #(5): FSC Aalstad2020
+    if(("avg_NDSI" %in% method) & ("FSC_Aalstad2020" %in% method_output)){
+      list_df_Polygons_FSC_Aalstad2020_GAM_predictions[[which(year_ID==year_ID_vector)]] <- df_Polygons_FSC_Aalstad2020_GAM_predictions
+      list_df_Polygon_FSC_Aalstad2020[[which(year_ID==year_ID_vector)]] <- df_Polygon_FSC_Aalstad2020
+      list_p_fsc_aalstad2020[[which(year_ID==year_ID_vector)]] <- list(list_plots_fsc_aalstad2020)
+      }
+
+    #(6): NDSI
+    if(("avg_NDSI" %in% method) & ("NDSI" %in% method_output)){
+      list_df_Polygons_NDSI_GAM_predictions[[which(year_ID==year_ID_vector)]] <- df_Polygons_NDSI_GAM_predictions
+      list_df_Polygon_NDSI[[which(year_ID==year_ID_vector)]] <- df_Polygon_NDSI
+      list_p_ndsi[[which(year_ID==year_ID_vector)]] <- list(list_plots_ndsi)
+      }
+
+    #(7): NDVI
+    if(("avg_NDSI" %in% method) & ("NDVI" %in% method_output)){
+      list_df_Polygons_NDVI_GAM_predictions[[which(year_ID==year_ID_vector)]] <- df_Polygons_NDVI_GAM_predictions
+      list_p_ndvi[[which(year_ID==year_ID_vector)]] <- list(list_plots_ndvi)
+      }
+
+    #(8): NDMI
+    if(("avg_NDSI" %in% method) & ("NDMI" %in% method_output)){
+      list_df_Polygons_NDMI_GAM_predictions[[which(year_ID==year_ID_vector)]] <- df_Polygons_NDMI_GAM_predictions
+      list_p_ndmi[[which(year_ID==year_ID_vector)]] <- list(list_plots_ndmi)
+      }
+
+}
+
+  #Store the results for all years for the current shapefile
+
+    #(1): Pixel counts:
+    if(pixel_counts==TRUE){
+
+       #Dataframe
+       df_pixelcount <- do.call("rbind", list_df_pixelcount)
+       write.csv(df_pixelcount, file=paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", area_name, "_MODIS_", MODIS_cloud_masking_algorithm, "_Res", resolution, "_Polygons_Data_Pixel_Counts_polygon.csv"), quote=FALSE, row.names=FALSE)
+
+       #Plot:
+       list_p_pixelcounts <- lapply(list_p_pixelcounts, function(x) {do.call(list, list(x))})
+       pdf(paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", area_name, "_MODIS_", MODIS_cloud_masking_algorithm, "_Res", resolution, "_Polygons_Plot_Pixel_Counts_polygon.pdf"), width=12, height=8, onefile = TRUE)
+       for(k in seq(length(list_p_pixelcounts))) {do.call("grid.arrange", c(list_p_pixelcounts[[k]], ncol=1, nrow=1))}
+       dev.off()
+
+       }
+
+    #(2): Raw data
+
+       #Timeseries of Mean bandvalues:
+       if("avg_NDSI" %in% method){
+        df_Polygons_BandValues <- do.call("rbind", list_df_Polygons_BandValues)
+        write.csv(df_Polygons_BandValues, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", area_name, "_MODIS_", MODIS_cloud_masking_algorithm, "_Res", resolution, "_Polygons_Data_MeanBandValues.csv"), row.names = FALSE)
+        }
+
+       #Timeseries of fraction of snowcover
+       if("snowfraction" %in% method){
+        df_Polygons_SnowFraction <- do.call("rbind", list_df_Polygons_SnowFraction)
+        write.csv(df_Polygons_SnowFraction, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", area_name, "_MODIS_", MODIS_cloud_masking_algorithm, "_Res", resolution, "_Polygons_Data_SnowFraction.csv"), row.names = FALSE)
+        }
+
+    #(3): Snowfraction
+    if("snowfraction" %in% method){
+
+       #Predictions of GAM fit
+       df_Polygons_SnowFraction_GAM_predictions <- do.call("rbind", list_df_Polygons_SnowFraction_GAM_predictions)
+       write.csv(df_Polygons_SnowFraction_GAM_predictions, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", area_name, "_MODIS_", MODIS_cloud_masking_algorithm, "_Res", resolution, "_Polygons_GAM_Predictions_SnowFraction.csv"), row.names = FALSE)
+
+       #Date of snowmelt
+       df_Polygon_Snowfraction <- do.call("rbind", list_df_Polygon_Snowfraction)
+       write.csv(df_Polygon_Snowfraction, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", area_name, "_MODIS_", MODIS_cloud_masking_algorithm, "_Res", resolution, "_Polygons_Snowmelt_Snowfraction.csv"), row.names = FALSE)
+
+       #Plot (separate page per year, separate plot per NDSI-threshold and per year):
+
+         #Load plots
+         plots_snowfraction <- list_p_snowfraction
+         plots_per_page = 25
+
+         #Collapse list within each year
+         plots_snowfraction <- lapply(plots_snowfraction, function(inner_list) {do.call(c, inner_list)})
+
+         #Split list of plots to only contain maximum 25 plots per page
+         plots_snowfraction <- lapply(plots_snowfraction, function(x){split(x, ceiling(seq_along(plots_snowfraction[[1]])/plots_per_page))})
+         plots_snowfraction <- unname(unlist(plots_snowfraction, recursive = F))
+
+         #Determine number of columns based on number of plots per page
+         max_plots <- max(unlist(lapply(plots_snowfraction, function(x){length(x)})))
+         if(max_plots<2){var_ncol<-1}
+         if(max_plots>1 & max_plots<5){var_ncol<-2}
+         if(max_plots>4 & max_plots<10){var_ncol<-3}
+         if(max_plots>9 & max_plots<17){var_ncol<-4}
+         if(max_plots>16){var_ncol<-5}
+
+         #Create plot
+         pdf(paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", area_name, "_MODIS_", MODIS_cloud_masking_algorithm, "_Res", resolution, "_Polygons_Plot_Snowfraction.pdf"), width=20, height=16, onefile = TRUE)
+         for(k in seq(length(plots_snowfraction))) {do.call("grid.arrange", c(plots_snowfraction[[k]], ncol=var_ncol, nrow=var_ncol))}
+         dev.off()
+
+        }
+
+    #(4): FSC Gascoin2020
+    if(("avg_NDSI" %in% method) & ("FSC_Gascoin2020" %in% method_output)){
+
+       #Predictions of GAM fit
+       df_Polygons_FSC_Gascoin2020_GAM_predictions <- do.call("rbind", list_df_Polygons_FSC_Gascoin2020_GAM_predictions)
+       write.csv(df_Polygons_FSC_Gascoin2020_GAM_predictions, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", area_name, "_MODIS_", MODIS_cloud_masking_algorithm, "_Res", resolution, "_Polygons_GAM_Predictions_FSC_Gascoin2020.csv"), row.names = FALSE)
+
+       #Date of snowmelt
+       df_Polygon_FSC_Gascoin2020 <- do.call("rbind", list_df_Polygon_FSC_Gascoin2020)
+       write.csv(df_Polygon_FSC_Gascoin2020, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", area_name, "_MODIS_", MODIS_cloud_masking_algorithm, "_Res", resolution, "_Polygons_Snowmelt_FSC_Gascoin2020.csv"), row.names = FALSE)
+
+       #Plot (separate page per year, separate plot per polygon:
+
+         #Load plots
+         plots_fsc_gascoin2020 <- list_p_fsc_gascoin2020
+         plots_per_page = 25
+
+         #Collapse list within each year
+         plots_fsc_gascoin2020 <- lapply(plots_fsc_gascoin2020, function(inner_list) {do.call(c, inner_list)})
+
+         #Split list of plots to only contain maximum 25 plots per page
+         plots_fsc_gascoin2020 <- lapply(plots_fsc_gascoin2020, function(x){split(x, ceiling(seq_along(plots_fsc_gascoin2020[[1]])/plots_per_page))})
+         plots_fsc_gascoin2020 <- unname(unlist(plots_fsc_gascoin2020, recursive = F))
+
+         #Determine number of columns based on number of plots per page
+         max_plots <- max(unlist(lapply(plots_fsc_gascoin2020, function(x){length(x)})))
+         if(max_plots<2){var_ncol<-1}
+         if(max_plots>1 & max_plots<5){var_ncol<-2}
+         if(max_plots>4 & max_plots<10){var_ncol<-3}
+         if(max_plots>9 & max_plots<17){var_ncol<-4}
+         if(max_plots>16){var_ncol<-5}
+
+         #Create plot
+         pdf(paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", area_name, "_MODIS_", MODIS_cloud_masking_algorithm, "_Res", resolution, "_Polygons_Plot_FSC_Gascoin2020.pdf"), width=20, height=16, onefile = TRUE)
+         for(k in seq(length(plots_fsc_gascoin2020))) {do.call("grid.arrange", c(plots_fsc_gascoin2020[[k]], ncol=var_ncol, nrow=var_ncol))}
+         dev.off()
+
+        }
+
+    #(5): FSC Aalstad2020
+    if(("avg_NDSI" %in% method) & ("FSC_Aalstad2020" %in% method_output)){
+
+       #Predictions of GAM fit
+       df_Polygons_FSC_Aalstad2020_GAM_predictions <- do.call("rbind", list_df_Polygons_FSC_Aalstad2020_GAM_predictions)
+       write.csv(df_Polygons_FSC_Aalstad2020_GAM_predictions, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", area_name, "_MODIS_", MODIS_cloud_masking_algorithm, "_Res", resolution, "_Polygons_GAM_Predictions_FSC_Aalstad2020.csv"), row.names = FALSE)
+
+       #Date of snowmelt
+       df_Polygon_FSC_Aalstad2020 <- do.call("rbind", list_df_Polygon_FSC_Aalstad2020)
+       write.csv(df_Polygon_FSC_Aalstad2020, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", area_name, "_MODIS_", MODIS_cloud_masking_algorithm, "_Res", resolution, "_Polygons_Snowmelt_FSC_Aalstad2020.csv"), row.names = FALSE)
+
+       #Plot (separate page per year, separate plot per polygon:
+
+         #Load plots
+         plots_fsc_aalstad2020 <- list_p_fsc_aalstad2020
+         plots_per_page = 25
+
+         #Collapse list within each year
+         plots_fsc_aalstad2020 <- lapply(plots_fsc_aalstad2020, function(inner_list) {do.call(c, inner_list)})
+
+         #Split list of plots to only contain maximum 25 plots per page
+         plots_fsc_aalstad2020 <- lapply(plots_fsc_aalstad2020, function(x){split(x, ceiling(seq_along(plots_fsc_aalstad2020[[1]])/plots_per_page))})
+         plots_fsc_aalstad2020 <- unname(unlist(plots_fsc_aalstad2020, recursive = F))
+
+         #Determine number of columns based on number of plots per page
+         max_plots <- max(unlist(lapply(plots_fsc_aalstad2020, function(x){length(x)})))
+         if(max_plots<2){var_ncol<-1}
+         if(max_plots>1 & max_plots<5){var_ncol<-2}
+         if(max_plots>4 & max_plots<10){var_ncol<-3}
+         if(max_plots>9 & max_plots<17){var_ncol<-4}
+         if(max_plots>16){var_ncol<-5}
+
+         #Create plot
+         pdf(paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", area_name, "_MODIS_", MODIS_cloud_masking_algorithm, "_Res", resolution, "_Polygons_Plot_FSC_Aalstad2020.pdf"), width=20, height=16, onefile = TRUE)
+         for(k in seq(length(plots_fsc_aalstad2020))) {do.call("grid.arrange", c(plots_fsc_aalstad2020[[k]], ncol=var_ncol, nrow=var_ncol))}
+         dev.off()
+
+        }
+
+    #(6): NDSI
+    if(("avg_NDSI" %in% method) & ("NDSI" %in% method_output)){
+
+       #Predictions of GAM fit
+       df_Polygons_NDSI_GAM_predictions <- do.call("rbind", list_df_Polygons_NDSI_GAM_predictions)
+       write.csv(df_Polygons_NDSI_GAM_predictions, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", area_name, "_MODIS_", MODIS_cloud_masking_algorithm, "_Res", resolution, "_Polygons_GAM_Predictions_NDSI.csv"), row.names = FALSE)
+
+       #Date of snowmelt
+       df_Polygon_NDSI <- do.call("rbind", list_df_Polygon_NDSI)
+       write.csv(df_Polygon_NDSI, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", area_name, "_MODIS_", MODIS_cloud_masking_algorithm, "_Res", resolution, "_Polygons_Snowmelt_NDSI.csv"), row.names = FALSE)
+
+       #Plot (separate page per year, separate plot per polygon:
+
+         #Load plots
+         plots_ndsi <- list_p_ndsi
+         plots_per_page = 25
+
+         #Collapse list within each year
+         plots_ndsi <- lapply(plots_ndsi, function(inner_list) {do.call(c, inner_list)})
+
+         #Split list of plots to only contain maximum 25 plots per page
+         plots_ndsi <- lapply(plots_ndsi, function(x){split(x, ceiling(seq_along(plots_ndsi[[1]])/plots_per_page))})
+         plots_ndsi <- unname(unlist(plots_ndsi, recursive = F))
+
+         #Determine number of columns based on number of plots per page
+         max_plots <- max(unlist(lapply(plots_ndsi, function(x){length(x)})))
+         if(max_plots<2){var_ncol<-1}
+         if(max_plots>1 & max_plots<5){var_ncol<-2}
+         if(max_plots>4 & max_plots<10){var_ncol<-3}
+         if(max_plots>9 & max_plots<17){var_ncol<-4}
+         if(max_plots>16){var_ncol<-5}
+
+         #Create plot
+         pdf(paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", area_name, "_MODIS_", MODIS_cloud_masking_algorithm, "_Res", resolution, "_Polygons_Plot_NDSI.pdf"), width=20, height=16, onefile = TRUE)
+         for(k in seq(length(plots_ndsi))) {do.call("grid.arrange", c(plots_ndsi[[k]], ncol=var_ncol, nrow=var_ncol))}
+         dev.off()
+
+        }
+
+    #(7): NDVI
+    if(("avg_NDSI" %in% method) & ("NDVI" %in% method_output)){
+
+      #Predictions of GAM fit
+      df_Polygons_NDVI_GAM_predictions <- do.call("rbind", list_df_Polygons_NDVI_GAM_predictions)
+      write.csv(df_Polygons_NDVI_GAM_predictions, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", area_name, "_MODIS_", MODIS_cloud_masking_algorithm, "_Res", resolution, "_Polygons_GAM_Predictions_NDVI.csv"), row.names = FALSE)
+
+      #Plot (separate page per year, separate plot per polygon:
+
+        #Load plots
+        plots_ndvi <- list_p_ndvi
+        plots_per_page = 25
+
+        #Collapse list within each year
+        plots_ndvi <- lapply(plots_ndvi, function(inner_list) {do.call(c, inner_list)})
+
+        #Split list of plots to only contain maximum 25 plots per page
+        plots_ndvi <- lapply(plots_ndvi, function(x){split(x, ceiling(seq_along(plots_ndvi[[1]])/plots_per_page))})
+        plots_ndvi <- unname(unlist(plots_ndvi, recursive = F))
+
+        #Determine number of columns based on number of plots per page
+        max_plots <- max(unlist(lapply(plots_ndvi, function(x){length(x)})))
+        if(max_plots<2){var_ncol<-1}
+        if(max_plots>1 & max_plots<5){var_ncol<-2}
+        if(max_plots>4 & max_plots<10){var_ncol<-3}
+        if(max_plots>9 & max_plots<17){var_ncol<-4}
+        if(max_plots>16){var_ncol<-5}
+
+        #Create plot
+        pdf(paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", area_name, "_MODIS_", MODIS_cloud_masking_algorithm, "_Res", resolution, "_Polygons_Plot_NDVI.pdf"), width=20, height=16, onefile = TRUE)
+        for(k in seq(length(plots_ndvi))) {do.call("grid.arrange", c(plots_ndvi[[k]], ncol=var_ncol, nrow=var_ncol))}
+        dev.off()
+
+        }
+
+    #(8): NDMI
+    if(("avg_NDSI" %in% method) & ("NDMI" %in% method_output)){
+
+      #Predictions of GAM fit
+      df_Polygons_NDMI_GAM_predictions <- do.call("rbind", list_df_Polygons_NDMI_GAM_predictions)
+      write.csv(df_Polygons_NDMI_GAM_predictions, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", area_name, "_MODIS_", MODIS_cloud_masking_algorithm, "_Res", resolution, "_Polygons_GAM_Predictions_NDMI.csv"), row.names = FALSE)
+
+      #Plot (separate page per year, separate plot per polygon:
+
+        #Load plots
+        plots_ndmi <- list_p_ndmi
+        plots_per_page = 25
+
+        #Collapse list within each year
+        plots_ndmi <- lapply(plots_ndmi, function(inner_list) {do.call(c, inner_list)})
+
+        #Split list of plots to only contain maximum 25 plots per page
+        plots_ndmi <- lapply(plots_ndmi, function(x){split(x, ceiling(seq_along(plots_ndmi[[1]])/plots_per_page))})
+        plots_ndmi <- unname(unlist(plots_ndmi, recursive = F))
+
+        #Determine number of columns based on number of plots per page
+        max_plots <- max(unlist(lapply(plots_ndmi, function(x){length(x)})))
+        if(max_plots<2){var_ncol<-1}
+        if(max_plots>1 & max_plots<5){var_ncol<-2}
+        if(max_plots>4 & max_plots<10){var_ncol<-3}
+        if(max_plots>9 & max_plots<17){var_ncol<-4}
+        if(max_plots>16){var_ncol<-5}
+
+        #Create plot
+        pdf(paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", area_name, "_MODIS_", MODIS_cloud_masking_algorithm, "_Res", resolution, "_Polygons_Plot_NDMI.pdf"), width=20, height=16, onefile = TRUE)
+        for(k in seq(length(plots_ndmi))) {do.call("grid.arrange", c(plots_ndmi[[k]], ncol=var_ncol, nrow=var_ncol))}
+        dev.off()
+
+        }
+
+ }
+
 ##################################################################################################################################
 
