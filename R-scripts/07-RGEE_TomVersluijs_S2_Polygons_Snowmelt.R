@@ -163,14 +163,15 @@
        #NDSI and NIR thresholds above which a pixel is perceived as snow
        NIR_threshold=1100
 
-       #Date range to detect permanent waterbodies based on NDWI
-       start_date_NDWI <- paste0(year_ID, "-07-15")
-       end_date_NDWI <- paste0(year_ID, "-08-15")
+       #Date range to detect permanent waterbodies based on NDWI (format "-mm-dd")
+       start_month_day_NDWI <- "-07-15"
+       end_month_day_NDWI <- "-08-15"
 
        #Date range to detect permanent waterbodies based on NDSI (used to differentiate between water and snow in the detection of
        #permanent waterbodies).This date range should occur c.a. 2 weeks before the date range from start_date_NDWI to end_date_NDWI.
-       start_date_NDSI <- paste0(year_ID, "-07-01")
-       end_date_NDSI <- paste0(year_ID, "-08-01")
+       #The specified format should be: "-mm-dd"
+       start_month_day_NDSI <- "-07-01"
+       end_month_day_NDSI <- "-08-01"
 
    #(g): Composite image
        
@@ -263,6 +264,14 @@
      #Define date range of all images considered for analysis
      start_date <- paste0(year_ID, start_month_day) #choose date (well) before the first snowmelt occurs within the study site
      end_date <- paste0(year_ID, end_month_day) #choose date (well) after last snowmelt occurs within the study site
+     
+     #Date range to detect permanent waterbodies based on NDWI
+     start_date_NDWI <- paste0(year_ID, start_month_day_NDWI)
+     end_date_NDWI <- paste0(year_ID, end_month_day_NDWI)
+     
+     #Date range to detect permanent waterbodies based on NDSI
+     start_date_NDSI <- paste0(year_ID, start_month_day_NDSI)
+     end_date_NDSI <- paste0(year_ID, start_month_day_NDSI)
      
      #Define area name (used as prefix in output files)
      area_name <- toupper(substr(shapefile, 1, 3))    
