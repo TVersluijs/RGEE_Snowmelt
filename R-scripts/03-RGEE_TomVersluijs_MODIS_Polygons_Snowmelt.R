@@ -80,7 +80,7 @@
 
    #(b) Areas of interest
 
-     #Name of Shapefiles containing either a single polygon, or a multi-polygon (located in '/Input/Shapefiles' folder)
+     #Name of Shapefile(s) containing either a single polygon, or a multi-polygon (located in '/Input/Shapefiles' folder)
 	   #Follow the guide "Manual_CreateShapefilePolygons.pdf" when creating these shapefiles. Specify multiple using c().
      shapefile_vector <- "ZAC_TenEqualSizeVoronoiPolygons_EPSG4326.shp"
 
@@ -89,7 +89,7 @@
 
    #(c) Dates
 
-     #Specify the years of interest (specify multiple using c())
+     #Specify the year(s) of interest (specify multiple using c())
      year_ID_vector <- as.character(2000:2023)
 
      #Date range of all images considered for analysis (format "-mm-dd")
@@ -555,7 +555,7 @@
   #(14): Count the total number of unmasked pixels and the total number of pixels per doy within aoi_Shapefile
   if(pixel_counts==TRUE){
 
-    #(A): Add pixel counts within the area of interest to each separate image by mapping the pixel count functions over the image collection
+    #(A): Add pixel counts within aoi_Shapefile to each separate image by mapping the pixel count functions over the image collection
      MODIS_clouds_filtered <- MODIS_clouds_filtered$
        #Count number of unmasked pixels within aoi_Shapefile
        map(AddPixelCount)$
