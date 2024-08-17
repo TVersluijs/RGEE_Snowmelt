@@ -97,7 +97,7 @@
    #(c) Dates
 
      #Specify the year(s) of interest (specify multiple using c())
-     year_ID_vector <- as.character(2000:2023)
+     year_ID_vector <- as.character(2019:2023)
 
      #Date range of all images considered for analysis (format "-mm-dd")
      start_month_day <- "-03-15" #choose date (well) before the first snowmelt occurs within the study site
