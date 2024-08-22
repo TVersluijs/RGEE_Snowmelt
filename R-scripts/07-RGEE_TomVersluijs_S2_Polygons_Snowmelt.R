@@ -197,6 +197,9 @@
      pixel_counts=TRUE
      
 ##################################################################################################################################
+  
+ #Store the names of all parameters        
+ params_output <- setdiff(ls(), lsf.str())          
      
  #Run the analysis for all shapefiles
  for(shapefile in shapefile_vector){
@@ -307,7 +310,7 @@
      #Save all parameters and their values in the environment to a text file (only once, because parameters are identical between runs for different years)
      if(year_ID == year_ID_vector[1]){
        file_conn <- file(paste0(here(), "/Output/S2/07_Polygons_Snowmelt/", timestamp, "_", paste0(area_name, "_S2"), "_Parameters.txt"), "w")
-       for (obj in setdiff(ls(), lsf.str())) {cat(paste(obj, "=", get(obj)), file = file_conn) ; cat("\n", file = file_conn)}
+       for (obj in sort(c(params_output, "shapefile", "year_ID", "start_date", "end_date", "start_date_doy", "end_date_doy", "area_name", "data_ID", "timestamp"))) {cat(paste(obj, "=", get(obj)), file = file_conn) ; cat("\n", file = file_conn)}
        close(file_conn)
        }
        
