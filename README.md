@@ -179,9 +179,10 @@ user by setting the parameter 'method'):
 <br />
 				
 ### *03-RGEE_TomVersluijs_MODIS_Polygons_Snowmelt.R
-The date of snow melt is calculated based on MODIS data for a single **`polygon`**, or **`multi-polygon** specified using a shapefile. 
-This shapefile can be created using e.g. QGIS (see manual). The user can specify whether clouds and permanent water bodies need to be masked.
-Snow melt is analysed within each polygon based on one of the following methods (specified by the user by setting the parameter 'method'):
+The date of snow melt is calculated based on MODIS data for a single **`polygon`**, or **`multi-polygon** specified using shapefiles. 
+Shapefiles can be created using e.g. QGIS (see manual). The script allows the user to run the code for multiple shapefiles and years 
+at once. The user can specify whether clouds and permanent water bodies need to be masked. Snow melt is analysed within each polygon 
+based on one of the following methods (specified by the user by setting the parameter 'method'):
 
 * (1) <i>'avg_NDSI'</i>: Calculate the average NDSI value over time within each polygon, fit a GAM through these data and calculate when this model passes the specified NDSI threshold representing the moment of snow melt. In addition, time series of the average NDVI and NDMI are extracted within each polygon. Also, time series of the average Fractional Snow Cover (FSC, a within-pixel estimate of the fraction of snow cover) are extracted within each polygon based on the formulas specified in Gascoin et al 2020 and Aalstad et al 2020.
 * (2) <i>'snowfraction'</i>: Calculate the fraction of pixels within each polygon over time where NDSI > 'NDSI_threshold', fit a GAM through these data and extract the moment when this model passes a user-specified 'Snowfraction_threshold'. 
@@ -274,12 +275,13 @@ run than script 08.
 <br />
 								
 ### *07-RGEE_TomVersluijs_S2_Polygons_Snowmelt.R
-The date of snow melt is calculated based on Sentinel-2 data for a single **`polygon`**, or **`multi-polygon** specified using a shapefile. 
-This shapefile can be created using e.g. QGIS (see manual). It only works for small areas of c.a. 50 km2 (larger areas might result in 
-computation errors unless the spatial resolution of the analyses is decreased). The user can specify whether clouds and permanent water 
-bodies need to be masked. If the area of interest overlaps with multiple satellite tiles for a certain day, then a composite image can be 
-created (picking the pixel with the least cloud cover). Snow melt is analysed within each polygon based on one of the following methods 
-(specified by the user by setting the parameter 'method'):
+The date of snow melt is calculated based on Sentinel-2 data for a single **`polygon`**, or **`multi-polygon** specified using shapefiles. 
+Shapefiles can be created using e.g. QGIS (see manual). It only works for small areas of c.a. 50 km2 (larger areas might result in 
+computation errors unless the spatial resolution of the analyses is decreased). The script allows the user to run the code for multiple 
+shapefiles and years at once. The user can specify whether clouds and permanent water bodies need to be masked. If the area of interest 
+overlaps with multiple satellite tiles for a certain day, then a composite image can be created (picking the pixel with the least cloud 
+cover). Snow melt is analysed within each polygon based on one of the following methods (specified by the user by setting the parameter 
+'method'):
 
 * (1) '<i>avg_NDSI</i>': Calculate the average NDSI value over time within each polygon, fit a GAM through these data and calculate when this model passes the specified NDSI threshold representing the moment of snow melt. In addition, time series of the average NDVI and NDMI are extracted within each polygon. Also, time series of the average Fractional Snow Cover (FSC, a within-pixel estimate of the fraction of snow cover) are extracted within each polygon based on the formulas specified in Gascoin et al 2020 and Aalstad et al 2020.
 * (2) '<i>snowfraction</i>': Calculate the fraction of pixels within each polygon over time where NDSI > 'NDSI_threshold', fit a GAM through these data and extract the moment when this model passes a user-specified 'Snowfraction_threshold'. 
