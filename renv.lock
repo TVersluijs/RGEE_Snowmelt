@@ -74,45 +74,6 @@
       ],
       "Hash": "40a55bd0b44719941d103291ac5e9d74"
     },
-    "R.methodsS3": {
-      "Package": "R.methodsS3",
-      "Version": "1.8.2",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Requirements": [
-        "R",
-        "utils"
-      ],
-      "Hash": "278c286fd6e9e75d0c2e8f731ea445c8"
-    },
-    "R.oo": {
-      "Package": "R.oo",
-      "Version": "1.25.0",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Requirements": [
-        "R",
-        "R.methodsS3",
-        "methods",
-        "utils"
-      ],
-      "Hash": "a0900a114f4f0194cf4aa8cd4a700681"
-    },
-    "R.utils": {
-      "Package": "R.utils",
-      "Version": "2.12.2",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Requirements": [
-        "R",
-        "R.methodsS3",
-        "R.oo",
-        "methods",
-        "tools",
-        "utils"
-      ],
-      "Hash": "325f01db13da12c04d8f6e7be36ff514"
-    },
     "R6": {
       "Package": "R6",
       "Version": "2.5.1",
@@ -789,26 +750,6 @@
         "withr"
       ],
       "Hash": "c64c926cdc1a2796e609f99b53017be2"
-    },
-    "gdalUtils": {
-      "Package": "gdalUtils",
-      "Version": "2.0.3.2",
-      "Source": "GitHub",
-      "RemoteType": "github",
-      "RemoteHost": "api.github.com",
-      "RemoteRepo": "gdalUtils",
-      "RemoteUsername": "gearslaboratory",
-      "RemoteRef": "HEAD",
-      "RemoteSha": "8872aaf763bf7e5d0393a52b0ff63292f51157d1",
-      "Requirements": [
-        "R",
-        "R.utils",
-        "foreach",
-        "raster",
-        "rgdal",
-        "sp"
-      ],
-      "Hash": "2d38dfcfc7de741ddabccbaf69757599"
     },
     "generics": {
       "Package": "generics",
@@ -2057,13 +1998,13 @@
     },
     "renv": {
       "Package": "renv",
-      "Version": "1.0.0",
+      "Version": "1.0.11",
       "Source": "Repository",
-      "Repository": "CRAN",
+      "Repository": "RSPM",
       "Requirements": [
         "utils"
       ],
-      "Hash": "c321cd99d56443dbffd1c9e673c0c1a2"
+      "Hash": "47623f66b4e80b3b0587bc5d7b309888"
     },
     "reshape2": {
       "Package": "reshape2",
@@ -2099,22 +2040,6 @@
       ],
       "Hash": "86c441bf33e1d608db773cb94b848458"
     },
-    "rgdal": {
-      "Package": "rgdal",
-      "Version": "1.6-6",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Requirements": [
-        "R",
-        "grDevices",
-        "graphics",
-        "methods",
-        "sp",
-        "stats",
-        "utils"
-      ],
-      "Hash": "05c7c91191407d54da92816fb849ab29"
-    },
     "rgee": {
       "Package": "rgee",
       "Version": "1.1.6.9999",
@@ -2140,21 +2065,6 @@
         "rstudioapi"
       ],
       "Hash": "5c6a6c8a52be7ce57dce68a70b67ec35"
-    },
-    "rgeos": {
-      "Package": "rgeos",
-      "Version": "0.6-2",
-      "Source": "Repository",
-      "Repository": "CRAN",
-      "Requirements": [
-        "R",
-        "graphics",
-        "methods",
-        "sp",
-        "stats",
-        "utils"
-      ],
-      "Hash": "9511acfd44e26cd310b9975f63ac9f72"
     },
     "rlang": {
       "Package": "rlang",
