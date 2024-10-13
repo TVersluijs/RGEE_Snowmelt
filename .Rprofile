@@ -1,2 +1,2 @@
-options(renv.config.synchronized.check = FALSE)
+options(renv.config.synchronized.check = TRUE)
 source("renv/activate.R")
