@@ -211,7 +211,8 @@
   rgee::ee_Initialize(user="ENTER YOUR OWN GOOGLE EMAIL (@gmail.com)", drive = T) 
  
   #When running this for the first time you will need to conduct two authentication steps:
-  #(1): You need to allow Tidyverse to access and manage files on your Google Drive (check that this option is selected before confirming).
+  #(1): You need to allow Tidyverse to access and manage files on your Google Drive. IMPORTANT: make sure to cross the 
+  #     box to give this permission before confirming.
   #(2): Notebook Authenticator: 
   #  -Verify that the correct user account is listed. If not, press 'SWITCH ACCOUNT' to select another gmail account.
   #  -Select your previously created Google Cloud Project to use for Authentication. Make sure that the project is listed in
