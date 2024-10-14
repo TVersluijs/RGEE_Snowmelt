@@ -228,9 +228,9 @@
   #If after running ee_Initialize there are five green checkmarks at 'user', 'Google Drive credentials', 'Initializing Google Earth Engine'
   #'Earth Engine account' and 'Python Path' then the installation and initialization has completed successfully. Congratulations!!
 
-  #As a final step we create an asset folder on your local machine for the temporary storage of output files
-  rgee::ee$data$createAssetHome("users/fldr_assets")
+  #As a final step we create an asset folder on your local machine for the temporary storage of output files.
   #Note: This step can be skipped if it results in the error that an asset folder already exists.
+  rgee::ee$data$createAssetHome("users/fldr_assets")
   
 ######################################################################################################################################
 
