@@ -202,7 +202,7 @@
            reducer= ee$Reducer$sum(),
            geometry= aoi_Shapefile,
            crs= crs,
-           scale= 10,
+           scale= resolution,
            maxPixels= 1E13)
          paste0('Size of study area calculated using the pixel area method: ', round(ee$Number(area2$get('area'))$getInfo(),3), ' km2')
 
