@@ -274,9 +274,19 @@
 
        #Save the plot only once, because the shapefile is identical for all years
        if(year_ID == year_ID_vector[1]){
-        ggsave(plot=p1, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_",paste0(area_name, "_MODIS_", MODIS_cloud_masking_algorithm), "_Polygons.pdf"), width=10, height=8)
-        }
-
+         tryCatch({print(p1)},
+            #Catch the 'st_point_on_surface' warning
+             warning = function(w){
+               if(grepl("st_point_on_surface", w$message)){
+                 suppressWarnings(ggsave(plot=p1, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_",paste0(area_name, "_MODIS_", MODIS_cloud_masking_algorithm), "_Polygons.pdf"), width=10, height=8))
+                 suppressWarnings(print(p1))
+                 }
+               if(!grepl("st_point_on_surface", w$message)){
+                 ggsave(plot=p1, paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_",paste0(area_name, "_MODIS_", MODIS_cloud_masking_algorithm), "_Polygons.pdf"), width=10, height=8)
+                 print(p1)
+                 }
+               })}
+       
        #Convert the shapefile to an earthengine feature collection:
        aoi_Polygons <- st_transform(aoi_Polygons, crs="EPSG:4326")
        aoi_Polygons <- sf_as_ee(aoi_Polygons)

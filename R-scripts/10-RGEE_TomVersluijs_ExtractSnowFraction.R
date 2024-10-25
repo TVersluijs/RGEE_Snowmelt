@@ -89,7 +89,7 @@
       #For which year was the snow melt map generated
        year_ID <- "2023"
        
-      #What were the min and max date ranges for which snow melt was calculated
+      #What were the date ranges for which snow melt was calculated
        start_date <- paste0(year_ID, "-03-15") 
        end_date <- paste0(year_ID, "-09-15")
   
@@ -297,13 +297,25 @@
       #Set column LocationID to a factor
       df_locations$LocationID <- as.factor(df_locations$LocationID)
       
-      #Plot the locations:
+      #Plot the shapefile:
       p_shapefile <- ggplot() + 
         geom_sf(data = df_locations, fill=sf.colors(nrow(df_locations)), col = "black")+
         geom_sf_label(data = df_locations, aes(label=LocationID), colour="black")+
         theme_tom()
       
-      ggsave(plot=p_shapefile, paste0(dir_Output, "/", timestamp, "_", data_ID, "_Locations_Shapefile.pdf"), width=10, height=8)
+      #Save shapefile plot
+      tryCatch({print(p_shapefile)},
+         #Catch the 'st_point_on_surface' warning
+         warning = function(w){
+           if(grepl("st_point_on_surface", w$message)){
+             suppressWarnings(ggsave(plot=p_shapefile, paste0(dir_Output, "/", timestamp, "_", data_ID, "_Locations_Shapefile.pdf"), width=10, height=8))
+             suppressWarnings(print(p_shapefile))
+             }
+           if(!grepl("st_point_on_surface", w$message)){
+             ggsave(plot=p_shapefile, paste0(dir_Output, "/", timestamp, "_", data_ID, "_Locations_Shapefile.pdf"), width=10, height=8)
+             print(p_shapefile)
+             }
+           })
       
       #Convert shapefile to an earthengine feature collection:  
       Locations_ee <- st_transform(df_locations, crs="EPSG:4326")
