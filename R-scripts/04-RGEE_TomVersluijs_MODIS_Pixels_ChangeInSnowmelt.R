@@ -82,7 +82,7 @@
 
    #(c) Dates
 
-     #Specify date and year ranges of all images
+     #Specify date and year ranges of all images (Note that this has to correspond to the settings that were used in script '01-RGEE_TomVersluijs_MODIS_Pixels_Snowmelt.R')
      years <- 2000:2023
      start_mmdd <- "-03-15"
      end_mmdd <- "-09-15"

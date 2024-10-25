@@ -123,8 +123,8 @@
      year_ID <- "2022"
 
      #Date range of all images considered for analysis
-     start_date <- paste0(year_ID, "-03-15") #choose date (well) before the first snowmelt occurs within the study site
-     end_date <- paste0(year_ID, "-09-15") #choose date (well) after last date of tracking
+     start_date <- paste0(year_ID, "-03-15") #choose date (well) before the first snow melt occurs within the study area
+     end_date <- paste0(year_ID, "-09-15") #choose date (well) after last snow melt occurs within the study area
 
    #(d) Snow detection
 
@@ -170,7 +170,7 @@
      resolution_cldmsk=150 #(default = 150)
 
      #Maximum fraction of cloud cover allowed in each image
-     max_cloud_fraction=0.75 #(default = 0.75)
+     max_cloud_fraction=0.75 #0.75 equals 75% cloud cover
 
    #(f): Water masking
 
@@ -221,7 +221,7 @@
      
    #(i): Counts of unmasked pixels
      
-     #Should counts of the number of unmasked pixels per doy within the shapefile area be conducted (increases computation time)
+     #Should counts of the number of unmasked pixels per day of year within the shapefile area be conducted (increases computation time)
      pixel_counts=TRUE
      
      
