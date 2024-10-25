@@ -6,7 +6,7 @@
 #creating the snow melt map, script "10-RGEE_TomVersluijs_S2_ExtractSnowFraction.R" can be used to extract time series of the 
 #fraction of snow cover for points/polygon(s) of interest from this map.
 
-#Copyright Tom Versluijs 2024-07-19. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
+#Copyright Tom Versluijs 2024-10-25. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
 
 #Before running this script make sure to install RGEE according to the instructions in script "00-RGEE_TomVersluijs_Installation.R". 
 #Note that a GoogleDrive is required. Important: make sure to run this script from within the "RGEE_Snowmelt.Rproj" project file.
@@ -978,7 +978,16 @@
     #(24): Save workspace 
      save.image(paste0(here(), "/Output/S2/05_Pixels_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Workspace_Backup_PixelDoySnowmelt.RData"))
 
-
+    #(25): Print concluding remarks  
+     {cat("\n") ; cat("\n")
+      print("--------------------------------------------------------------------------------------------------------------------------")
+      print(paste0("THE ANALYSIS HAS COMPLETED"))
+      cat("\n")
+      print(paste0("-Generated data and plots can be found at ", here(), "/Output/S2/05_Pixels_Snowmelt/"))
+      print("--------------------------------------------------------------------------------------------------------------------------")
+      cat("\n")}
+     
+     
 ###########################################################################################################################################################################
 ###########################################################################################################################################################################
 ###########################################################################################################################################################################

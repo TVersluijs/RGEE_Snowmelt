@@ -6,7 +6,7 @@
 #creating the snow melt map, script "10-RGEE_TomVersluijs_S2_ExtractSnowFraction.R" can be used to extract time series of the 
 #fraction of snow cover for points/polygon(s) of interest from this map.
 
-#Copyright Tom Versluijs 2024-07-19. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
+#Copyright Tom Versluijs 2024-10-25. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
 
 #Before running this script make sure to install RGEE according to the instructions in script "00-RGEE_TomVersluijs_Installation.R". 
 #Note that a GoogleDrive is required. Important: make sure to run this script from within the "RGEE_Snowmelt.Rproj" project file.
@@ -1023,9 +1023,14 @@
         #(20): Save workspace
          #save.image(paste0(here(), "/Output/MODIS/01_Pixels_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Backup_Workspace_PixelDateOfSnowmelt.RData"))
          
-    #The snowmelt image is now completed and can be downloaded as .tif file from the RGEE_backup folder on the specified Google Drive.
-    #The optional code below uses the generated snowmelt image to extract the snowmelt day of year at specific points of interest.
-
+        #(21): Print concluding remarks
+         {cat("\n") ; cat("\n")
+          print("--------------------------------------------------------------------------------------------------------------------------")
+          print(paste0("THE ANALYSIS HAS COMPLETED"))
+          cat("\n")
+          print(paste0("-Generated data and plots can be found at ", here(), "/Output/MODIS/01_Pixels_Snowmelt/"))
+          print("--------------------------------------------------------------------------------------------------------------------------")
+          cat("\n")}
          
 ###########################################################################################################################################################################
 ###########################################################################################################################################################################

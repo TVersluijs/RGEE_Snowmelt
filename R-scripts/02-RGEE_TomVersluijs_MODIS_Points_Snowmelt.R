@@ -23,7 +23,7 @@
 #what this average NDSI value entails.
 
 
-#Copyright Tom Versluijs 2024-07-19. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
+#Copyright Tom Versluijs 2024-10-25. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
 
 #Before running this script make sure to install RGEE according to the instructions in script "00-RGEE_TomVersluijs_Installation.R". 
 #Note that a GoogleDrive is required. Important: make sure to run this script from within the "RGEE_Snowmelt.Rproj" project file.
@@ -1938,6 +1938,15 @@
    
 ##########################################################################################################################################################################
   
-#The End   
+#The End
+  
+  #Print concluding remarks
+  {cat("\n") ; cat("\n")
+   print("--------------------------------------------------------------------------------------------------------------------------")
+   print(paste0("THE ANALYSIS HAS COMPLETED"))
+   cat("\n")
+   print(paste0("-Generated data and plots can be found at ", here(), "/Output/MODIS/02_Points_Snowmelt/"))
+   print("--------------------------------------------------------------------------------------------------------------------------")
+   cat("\n")}
   
 ##########################################################################################################################################################################
