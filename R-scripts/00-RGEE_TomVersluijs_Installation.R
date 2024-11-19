@@ -2,7 +2,7 @@
 
 # Script: Script with installation procedures to use RGEE
 # Author: Tom Versluijs, adapted from Ricardo Dal'Agnol da Silva
-# Date Created: 2024-10-13
+# Date Created: 2024-11-19
 # R version 4.3.2
 # Adapted from the following video tutorial: https://www.youtube.com/watch?v=1-k6wNL2hlo&ab_channel=RicardoDalagnol
 
@@ -175,8 +175,9 @@
   #Note that this might result in an error due to the dependency on rgdal. This is however not essential for RGEE to function.
 
   # now some more specific packages related to using rgee
-  p_load(geojsonio, remotes, reticulate, devtools, googledrive)
+  p_load(geojsonio, remotes, reticulate, devtools, googledrive, magick)
   devtools:::install_github("r-spatial/rgee")
+  remotes::install_github("r-earthengine/rgeeExtra")
 
   ## IMPORTANT! Restart R before proceeding with the code below. Also try restarting if the installation
   ## did not finish properly and run the installation again after restart. In any case make sure to
