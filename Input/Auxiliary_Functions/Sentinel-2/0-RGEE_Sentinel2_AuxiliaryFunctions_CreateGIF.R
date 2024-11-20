@@ -35,7 +35,7 @@ f_img_col_to_gif <- function(img_col=image_collection,  #image collection
 
   #(0): Print progress
     print(paste0("Start creating GIF: "))
-    print(paste0(output_fldr, timestamp, "_", data_ID, "_Res", resolution, "_", file_name, ".gif"))
+    print(paste0(output_fldr, timestamp, "_", data_ID, "_Res", resolution, "_", file_name, "_Buf", centroid_buffer_m, ".gif"))
     cat("\n")
 
   #(1): Clip images by the shapefile area
@@ -105,11 +105,11 @@ f_img_col_to_gif <- function(img_col=image_collection,  #image collection
         animation <- rgeeExtra::ee_utils_gif_creator(img_col_gif_with_polygon, quiet=F, videoArgs, mode="wb")
         animation <- animation %>% rgeeExtra::ee_utils_gif_annotate(gif_text, gravity=gif_text_position, location=gif_text_position_adjustment, size=gif_text_size, color=gif_text_col)
         gc(reset = TRUE)
-        rgeeExtra::ee_utils_gif_save(animation, path = paste0(output_fldr, timestamp, "_", data_ID, "_Res", resolution, "_", file_name, ".gif"))
+        rgeeExtra::ee_utils_gif_save(animation, path = paste0(output_fldr, timestamp, "_", data_ID, "_Res", resolution, "_", file_name, "_Buf", centroid_buffer_m, ".gif"))
         }, error = function(cond){return({
           print(paste0("Unable to create: '", file_name, ".gif'"))
           print(paste0("  -Detailed error: ", cond))
-          print("  -In case of error - 'Total request size (X pixels) must be less than or equal to X pixels' - reduce 'gif_max_pixels'.")
+          print("  -In case of error 'Total request size (X pixels) must be less than or equal to X pixels' - reduce 'gif_max_pixels'.")
           cat("\n")
           })})
 
