@@ -6,7 +6,7 @@
 #creating the snow melt map, script "10-RGEE_TomVersluijs_S2_ExtractSnowFraction.R" can be used to extract time series of the 
 #fraction of snow cover for points/polygon(s) of interest from this map.
 
-#Copyright Tom Versluijs 2024-10-25. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
+#Copyright Tom Versluijs 2024-11-20. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
 
 #Before running this script make sure to install RGEE according to the instructions in script "00-RGEE_TomVersluijs_Installation.R". 
 #Note that a GoogleDrive is required. Important: make sure to run this script from within the "RGEE_Snowmelt.Rproj" project file.
@@ -31,7 +31,7 @@
        #renv::restore() #revert to last version of R-packages used to successfully run this script (optional).
        utils::install.packages("pacman")
        library(pacman)
-       p_load(sf, rgee, ggplot2, mgcv, googledrive, dplyr, tidyr, foreach, parallel, doSNOW, gridExtra)       
+       p_load(sf, rgee, ggplot2, mgcv, googledrive, dplyr, tidyr, foreach, parallel, doSNOW, gridExtra, rgeeExtra, magick)       
 
       #(2): Define ggplot2 plotting theme
        theme_tom <- function(){
@@ -133,6 +133,13 @@
      #Should counts of the number of unmasked pixels per day of year within the shapefile area be conducted (increases computation time)
      pixel_counts=TRUE
      
+   #(i): GIF animations
+     
+     #Should GIF animations be constructed 
+     gif_output=FALSE
+     
+     #Maximum dimension (in pixels) of GIF
+     gif_max_pixels=300
      
 ##################################################################################################################################
          
@@ -224,37 +231,37 @@
         #Clip all images to area of interest (aoi). Clipping to shapefile will occur at step 16B of this script
          MODIS_col <- MODIS_col$map(function(img){return(img$clip(aoi))})
         
-        #Plot a single clipped image: 
+        #Plot a single clipped image (for debugging): 
          
-          #Select a single image for initial plot, clipped to aoi_Shapefile:
-           image <- MODIS_col$filterDate(paste0(year_ID, "-06-10"), end_date)$first()$clipToCollection(aoi_Shapefile)
-  
-          #Add Normalized difference snow index to this image:
-           ndsi_MODIS <-  image$expression('(B4 - B6) / (B4 + B6)',
-                                        list('B4'=image$select('sur_refl_b04'),
-                                             'B6'=image$select('sur_refl_b06')))
-        
-          #Add Normalized difference vegetation index to this image (CHECKED):
-           ndvi_MODIS <- image$expression('(B2 - B1) / (B2 + B1)',
-                                       list('B2'=image$select('sur_refl_b02'),
-                                            'B1'=image$select('sur_refl_b01')))
-           
-          #Add Normalized difference Moisture index to this image:
-           ndmi_MODIS <- image$expression('(B2 - B6) / (B2 + B6)',
-                                       list('B2'=image$select('sur_refl_b02'),
-                                            'B6'=image$select('sur_refl_b06'))) 
-           
-          #Add Normalized difference water index to this image:
-           ndwi_MODIS <- image$expression('(B4 - B2) / (B4 + B2)',
-                                       list('B4'=image$select('sur_refl_b04'),
-                                            'B2'=image$select('sur_refl_b02')))
-    
-          #Plot all image Bands
-           Map$setCenter(coordinates_point$getInfo()$coordinates[1], coordinates_point$getInfo()$coordinates[2], 10)
-           Map$addLayer(image,list(bands=c("sur_refl_b01", "sur_refl_b04", "sur_refl_b03"), min=100, max=8000, gamma=c(1.9, 1.7, 1.7)), 'TRUE COLOR')+ 
-           Map$addLayer(ndsi_MODIS,list(min=-1, max=1.5, palette=c('black', '0dffff', '0524ff', 'ffffff')), 'NDSI')+
-           Map$addLayer(ndvi_MODIS,list(min=-1, max=1, palette=c('#FF0000','#00FF00')), 'NDVI')+
-           Map$addLayer(ndwi_MODIS,list(min=0, max=1, palette=c('000000', '0dffff', '0524ff', 'ffffff')), 'NDWI')
+          # #Select a single image for initial plot, clipped to aoi_Shapefile:
+          #  image <- MODIS_col$filterDate(paste0(year_ID, "-06-10"), end_date)$first()$clipToCollection(aoi_Shapefile)
+          # 
+          # #Add Normalized difference snow index to this image:
+          #  ndsi_MODIS <-  image$expression('(B4 - B6) / (B4 + B6)',
+          #                               list('B4'=image$select('sur_refl_b04'),
+          #                                    'B6'=image$select('sur_refl_b06')))
+          # 
+          # #Add Normalized difference vegetation index to this image (CHECKED):
+          #  ndvi_MODIS <- image$expression('(B2 - B1) / (B2 + B1)',
+          #                              list('B2'=image$select('sur_refl_b02'),
+          #                                   'B1'=image$select('sur_refl_b01')))
+          #  
+          # #Add Normalized difference Moisture index to this image:
+          #  ndmi_MODIS <- image$expression('(B2 - B6) / (B2 + B6)',
+          #                              list('B2'=image$select('sur_refl_b02'),
+          #                                   'B6'=image$select('sur_refl_b06'))) 
+          #  
+          # #Add Normalized difference water index to this image:
+          #  ndwi_MODIS <- image$expression('(B4 - B2) / (B4 + B2)',
+          #                              list('B4'=image$select('sur_refl_b04'),
+          #                                   'B2'=image$select('sur_refl_b02')))
+          # 
+          # #Plot all image Bands
+          #  Map$setCenter(coordinates_point$getInfo()$coordinates[1], coordinates_point$getInfo()$coordinates[2], 10)
+          #  Map$addLayer(image,list(bands=c("sur_refl_b01", "sur_refl_b04", "sur_refl_b03"), min=100, max=8000, gamma=c(1.9, 1.7, 1.7)), 'TRUE COLOR')+ 
+          #  Map$addLayer(ndsi_MODIS,list(min=-1, max=1.5, palette=c('black', '0dffff', '0524ff', 'ffffff')), 'NDSI')+
+          #  Map$addLayer(ndvi_MODIS,list(min=-1, max=1, palette=c('#FF0000','#00FF00')), 'NDVI')+
+          #  Map$addLayer(ndwi_MODIS,list(min=0, max=1, palette=c('000000', '0dffff', '0524ff', 'ffffff')), 'NDWI')
        
       #(9) Add NDSI, NDVI, NDMI and NDWI to the clipped image collection
         
@@ -263,27 +270,56 @@
           map(getNDSI)$
           map(getNDVI)$
           map(getNDMI)$
-          map(getNDWI)
+          map(getNDWI)$
+          map(add_Date)
       
-      #(10) Create a timeseries gif of RGB images for the aoi_Shapefile shapefile (for debugging)
-        
-        # #Check number of images in collection
-        #  MODIS_col$size()$getInfo()
-
-        # #Create a timelapse video of RGB band
-        #  videoArgs <- list(dimensions=380, region=aoi,framesPerSecond=5, crs='EPSG:3857', bands=c("sur_refl_b01", "sur_refl_b04", "sur_refl_b03"), 
-        #                    min=0, max=12000, gamma=c(1.9, 1.7, 1.7))
-        #  tryCatch({browseURL(MODIS_col$map(function(img){return(img$clipToCollection(aoi_Shapefile))})$getVideoThumbURL(videoArgs)) }, error = function(cond){return("Too many pixels. Reduce dimensions.")})
-        
-        # #Create a timelapse video of NDSI band  
-        #  palette=c('black', '0dffff', '0524ff', 'ffffff')
-        #  visFun_NDSI <-  function(img) {
-        #    return(img$visualize(bands='NDSI', min=-1, max=1.5, palette=palette)$copyProperties(img, img$propertyNames()))
-        #    }
-        #  MODIS_snow_RGB <- MODIS_col$map(function(img){return(img$clipToCollection(aoi_Shapefile))})$map(visFun_NDSI)
-        #  videoArgs <- list(dimensions=380, region=aoi, framesPerSecond=5, crs='EPSG:3857', bands=c('vis-red', 'vis-green', 'vis-blue'), min=0, max=255)
-        #  tryCatch({browseURL(MODIS_snow_RGB$getVideoThumbURL(videoArgs)) }, error = function(cond){return("Too many pixels. Reduce dimensions.")})
-      
+      #(10) Create a timeseries GIF of unmasked RGB images for aoi_Shapefile (for debugging)
+        if(gif_output==TRUE){
+ 
+          #(A): GIF of RGB-images
+          f_img_col_to_gif(img_col=MODIS_col,  #image collection
+                           RGB_bands=c("sur_refl_b01", "sur_refl_b04", "sur_refl_b03"), #names of RGB-bands in image collection
+                           shapefile=aoi_Shapefile, #shapefile of area of interest
+                           centroid_buffer_m=0, #buffer zone surrounding centroid of shapefile in meters (to enlarge area for GIF)
+                           gif_dimensions=gif_max_pixels, #Maximum dimensions of GIF (pixels)
+                           gif_fps=5, #Frames per second of GIF
+                           gif_min=0, #Value to map to 0 (to improve contrast). A good rule of thumb is to set min to values that represent the 2nd percentile of the data
+                           gif_max=12000, #Value to map to 255 (to improve contrast). A good rule of thumb is to set max to values that represent the 98th percentile of the data
+                           gif_gamma=c(1.9, 1.7, 1.7), #Gamma correction factors (one for each band)
+                           gif_crs='EPSG:3857', #CRS project of the output
+                           gif_text_position="northwest", #Location of text (datetime string)
+                           gif_text_position_adjustment="+0+0", #Small scale adjustment of text in meters
+                           gif_text_size=14, #Size of text
+                           gif_text_col="#FFFFFF",
+                           output_fldr=paste0(root_fldr, "/Output/MODIS/01_Pixels_Snowmelt/"),
+                           file_name="GIF_RGB")
+          
+          #(b): GIF of NDSI-images
+          
+            #Transform NDSI-band to RGB bands
+            MODIS_col_ndsi <- MODIS_col$map(ee_utils_pyfunc(function(image){
+              f_band_to_RGB(img=image, band='NDSI', min_value=-1, max_value=1.5, palette=c('#000000', '#0dffff', '#0524ff', '#ffffff'))}))
+            
+            #Create gif of the transformed NDSI-band
+            f_img_col_to_gif(img_col=MODIS_col_ndsi,  #image collection
+                             RGB_bands=c("vis-red", "vis-green", "vis-blue"), #names of RGB-bands in image collection
+                             shapefile=aoi_Shapefile, #shapefile of area of interest
+                             centroid_buffer_m=0, #buffer zone surrounding centroid of shapefile in meters (to enlarge area for GIF)
+                             gif_dimensions=gif_max_pixels, #Maximum dimensions of GIF (pixels)
+                             gif_fps=5, #Frames per second of GIF
+                             gif_min=0, #Value to map to 0 (to improve contrast). A good rule of thumb is to set min to values that represent the 2nd percentile of the data
+                             gif_max=255, #Value to map to 255 (to improve contrast). A good rule of thumb is to set max to values that represent the 98th percentile of the data
+                             gif_gamma=c(1, 1, 1), #Gamma correction factors (one for each band)
+                             gif_crs='EPSG:3857', #CRS project of the output
+                             gif_text_position="northwest", #Location of text (datetime string)
+                             gif_text_position_adjustment="+0+0", #Small scale adjustment of text in meters
+                             gif_text_size=14, #Size of text
+                             gif_text_col="#FFFFFF",
+                             output_fldr=paste0(root_fldr, "/Output/MODIS/01_Pixels_Snowmelt/"),
+                             file_name="GIF_NDSI")
+          
+         }
+       
          #Note that MODIS_col is only clipped by 'aoi' and not yet by aoi_Shapefile.
          
 ##################################################################################################################################
@@ -317,9 +353,7 @@
            #Add the fraction of cloud-covered pixels within the area of interest as image property
            map(AddCloudFraction)$
            #Add NULL to those images in which cloudfraction could not be calculated
-           map(AddNULLCloudFraction)$
-           #Add date and time characteristics to each image
-           map(add_Date)
+           map(AddNULLCloudFraction)
          
         # #Check if Cloud information has been added to the properties of each image (for debugging)
         # MODIS_col$first()$propertyNames()$getInfo()
@@ -394,28 +428,14 @@
            #Apply cloudmask for individual pixels
            map(AddCloudMask)
          
-        # #Create timelapse video of the cloud filtered/masked RGB images (for debugging)
-        #  videoArgs <- list(dimensions=380, region=aoi,framesPerSecond=5, crs='EPSG:3857', bands=c("sur_refl_b01", "sur_refl_b04", "sur_refl_b03"), min=100, max=10000, gamma=c(1.9, 1.7, 1.7))
-        #  tryCatch({browseURL(MODIS_clouds_filtered$map(function(img){return(img$clipToCollection(aoi_Shapefile))})$getVideoThumbURL(videoArgs)) }, error = function(cond){return("Too many pixels. Reduce dimensions.")})
-     
-        # #Create a timelapse video of the cloud filtered/masked NDSI band (for debugging) 
-        #  palette=c('black', '0dffff', '0524ff', 'ffffff')
-        #  visFun_NDSI <-  function(img) {
-        #    return(img$visualize(bands='NDSI', min=-1, max=1.5, palette=palette)$
-        #             copyProperties(img, img$propertyNames()))}
-        #  MODIS_snow_masked_RGB <- MODIS_clouds_filtered$map(function(img){return(img$clipToCollection(aoi_Shapefile))})$map(visFun_NDSI)
-        #  videoArgs <- list(dimensions=380, region=aoi, framesPerSecond=5, crs='EPSG:3857', bands=c('vis-red', 'vis-green', 'vis-blue'), min=0, max=255)
-        #  tryCatch({browseURL(MODIS_snow_masked_RGB$getVideoThumbURL(videoArgs)) }, error = function(cond){return("Too many pixels. Reduce dimensions.")})
-
        }
    if(mask_clouds==FALSE){
      
      #print message   
      print("Cloud masking = FALSE")
-     
-     #Add Date and Time to MODIS collection
-     MODIS_clouds_filtered <- MODIS_col$map(add_Date)
-
+ 
+     #Set MODIS_clouds_filtered equal to MODIS_col
+     MODIS_clouds_filtered <- MODIS_col
    }       
          
    #Store default MODIS image projection 
@@ -423,7 +443,6 @@
    #modisProjection$getInfo()
          
    #Note that MODIS_clouds_filtered is not yet clipped by aoi_Shapefile (only by aoi)!
-
 
 ##################################################################################################################################
          
@@ -457,10 +476,6 @@
       
         #Apply the final watermask:
         MODIS_clouds_filtered <- MODIS_clouds_filtered$map(Add_WaterMask_MODIS)
-      
-        # #Create a timeseries GIF of RGB images of the water and cloud filtered image collection (for debugging)
-        # videoArgs <- list(dimensions=380, region=aoi,framesPerSecond=5, crs='EPSG:3857', bands=c("sur_refl_b01", "sur_refl_b04", "sur_refl_b03"), min=100, max=10000, gamma=c(1.9, 1.7, 1.7))
-        # tryCatch({browseURL(MODIS_clouds_filtered$getVideoThumbURL(videoArgs))}, error = function(cond){return("Too many pixels. Reduce dimensions.")})
       
       }
    if(mask_water==FALSE){
@@ -544,493 +559,618 @@
    }
      
 ##################################################################################################################################
+
+#VIII: Create timelapse videos of the RGB bands, and the NDSI-, NDVI-, NDMI- and NDMI-bands for aoi_Polygons (Cloud and Water masked)
+
+##################################################################################################################################
+
+   #(15): Create timeseries GIF animations
+   if(gif_output==TRUE){
+     
+     #(a): GIF of RGB-images
+     f_img_col_to_gif(img_col=MODIS_clouds_filtered,  #image collection
+                      RGB_bands=c("sur_refl_b01", "sur_refl_b04", "sur_refl_b03"), #names of RGB-bands in image collection
+                      shapefile=aoi_Shapefile, #shapefile of area of interest
+                      centroid_buffer_m=0, #buffer zone surrounding centroid of shapefile in meters (to enlarge area for GIF)
+                      gif_dimensions=gif_max_pixels, #Maximum dimensions of GIF (pixels)
+                      gif_fps=5, #Frames per second of GIF
+                      gif_min=0, #Value to map to 0 (to improve contrast). A good rule of thumb is to set min to values that represent the 2nd percentile of the data
+                      gif_max=12000, #Value to map to 255 (to improve contrast). A good rule of thumb is to set max to values that represent the 98th percentile of the data
+                      gif_gamma=c(1.9, 1.7, 1.7), #Gamma correction factors (one for each band)
+                      gif_crs='EPSG:3857', #CRS project of the output
+                      gif_text_position="northwest", #Location of text (datetime string)
+                      gif_text_position_adjustment="+0+0", #Small scale adjustment of text in meters
+                      gif_text_size=14, #Size of text
+                      gif_text_col="#FFFFFF",
+                      output_fldr=paste0(root_fldr, "/Output/MODIS/01_Pixels_Snowmelt/"),
+                      file_name="GIF_RGB_masked")
+     
+     #(b): GIF of NDSI-images
+     
+       #Transform NDSI-band to RGB bands
+       MODIS_clouds_filtered_ndsi <- MODIS_clouds_filtered$map(ee_utils_pyfunc(function(image){
+         f_band_to_RGB(img=image, band='NDSI', min_value=-1, max_value=1.5, palette=c('#000000', '#0dffff', '#0524ff', '#ffffff'))}))
+       
+       #Create gif of the transformed NDSI-band
+       f_img_col_to_gif(img_col=MODIS_clouds_filtered_ndsi,  #image collection
+                        RGB_bands=c("vis-red", "vis-green", "vis-blue"), #names of RGB-bands in image collection
+                        shapefile=aoi_Shapefile, #shapefile of area of interest
+                        centroid_buffer_m=0, #buffer zone surrounding centroid of shapefile in meters (to enlarge area for GIF)
+                        gif_dimensions=gif_max_pixels, #Maximum dimensions of GIF (pixels)
+                        gif_fps=5, #Frames per second of GIF
+                        gif_min=0, #Value to map to 0 (to improve contrast). A good rule of thumb is to set min to values that represent the 2nd percentile of the data
+                        gif_max=255, #Value to map to 255 (to improve contrast). A good rule of thumb is to set max to values that represent the 98th percentile of the data
+                        gif_gamma=c(1, 1, 1), #Gamma correction factors (one for each band)
+                        gif_crs='EPSG:3857', #CRS project of the output
+                        gif_text_position="northwest", #Location of text (datetime string)
+                        gif_text_position_adjustment="+0+0", #Small scale adjustment of text in meters
+                        gif_text_size=14, #Size of text
+                        gif_text_col="#FFFFFF",
+                        output_fldr=paste0(root_fldr, "/Output/MODIS/01_Pixels_Snowmelt/"),
+                        file_name="GIF_NDSI_masked")
+     
+     # #(c): GIF of NDVI-images
+     #    
+     #    #Transform NDVI-band to RGB bands
+     #    MODIS_clouds_filtered_ndvi <- MODIS_clouds_filtered$map(ee_utils_pyfunc(function(image){
+     #      f_band_to_RGB(img=image, band='NDVI', min_value=-0.25, max_value=1, palette=c("#cccccc", "#f46d43", "#fdae61", "#fee08b", "#d9ef8b", "#a6d96a", "#66bd63", "#1a9850"))}))
+     #    
+     #    #Create gif of the transformed NDVI-band
+     #    f_img_col_to_gif(img_col=MODIS_clouds_filtered_ndvi,  #image collection
+     #                     RGB_bands=c("vis-red", "vis-green", "vis-blue"), #names of RGB-bands in image collection
+     #                     shapefile=aoi_Shapefile, #shapefile of area of interest
+     #                     centroid_buffer_m=0, #buffer zone surrounding centroid of shapefile in meters (to enlarge area for GIF)
+     #                     gif_dimensions=gif_max_pixels, #Maximum dimensions of GIF (pixels)
+     #                     gif_fps=5, #Frames per second of GIF
+     #                     gif_min=0, #Value to map to 0 (to improve contrast). A good rule of thumb is to set min to values that represent the 2nd percentile of the data
+     #                     gif_max=255, #Value to map to 255 (to improve contrast). A good rule of thumb is to set max to values that represent the 98th percentile of the data
+     #                     gif_gamma=c(1, 1, 1), #Gamma correction factors (one for each band)
+     #                     gif_crs='EPSG:3857', #CRS project of the output
+     #                     gif_text_position="northwest", #Location of text (datetime string)
+     #                     gif_text_position_adjustment="+0+0", #Small scale adjustment of text in meters
+     #                     gif_text_size=14, #Size of text
+     #                     gif_text_col="#FFFFFF",
+     #                     output_fldr=paste0(root_fldr, "/Output/MODIS/01_Pixels_Snowmelt/"),
+     #                     file_name="GIF_NDVI_masked")
+     # 
+     # #(d): GIF of NDMI-images
+     #    
+     #    #Transform NDMI-band to RGB bands
+     #    MODIS_clouds_filtered_ndmi <- MODIS_clouds_filtered$map(ee_utils_pyfunc(function(image){
+     #      f_band_to_RGB(img=image, band='NDMI', min_value=-0.75, max_value=1, palette=c("#d73027", "#f46d43", "#fdae61", "#fee08b", "#d9ef8b", "#a6d96a", "#66bd63", "#1a9850", "#6ad99e", "#387ad9", "#003dd6"))}))
+     #    
+     #    #Create gif of the transformed NDMI-band
+     #    f_img_col_to_gif(img_col=MODIS_clouds_filtered_ndmi,  #image collection
+     #                     RGB_bands=c("vis-red", "vis-green", "vis-blue"), #names of RGB-bands in image collection
+     #                     shapefile=aoi_Shapefile, #shapefile of area of interest
+     #                     centroid_buffer_m=0, #buffer zone surrounding centroid of shapefile in meters (to enlarge area for GIF)
+     #                     gif_dimensions=gif_max_pixels, #Maximum dimensions of GIF (pixels)
+     #                     gif_fps=5, #Frames per second of GIF
+     #                     gif_min=0, #Value to map to 0 (to improve contrast). A good rule of thumb is to set min to values that represent the 2nd percentile of the data
+     #                     gif_max=255, #Value to map to 255 (to improve contrast). A good rule of thumb is to set max to values that represent the 98th percentile of the data
+     #                     gif_gamma=c(1, 1, 1), #Gamma correction factors (one for each band)
+     #                     gif_crs='EPSG:3857', #CRS project of the output
+     #                     gif_text_position="northwest", #Location of text (datetime string)
+     #                     gif_text_position_adjustment="+0+0", #Small scale adjustment of text in meters
+     #                     gif_text_size=14, #Size of text
+     #                     gif_text_col="#FFFFFF",
+     #                     output_fldr=paste0(root_fldr, "/Output/MODIS/01_Pixels_Snowmelt/"),
+     #                     file_name="GIF_NDMI_masked")
+     # 
+     # #(e): GIF of NDWI-images
+     #    
+     #    #Transform NDWI-band to RGB bands
+     #    MODIS_clouds_filtered_ndwi <- MODIS_clouds_filtered$map(ee_utils_pyfunc(function(image){
+     #      f_band_to_RGB(img=image, band='NDWI', min_value=-0.5, max_value=1, palette=c('#000000', '#0dffff', '#0524ff', '#ffffff'))}))
+     #    
+     #    #Create gif of the transformed NDWI-band
+     #    f_img_col_to_gif(img_col=MODIS_clouds_filtered_ndwi,  #image collection
+     #                     RGB_bands=c("vis-red", "vis-green", "vis-blue"), #names of RGB-bands in image collection
+     #                     shapefile=aoi_Shapefile, #shapefile of area of interest
+     #                     centroid_buffer_m=0, #buffer zone surrounding centroid of shapefile in meters (to enlarge area for GIF)
+     #                     gif_dimensions=gif_max_pixels, #Maximum dimensions of GIF (pixels)
+     #                     gif_fps=5, #Frames per second of GIF
+     #                     gif_min=0, #Value to map to 0 (to improve contrast). A good rule of thumb is to set min to values that represent the 2nd percentile of the data
+     #                     gif_max=255, #Value to map to 255 (to improve contrast). A good rule of thumb is to set max to values that represent the 98th percentile of the data
+     #                     gif_gamma=c(1, 1, 1), #Gamma correction factors (one for each band)
+     #                     gif_crs='EPSG:3857', #CRS project of the output
+     #                     gif_text_position="northwest", #Location of text (datetime string)
+     #                     gif_text_position_adjustment="+0+0", #Small scale adjustment of text in meters
+     #                     gif_text_size=14, #Size of text
+     #                     gif_text_col="#FFFFFF",
+     #                     output_fldr=paste0(root_fldr, "/Output/MODIS/01_Pixels_Snowmelt/"),
+     #                     file_name="GIF_NDWI_masked")
+ 
+}
+   
+##################################################################################################################################
         
-#VIII: Calculate the date of snowmelt for every pixel within the study area by fitting a GAM through the NDSI data
+#IX: Calculate the date of snowmelt for every pixel within the study area by fitting a GAM through the NDSI data
         
 ##################################################################################################################################            
          
-      #(15): Calculate the date of snowmelt (NDSI <= NDSI_threshold) for every pixel within the study area (bounding box!) 
+   #(16): Calculate the date of snowmelt (NDSI <= NDSI_threshold) for every pixel within the study area (bounding box!) 
+   
+     #(A): Transform each image to a feature Collection of NDSI values for all pixels within 'aoi'
+     
+       #Create an iteration function that we will use to iterate through all images of the image collection. For each image, the
+       #value of the NDSI band is extracted for each pixel of the image. The resulting NDSI values (+lat/lon, datetime of the image)
+       #of each pixel are stored as feature properties in a feature collection (i.e. where each pixel has a separate feature with
+       #properties). This results in a feature collection of all pixels for the current image. This feature collection is then
+       #appended to a list of feature collections from previous image iterations.
+
+       #Create an empty FeatureCollection list. This list is used as input for the first iteration of the iteration function below.
+        FC_initial <- ee$FeatureCollection(ee$List(list()))
+
+       #Specify the iteration function. This function takes two arguments. The first argument is the current element of the image collection
+       #(in this case the current iteration image) and the second element takes the output value from the iteration that preceeded it. The latter
+       #is not possible for the first iteration, that's why an initial object (empty feature collection) to start the iteration with
+       #has been defined. Note that inside $map() functions all processing has to be done in the language of the server (javascript
+       #Api of google earth engine). Thus, inside $map() functions, client-side functions such as $getInfo() or print(), paste0()
+       #cannot be used.
+        Extract_BandValuesAtPixels = Extract_BandValuesAtPixels #note that region=aoi
+
+       #Iterate over the ImageCollection (output is a large feature collection)
+        FC_merged <- ee$FeatureCollection(MODIS_clouds_filtered$select("NDSI")$iterate(Extract_BandValuesAtPixels, FC_initial))
+        #FC_merged$first()$getInfo() #for debugging
        
-          #(A): Transform each image to a feature Collection of NDSI values for all pixels within 'aoi'
-         
-           #Create an iteration function that we will use to iterate through all images of the image collection. For each image, the
-           #value of the NDSI band is extracted for each pixel of the image. The resulting NDSI values (+lat/lon, datetime of the image)
-           #of each pixel are stored as feature properties in a feature collection (i.e. where each pixel has a separate feature with
-           #properties). This results in a feature collection of all pixels for the current image. This feature collection is then
-           #appended to a list of feature collections from previous image iterations.
-
-           #Create an empty FeatureCollection list. This list is used as input for the first iteration of the iteration function below.
-            FC_initial <- ee$FeatureCollection(ee$List(list()))
-
-           #Specify the iteration function. This function takes two arguments. The first argument is the current element of the image collection
-           #(in this case the current iteration image) and the second element takes the output value from the iteration that preceeded it. The latter
-           #is not possible for the first iteration, that's why an initial object (empty feature collection) to start the iteration with
-           #has been defined. Note that inside $map() functions all processing has to be done in the language of the server (javascript
-           #Api of google earth engine). Thus, inside $map() functions, client-side functions such as $getInfo() or print(), paste0()
-           #cannot be used.
-            Extract_BandValuesAtPixels = Extract_BandValuesAtPixels #note that region=aoi
-
-           #Iterate over the ImageCollection (output is a large feature collection)
-            FC_merged <- ee$FeatureCollection(MODIS_clouds_filtered$select("NDSI")$iterate(Extract_BandValuesAtPixels, FC_initial))
-            #FC_merged$first()$getInfo() #for debugging
-           
-            #Note that at this point all pixels within 'aoi' are included (not only those in 'aoi_Shapefile'!)
-            
-         #(B): Transform feature collection to a dataframe:
-
-           #create a current timestamp to prevent identical names on Google Drive
-            current_timestamp1 <- gsub('\\.', '', format(Sys.time(), "%y%m%d%H%M%OS2"))
-            
-           #We use ee_table_to_drive() to prevent memory limits
-            a=Sys.time()
-            task_vector1 <- ee_table_to_drive(
-              collection = FC_merged,
-              description = paste0(current_timestamp1, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char,  "_Pixel_NDSI_bbox"),
-              fileFormat = "CSV",
-              selectors = c('NDSI', 'Date', 'lat', 'lon')
-              )
-
-            task_vector1$start()
-            print("Transform each image to a feature Collection of NDSI values for all pixels:")
-            ee_monitoring(task_vector1, max_attempts = 1000000)
-
-            exported_stats <- ee_drive_to_local(task = task_vector1, dsn=paste0("Output/MODIS/01_Pixels_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_NDSI_bbox"))
-            df_pixel_ndsi <- read.csv(exported_stats)
-            b=Sys.time()
-            print(paste0("Computation finished in ",  round(as.numeric(difftime(b, a, units="mins")),2), " minutes"))
-
-           # #Load dataframe (takes ca 2 minutes):
-           #  df_pixel_ndsi <- read.csv(paste0(timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_NDSI_bbox.csv"))
-
-           #Add day of year
-            df_pixel_ndsi$doy <- as.numeric(format(as.POSIXct(df_pixel_ndsi$Date, format = "%Y-%m-%d %H:%M:%S"), "%j"))          
-            
-           #Make sure each latitude/longitude combination gets its own pixel_ID (takes ca 1 minute):
-            df_pixel_ndsi$pixel_ID <- paste0(format(round(df_pixel_ndsi$lat, 5), nsmall = 5), "_", format(round(df_pixel_ndsi$lon, 5), nsmall = 5))
-
-         #(C): Calculate the date of snowmelt for each pixel in the dataframe
-            
-           #Loop through all pixel_ID's, select dataframe for that pixel containing NDSI values
-           #as measured in all images in the image collection, fit gam through the NDSI ~ doy data, 
-           #determine date when NDSI<NDSI_threshold and store this date of snowmelt together with 
-           #the pixel_ID in a new dataframe.
-
-           #Specify NDSI threshold (values larger than this threshold are considered snow covered):
-            NDSI_threshold=NDSI_threshold
-            
-           #When running this code as a sequential process on a single core it takes c.a. 72 hours to run. To speed-up
-           #this process we run the code in parallel on multiple local computer cores (4). We will add a progress-bar
-           #to be able to track the progress. In addition, the progress is slowed down by having to work with this
-           #gigantic dataset (df_pixel_ndsi) as one chunk. The code becomes MUCH faster if we split this up into
-           #several sub-datasets (e.g. based on subsets of 10000 unique pixel_IDs).
-
-           #Specify number of cores:
-            numCores <- detectCores()
-
-           #Make clusters and initialize using DoSNOW as this allows for a progress bar
-            cl <- makePSOCKcluster(numCores)
-            registerDoSNOW(cl)
-
-           #Split dataset into chuncks of pixels
-            chunk_size = 2000
-            pixelIDs <- unique(df_pixel_ndsi$pixel_ID)
-            pixelIDs_split <- split(pixelIDs, ceiling(seq_along(pixelIDs)/chunk_size))
-
-           #Specify function to sequentially remove outliers from the dataset for each pixel (results in better estimate of day of snowmelt).
-            
-            #We fit a Generalized Additive Model (GAM) through the NDSI data for every pixel in each data subset. We do this using a 
-            #sequential outlier-filtering process. We first fit a GAM through the data and calculate model residuals. We then exclude 
-            #all rows from the dataframe where the residual >= (0.25 * the range of the data). We then re-fit a GAM to this reduced 
-            #dataset, and again calculate model residuals. We then exclude all rows from the reduced dataframe where the residual >= 
-            #(0.1 * the range of the data). This gives us a final dataframe in which outliers are thus sequentially removed. This 
-            #whole process is executed using the function f_gam_SeqRemOutliers. Note that a sequential step is required because 
-            #initially some datapoints might falsely be assigned a large residual because of one extreme outlier. After removal of 
-            #this extreme outlier and refitting of the GAM, it can be better assessed which data points truly have a large residual 
-            #and can thus be assigned as 'true' outliers.
-            f_gam_SeqRemOutliers <- f_gam_SeqRemOutliers #sourced
-            
-            #Specify sequential outlier thresholds (Note that these thresholds are relative to the range of the data. Thus if the response
-            #variable ranges between -1 and +1, then the total range of the data is 2 and a threshold value of 0.4 thus corresponds to an
-            #actual residual threshold of 0.4*2=0.8:
-             outlier_thresh_1=outlier_thresh_1
-             outlier_thresh_2=outlier_thresh_2
-             outlier_removal=outlier_removal
-            
-           #Load a function that iterates through all data subsets. Within each data subset it calculates day of snowmelt 
-           #for every pixel, by fitting a GAM with sequential outlier removal and then linearly approximating at which day of 
-           #year the predicted NDSI value of this GAM changes from above outlier_threshold to below (direction="down") or
-           #from below outlier_threshold to above (direction="up"). The code employs parallel processing using foreach
-           #and %dopar% on four local computer cores.
-            f_detect_threshold_date_parallel <- f_detect_threshold_date_parallel #sourced
-
-           #Run the 'f_detect_threshold_date_parallel' function over all data subsets, combine the results and save the resulting dataframe and plots
-            print("Calculate the date of snowmelt for each pixel within aoi:")
-            results <- lapply(1:length(pixelIDs_split), FUN=f_detect_threshold_date_parallel, 
-                              pixelIDs_split=pixelIDs_split, df_pixel_y=df_pixel_ndsi, pixel_ID_column="pixel_ID",
-                              y="NDSI", x="doy", pixel_gam_plots=pixel_gam_plots, y_threshold=NDSI_threshold)
-                            
-            #Clean up the cluster after finishing the parallel runs
-            stopCluster(cl)
-            
-            #Turn parallel processing off and run sequentially again after this point
-            registerDoSEQ()
-            
-           #Store date of snowmelt per pixel within aoi (bounding box!) as a dataframe
-            df_pixel_snowmelt <- lapply(results, "[[", 1)
-            df_pixel_snowmelt <- as.data.frame(do.call(rbind, do.call(c, df_pixel_snowmelt)))
-            colnames(df_pixel_snowmelt)[colnames(df_pixel_snowmelt)=="x_threshold"] <- "doy_snowmelt"
-            #write.csv(df_pixel_snowmelt, file=paste0(here(), "/Output/MODIS/01_Pixels_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_Snowmelt_bbox.csv"), quote = FALSE, row.names=FALSE)
-            #df_pixel_snowmelt <- read.csv(file=paste0(here(), "/Output/MODIS/01_Pixels_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_Snowmelt_bbox.csv"), header=TRUE)  
-            
-           #Store GAM plots per pixel within aoi (bounding box!) as a list
-            if(pixel_gam_plots==TRUE){
-              plot_pixel_snowmelt <- lapply(results, "[[", 2)
-              plot_pixel_snowmelt <- do.call(c, plot_pixel_snowmelt)
-              }
+        #Note that at this point all pixels within 'aoi' are included (not only those in 'aoi_Shapefile'!)
         
-           #The dataframe df_pixel_snowmelt now contains the date of snowmelt for each individual pixel_ID (514584 10mx10m pixels)
-           #withing the aoi (i.e. the defined bounding box). To be able to plot these data we transform this dataframe to a feature 
-           #collection and then transform this feature collection to an image.
-            
-       #(16): Transform df_pixel_snowmelt to a feature collection with random geometry
-            
-           #Generate some random longitude and latitude values as this is required for an sf object:
-            df_pixel_snowmelt$lon <- runif(nrow(df_pixel_snowmelt), 0, 74)
-            df_pixel_snowmelt$lat <- runif(nrow(df_pixel_snowmelt), -20, 20)
-            
-           #Prevent NA in doy_snowmelt column (earthengine cannot deal with NA)  
-            df_pixel_snowmelt$doy_snowmelt[is.na(df_pixel_snowmelt$doy_snowmelt)] <- -9999
-            
-           #memory limits prevent us from processing the whole dataframe at once. Therefore we split it up into subsets with 'chunk_size' rows
-            chunk_size = 2000
-            rowIDs <- 1:nrow(df_pixel_snowmelt)
-            rowIDs_split <- split(rowIDs, ceiling(seq_along(rowIDs)/chunk_size))
-          
-           #Iterate through all dataframe subsets, convert each to a feature collection, and append each to the feature collection FC_initial.
-            FC_initial <- ee$FeatureCollection(ee$List(list()))
-            for(i in 1:length(rowIDs_split)){ 
-              
-              #Select subset of rows
-               rowID_min <- min(rowIDs_split[[i]])
-               rowID_max <- max(rowIDs_split[[i]])
-              
-              #Select subset of dataframe:
-               df_tmp <- df_pixel_snowmelt[rowID_min:rowID_max,]
-              
-              #Change subset-dataframe to a SF object 
-               print("Transform df_pixel_snowmelt to a feature collection with random geometry:")
-               df_sf_tmp <- st_as_sf(x = df_tmp,                         
-                                     coords = c("lon", "lat"),
-                                     crs="+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
-              
-              #Change sf object to an earth engine feature collection by uploading it to the asset folder
-               FC_tmp <- sf_as_ee(
-                 x = df_sf_tmp,
-                 assetId = paste0(path_asset, "/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_df_pixel_snowmelt_", i),
-                 overwrite = FALSE,
-                 monitoring = TRUE,
-                 via = 'getInfo_to_asset')
-               #FC_tmp <- sf_as_ee(df_sf_tmp)
-              
-              #Add feature collection to an expanding feature collection:
-               FC_initial <- FC_initial$merge(FC_tmp)
-               FC_initial <- ee$FeatureCollection(FC_initial)               
-              
-              #print progress
-               print(paste0("Progress: ", (100*i)/(length(rowIDs_split))))
-               #print(paste0("Size of FC_initial: ", FC_initial$size()$getInfo()))
-              
-            }
-            FC_pixels_snowmelt <- ee$FeatureCollection(FC_initial)
-            FC_pixels_snowmelt$first()$getInfo()
-            FC_pixels_snowmelt$size()$getInfo()
-            
-            #Inspect assets folder:
-             ee_manage_quota()
-             ee_manage_assetlist(path_asset)
-            
-        #(17): Add geometry (latitude and longitude) of each pixel_ID to FC_pixels_snowmelt
-             
-           #The feature collection that we want to construct should contain 'pixel_ID' and 'doy_snowmelt' as properties and should contain
-           #the original geometry corresponding to each pixel_ID. So far, FC_pixels_snowmelt contains a separate feature for each pixel, where
-           #each feature contains doy_snowmelt and pixel_ID as a property. However, the geometry (lan/lon) of each feature is randomly chosen. 
-           #We need to make sure that the actual geometry matching each pixel_ID is added instead of this random geometry.
-            
-           #To obtain the corresponding geometry (lat/lon) of every pixel_ID within aoi, we sample from a single image on a 'resolution' 
-           #resolution using img$sample(). This gives a single distinct feature for each pixel, including their geometry. We can then re-construct
-           #the property pixel_ID for every feature in this feature collection. The resulting feature collection is called FC_pixels_distinct. 
-           #The final step is then to join FC_pixels_snowmelt to FC_pixels_distinct based on an inner join with pixel_ID.
-           
-           #This step results in memory errors (on the server side) when the image contains more than 2.5 million pixels. In the latter case
-           #we need to split up our study area in several sub-areas (i.e. create separate adjacent shapefiles using QGIS). If such errors are
-           #encountered here then script "6-RGEE_TomVersluijs_PixelDateOfSnowmelt_TAY" should be run instead. 
+     #(B): Transform feature collection to a dataframe:
+
+       #create a current timestamp to prevent identical names on Google Drive
+        current_timestamp1 <- gsub('\\.', '', format(Sys.time(), "%y%m%d%H%M%OS2"))
         
-            #(A): Select a single image from the image collection
-             img <- MODIS_clouds_filtered$first()$select("NDSI")
-            
-            #(B): Create a feature collection of points within aoi (where each point corresponds to the center of a pixel in the image)
-             FC_pixels_distinct <- img$sample(
-              region=aoi, #Sample all pixels within aoi
-              geometries=TRUE,  #Store lat/lon in geometry property
-              projection=modisProjection, #set to native projection of MODIS image
-              scale=resolution, #sampling resolution in meters
-              seed=23, #set fixed seed to be able to reproduce the sample (same as for FC_merged above)
-              dropNulls=FALSE) #Make sure NULL pixels are not dropped from image collection
-          
-            #(C): Make sure there is a NDSI value at each feature within the feature collection:
-            #Set the band value to a no data value of -9999 for all features where the band value is NULL.
-             FC_pixels_distinct <- FC_pixels_distinct$map(function(feature){
-              ndsi <- ee$List(list(feature$get('NDSI'), -9999))$reduce(ee$Reducer$firstNonNull())
-              return(feature$set("NDSI", ndsi))})
-            
-            #(D): Add latitude and longitude of each pixel as a property to each feature
-             FC_pixels_distinct <- FC_pixels_distinct$map(function(feature){
-              coordinates <- feature$geometry()$coordinates()
-              lon <- coordinates$get(0)
-              lat <- coordinates$get(1)
-              return(feature$set('lon', lon)$set('lat', lat))
-              })
-            
-            #(E): Add a pixel_ID property to each feature
-             FC_pixels_distinct <- FC_pixels_distinct$map(function(feature){
-              lon_tmp <- feature$get("lon")
-              lat_tmp <- feature$get("lat")
-              lon_tmp <- ee$Number$format(lon_tmp, '%.5f')
-              lat_tmp <- ee$Number$format(lat_tmp, '%.5f')
-              string_tmp <- ee$String("_")
-              pixel_ID <- lat_tmp$cat(string_tmp)$cat(lon_tmp)
-              return(feature$set('pixel_ID', pixel_ID))
-              })  
-             
-            #(F): Reduce feature collection properties to only contain pixel_ID  
-             FC_pixels_distinct <- FC_pixels_distinct$map(function(feature) {
-              properties_all <- feature$propertyNames()
-              properties_selection <- properties_all$filter(ee$Filter$inList('item', list('pixel_ID')))
-              return(feature$select(properties_selection))
-              })
-            
-             FC_pixels_distinct$first()$getInfo()
-             FC_pixels_distinct$size()$getInfo()
-             
-             #Thus, FC_pixels_distinct is a featurecollection that contains a single distinct feature for every pixel_ID,
-             #and contains the original lat/lon geometry of every pixel. We will now add doy_snowmelt as a new property
-             #to FC_pixels_distinct by merging it with FC_pixels_snowmelt.
-             
-            #(G): Add doy_snowmelt as property to FC_pixels_distinct   
-            
-              #Use an equals filter to specify how the collections match.
-               Filter_pixel_ID <- ee$Filter$equals(
-                  leftField= 'pixel_ID',
-                  rightField= 'pixel_ID')
-             
-              #Define the join.
-               innerJoin <- ee$Join$inner()
-             
-              #Apply the join.
-               Pixel_ID_Join <- innerJoin$apply(FC_pixels_distinct, FC_pixels_snowmelt,  Filter_pixel_ID)
-             
-              #Add features of second ('secondary') feature collection to those of the first ('primary') feature collection 
-               FC_Combined <- Pixel_ID_Join$map(function(pair) {
-                 f1 <- ee$Feature(pair$get('primary'))
-                 f2 <- ee$Feature(pair$get('secondary'))
-                 return(f1$set(f2$toDictionary()))
-                 })  
-              
-            #(H): To speed-up further computations with this feature collection we as an intermediate step upload and re-download it
-             
-              #create a current timestamp to prevent identical names on Google Drive
-               current_timestamp2 <- gsub('\\.', '', format(Sys.time(), "%y%m%d%H%M%OS2"))
-               
-              #Delete FC_pixels_snowmelt_optimized if it already occured in the asset folder:
-               tryCatch({ee_manage_delete(paste0(path_asset, "/", current_timestamp2, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_FC_pixels_snowmelt_optimized"))}, 
-                        error = function(cond){return("Path did not yet exist - no folder deleted")})
-               
-              #Upload to asset folder:
-               assetid2 <- paste0(path_asset, "/", current_timestamp2, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_FC_pixels_snowmelt_optimized")
-               task_vector2 <- ee_table_to_asset(
-                   collection = FC_Combined,
-                   overwrite = FALSE,
-                   assetId = assetid2
-                   )
-               task_vector2$start()
-               print("Optimize further calculations with FC_Combined by uploading it to the asset folder:")
-               ee_monitoring(task_vector2, max_attempts = 1000000)
-             
-              #Check assets folder:
-               #ee_manage_quota()
-               #ee_manage_assetlist(path_asset)
-              
-              #Save assetid2 for future downloading of FC_pixels_snowmelt_optimized
-               saveRDS(object=assetid2, file=paste0(here(), "/Output/MODIS/01_Pixels_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Variable_AssetID.Rds"))
-              
-              #Get feature collection from asset folder and create FC_pixels_snowmelt_optimized
-               #assetid2=paste0(path_asset, "/", current_timestamp2, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_FC_pixels_snowmelt_optimized")
-               FC_pixels_snowmelt_optimized <- ee$FeatureCollection(assetid2) 
-               #FC_pixels_snowmelt_optimized$first()$getInfo()
-               #FC_pixels_snowmelt_optimized$size()$getInfo()
-           
-        #(18): Transform the Feature collection FC_pixels_snowmelt_optimized to an image (with doy_snowmelt as an image band)
-               
-              #(A): Reduce feature collection FC_pixels_snowmelt_optimized to an Image with a 500m resolution:    
-               image_snowmelt <- FC_pixels_snowmelt_optimized$
-                 filter(ee$Filter$notNull(list('doy_snowmelt')))$ #pre-filter data for nulls that cannot be turned into an image
-                 filter(ee$Filter$neq(name='doy_snowmelt', value=-9999))$ #pre-filter data for -9999 values
-                 reduceToImage(properties=list('doy_snowmelt'), reducer=ee$Reducer$first()$setOutputs(list('doy_snowmelt')))$
-                 #reproject(crs=crs, crsTransform=NULL, scale=resolution) #ensures sure that reduceToImage above is done in the crs projection
-                 reproject(crs=modisProjection, crsTransform=NULL, scale=resolution) #ensures sure that reduceToImage above is done in the MODIS projection
-               
-               #image_snowmelt$projection()$getInfo()
-               
-              #(B): Clip image along The specified shapefile.
-               image_snowmelt <- image_snowmelt$clipToCollection(aoi_Shapefile)
-               
-              #(C): Extract day of snowmelt in year of interest for a single point
-               ee_extract(x=image_snowmelt, y=coordinates_point, fun=ee$Reducer$first(), scale=resolution, sf=TRUE)
-             
-              #(D): Plot snowmelt day of year as a coloured image
-               MODIS_image <- MODIS_clouds_filtered$filterDate(paste0(year_ID, "-07-20"), end_date)$first()#$reproject(crs=crs, crsTransform=NULL, scale=resolution)
-               Map$setCenter(coordinates_point$getInfo()$coordinates[1], coordinates_point$getInfo()$coordinates[2], 10)
-               Map$addLayer(MODIS_image,list(bands=c("sur_refl_b01", "sur_refl_b04", "sur_refl_b03"), min=100, max=8000, gamma=c(1.9, 1.7, 1.7)), 'TRUE COLOR')+ 
-               Map$addLayer(image_snowmelt,list(bands="doy_snowmelt", min=start_date_doy, max=end_date_doy, palette=c('green', 'yellow', 'red')), 'Snowmelt_doy')
-          
-              #(E): Export original image to Google Drive (takes c.a. 2 minutes):
-             
-                #create a current timestamp to prevent identical names on Google Drive
-                 current_timestamp3 <- gsub('\\.', '', format(Sys.time(), "%y%m%d%H%M%OS2"))
-               
-                #Create task to export the original doy_snowmelt image to Google Drive  
-                 task_vector3 <- ee_image_to_drive(
-                  fileFormat='GeoTIFF',
-                  image=image_snowmelt,
-                  description=paste0(current_timestamp3, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, '_Pixel_Image_DoySnowmelt'),
-                  region=aoi,
-                  #scale=ee$Number(resolution), #defaults to native resolution of image asset.
-                  crs="EPSG:3857", #Coordinate reference system of projection of exported image
-                  maxPixels=1e9, #maximum allowed number of pixels in exported image
-                  dimensions=ee$Number(1024) #maximum dimension
-                  )
-               
-                #Start and monitor export task:
-                 task_vector3$start()
-                 print("Export original image to Google Drive:")
-                 ee_monitoring(task_vector3, max_attempts = 1000000)
-                 ee_drive_to_local(task = task_vector3, dsn=paste0("Output/MODIS/01_Pixels_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_Image_DoySnowmelt"))
-                 
-              #(F): Export RGB image to Google Drive (takes c.a. 2 minutes):
-             
-                #Convert original image to an RGB image:
-                 image_snowmelt_RGB <- image_snowmelt$visualize(bands=c('doy_snowmelt'), min=start_date_doy, max=end_date_doy, palette=c('green', 'yellow', 'red'))
-                 #ee_print(image_snowmelt_RGB)
-                 #image_snowmelt_RGB$projection()$getInfo()
+       #We use ee_table_to_drive() to prevent memory limits
+        a=Sys.time()
+        task_vector1 <- ee_table_to_drive(
+          collection = FC_merged,
+          description = paste0(current_timestamp1, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char,  "_Pixel_NDSI_bbox"),
+          fileFormat = "CSV",
+          selectors = c('NDSI', 'Date', 'lat', 'lon')
+          )
 
-                #create a current timestamp to prevent identical names on Google Drive
-                 current_timestamp4 <- gsub('\\.', '', format(Sys.time(), "%y%m%d%H%M%OS2"))
-                 
-                #Create task to export RGB image to Google Drive:
-                 task_vector4 <- ee_image_to_drive(
-                   fileFormat='GeoTIFF',
-                   image=image_snowmelt_RGB,
-                   description=paste0(current_timestamp4, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, '_Pixel_Image_DoySnowmelt_RGB'),
-                   region=aoi,
-                   #scale=ee$Number(resolution), #defaults to native resolution of image asset.
-                   crs="EPSG:3857", #Coordinate reference system of projection of exported image
-                   maxPixels=1e9, #maximum allowed number of pixels in exported image
-                   dimensions=ee$Number(1024) #maximum dimension
-                   )
+        task_vector1$start()
+        print("Transform each image to a feature Collection of NDSI values for all pixels:")
+        ee_monitoring(task_vector1, max_attempts = 1000000)
 
-                #Start and monitor export task:
-                 print("Export RGB image to Google Drive:")
-                 task_vector4$start()
-                 ee_monitoring(task_vector4, max_attempts = 1000000)
-                 ee_drive_to_local(task = task_vector4, dsn=paste0("Output/MODIS/01_Pixels_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_Image_DoySnowmelt_RGB"))
-                 
-        #(19): Extract the date of snowmelt for all pixels within image_snowmelt (i.e. clipped by aoi_Shapefile)         
-                 
-              #(A): Extract the date of snowmelt at each pixel within image_snowmelt and store each pixel value as a separate feature.
-              #The resulting output is a feature collection of all features (pixels) for the current image
-               FC_snowmelt <- image_snowmelt$sample( #sampling is done automatically for all Bands of the input image
-                 region=aoi_Shapefile, #All pixels within aoi_Shapefile will be stored as a separate feature
-                 geometries=TRUE,  #if TRUE, add center of sampled pixel as the geometry property of the output feature
-                 projection=modisProjection, #Set to native projection of MODIS image
-                 scale=resolution, #sampling resolution in meters
-                 seed=23, #Create reproducible results using the same random seed
-                 dropNulls=FALSE) #If TRUE, the result is post-filtered to drop features that have a NULL value for NDSI
-                 
-              #(B): Make sure there is a doy_snowmelt value at each feature within the feature collection:
-              #Set the band value to a no data value of -9999 for all features where the band value is NULL.
-               FC_snowmelt <- FC_snowmelt$map(function(feature){
-                  doy_snowmelt <- ee$List(list(feature$get('doy_snowmelt'), -9999))$reduce(ee$Reducer$firstNonNull())
-                  return(feature$set("doy_snowmelt", doy_snowmelt))})
-                 
-              #(C): Add latitude and longitude of each pixel as a property to each feature
-               FC_snowmelt <- FC_snowmelt$map(function(feature){
-                 coordinates <- feature$geometry()$coordinates()
-                 lon <- coordinates$get(0)
-                 lat <- coordinates$get(1)
-                 return(feature$set('lon', lon)$set('lat', lat))
-                  })
-                 
-              #(D): Transform feature collection FC_snowmelt to a dataframe:
-                 
-                #create a current timestamp to prevent identical names on Google Drive
-                 current_timestamp5 <- gsub('\\.', '', format(Sys.time(), "%y%m%d%H%M%OS2"))
-               
-                #We use ee_table_to_drive() to prevent memory limits
-                 a=Sys.time()
-                 task_vector5 <- ee_table_to_drive(
-                   collection = FC_snowmelt,
-                   description = paste0(current_timestamp5, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Data_Pixel_Snowmelt_polygon"),
-                   fileFormat = "CSV",
-                   selectors = c('doy_snowmelt', 'lat', 'lon')
-                   )
-               
-                #Execute task  
-                 task_vector5$start()
-                 print("Transform image_snowmelt to a feature Collection of doy_snowmelt values for all pixels:")
-                 ee_monitoring(task_vector5, max_attempts = 1000000)
-                 exported_stats <- ee_drive_to_local(task = task_vector5, dsn=paste0("Output/MODIS/01_Pixels_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Data_Pixel_Snowmelt_polygon"))
-                 df_pixel_snowmelt_shapefile <- read.csv(exported_stats)
-                 b=Sys.time()
-                 print(paste0("Computation finished in ",  round(as.numeric(difftime(b, a, units="mins")),2), " minutes"))
+        exported_stats <- ee_drive_to_local(task = task_vector1, dsn=paste0("Output/MODIS/01_Pixels_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_NDSI_bbox"))
+        df_pixel_ndsi <- read.csv(exported_stats)
+        b=Sys.time()
+        print(paste0("Computation finished in ",  round(as.numeric(difftime(b, a, units="mins")),2), " minutes"))
+
+       # #Load dataframe (takes ca 2 minutes):
+       #  df_pixel_ndsi <- read.csv(paste0(timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_NDSI_bbox.csv"))
+
+       #Add day of year
+        df_pixel_ndsi$doy <- as.numeric(format(as.POSIXct(df_pixel_ndsi$Date, format = "%Y-%m-%d %H:%M:%S"), "%j"))          
+        
+       #Make sure each latitude/longitude combination gets its own pixel_ID (takes ca 1 minute):
+        df_pixel_ndsi$pixel_ID <- paste0(format(round(df_pixel_ndsi$lat, 5), nsmall = 5), "_", format(round(df_pixel_ndsi$lon, 5), nsmall = 5))
+
+     #(C): Calculate the date of snowmelt for each pixel in the dataframe
+        
+       #Loop through all pixel_ID's, select dataframe for that pixel containing NDSI values
+       #as measured in all images in the image collection, fit gam through the NDSI ~ doy data, 
+       #determine date when NDSI<NDSI_threshold and store this date of snowmelt together with 
+       #the pixel_ID in a new dataframe.
+
+       #Specify NDSI threshold (values larger than this threshold are considered snow covered):
+        NDSI_threshold=NDSI_threshold
+        
+       #When running this code as a sequential process on a single core it takes c.a. 72 hours to run. To speed-up
+       #this process we run the code in parallel on multiple local computer cores (4). We will add a progress-bar
+       #to be able to track the progress. In addition, the progress is slowed down by having to work with this
+       #gigantic dataset (df_pixel_ndsi) as one chunk. The code becomes MUCH faster if we split this up into
+       #several sub-datasets (e.g. based on subsets of 10000 unique pixel_IDs).
+
+       #Specify number of cores:
+        numCores <- detectCores()
+
+       #Make clusters and initialize using DoSNOW as this allows for a progress bar
+        cl <- makePSOCKcluster(numCores)
+        registerDoSNOW(cl)
+
+       #Split dataset into chuncks of pixels
+        chunk_size = 2000
+        pixelIDs <- unique(df_pixel_ndsi$pixel_ID)
+        pixelIDs_split <- split(pixelIDs, ceiling(seq_along(pixelIDs)/chunk_size))
+
+       #Specify function to sequentially remove outliers from the dataset for each pixel (results in better estimate of day of snowmelt).
+        
+        #We fit a Generalized Additive Model (GAM) through the NDSI data for every pixel in each data subset. We do this using a 
+        #sequential outlier-filtering process. We first fit a GAM through the data and calculate model residuals. We then exclude 
+        #all rows from the dataframe where the residual >= (0.25 * the range of the data). We then re-fit a GAM to this reduced 
+        #dataset, and again calculate model residuals. We then exclude all rows from the reduced dataframe where the residual >= 
+        #(0.1 * the range of the data). This gives us a final dataframe in which outliers are thus sequentially removed. This 
+        #whole process is executed using the function f_gam_SeqRemOutliers. Note that a sequential step is required because 
+        #initially some datapoints might falsely be assigned a large residual because of one extreme outlier. After removal of 
+        #this extreme outlier and refitting of the GAM, it can be better assessed which data points truly have a large residual 
+        #and can thus be assigned as 'true' outliers.
+        f_gam_SeqRemOutliers <- f_gam_SeqRemOutliers #sourced
+        
+        #Specify sequential outlier thresholds (Note that these thresholds are relative to the range of the data. Thus if the response
+        #variable ranges between -1 and +1, then the total range of the data is 2 and a threshold value of 0.4 thus corresponds to an
+        #actual residual threshold of 0.4*2=0.8:
+         outlier_thresh_1=outlier_thresh_1
+         outlier_thresh_2=outlier_thresh_2
+         outlier_removal=outlier_removal
+        
+       #Load a function that iterates through all data subsets. Within each data subset it calculates day of snowmelt 
+       #for every pixel, by fitting a GAM with sequential outlier removal and then linearly approximating at which day of 
+       #year the predicted NDSI value of this GAM changes from above outlier_threshold to below (direction="down") or
+       #from below outlier_threshold to above (direction="up"). The code employs parallel processing using foreach
+       #and %dopar% on four local computer cores.
+        f_detect_threshold_date_parallel <- f_detect_threshold_date_parallel #sourced
+
+       #Run the 'f_detect_threshold_date_parallel' function over all data subsets, combine the results and save the resulting dataframe and plots
+        print("Calculate the date of snowmelt for each pixel within aoi:")
+        results <- lapply(1:length(pixelIDs_split), FUN=f_detect_threshold_date_parallel, 
+                          pixelIDs_split=pixelIDs_split, df_pixel_y=df_pixel_ndsi, pixel_ID_column="pixel_ID",
+                          y="NDSI", x="doy", pixel_gam_plots=pixel_gam_plots, y_threshold=NDSI_threshold)
+                        
+        #Clean up the cluster after finishing the parallel runs
+        stopCluster(cl)
+        
+        #Turn parallel processing off and run sequentially again after this point
+        registerDoSEQ()
+        
+       #Store date of snowmelt per pixel within aoi (bounding box!) as a dataframe
+        df_pixel_snowmelt <- lapply(results, "[[", 1)
+        df_pixel_snowmelt <- as.data.frame(do.call(rbind, do.call(c, df_pixel_snowmelt)))
+        colnames(df_pixel_snowmelt)[colnames(df_pixel_snowmelt)=="x_threshold"] <- "doy_snowmelt"
+        #write.csv(df_pixel_snowmelt, file=paste0(here(), "/Output/MODIS/01_Pixels_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_Snowmelt_bbox.csv"), quote = FALSE, row.names=FALSE)
+        #df_pixel_snowmelt <- read.csv(file=paste0(here(), "/Output/MODIS/01_Pixels_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_Snowmelt_bbox.csv"), header=TRUE)  
+        
+       #Store GAM plots per pixel within aoi (bounding box!) as a list
+        if(pixel_gam_plots==TRUE){
+          plot_pixel_snowmelt <- lapply(results, "[[", 2)
+          plot_pixel_snowmelt <- do.call(c, plot_pixel_snowmelt)
+          }
+    
+       #The dataframe df_pixel_snowmelt now contains the date of snowmelt for each individual pixel_ID (514584 10mx10m pixels)
+       #withing the aoi (i.e. the defined bounding box). To be able to plot these data we transform this dataframe to a feature 
+       #collection and then transform this feature collection to an image.
+        
+   #(17): Transform df_pixel_snowmelt to a feature collection with random geometry
+        
+       #Generate some random longitude and latitude values as this is required for an sf object:
+        df_pixel_snowmelt$lon <- runif(nrow(df_pixel_snowmelt), 0, 74)
+        df_pixel_snowmelt$lat <- runif(nrow(df_pixel_snowmelt), -20, 20)
+        
+       #Prevent NA in doy_snowmelt column (earthengine cannot deal with NA)  
+        df_pixel_snowmelt$doy_snowmelt[is.na(df_pixel_snowmelt$doy_snowmelt)] <- -9999
+        
+       #memory limits prevent us from processing the whole dataframe at once. Therefore we split it up into subsets with 'chunk_size' rows
+        chunk_size = 2000
+        rowIDs <- 1:nrow(df_pixel_snowmelt)
+        rowIDs_split <- split(rowIDs, ceiling(seq_along(rowIDs)/chunk_size))
       
-                #Make sure each latitude/longitude combination gets its own pixel_ID (takes ca 1 minute):
-                 df_pixel_snowmelt_shapefile$pixel_ID <- paste0(format(round(df_pixel_snowmelt_shapefile$lat, 5), nsmall = 5), "_", format(round(df_pixel_snowmelt_shapefile$lon, 5), nsmall = 5))
-                 
-                #Only select columns "pixel_ID" and "doy_snowmelt"
-                 df_pixel_snowmelt_shapefile <- df_pixel_snowmelt_shapefile[,c("pixel_ID", "doy_snowmelt")]
-                 
-                #Store the pixelID of all pixels within aoi_Shapefile        
-                 pixelIDs_shapefile <- unique(df_pixel_snowmelt_shapefile$pixel_ID) 
-                 
-              #(E): Save dataframe with the date of snowmelt for all pixels within aoi_Shapefile (i.e. buffer zone)
-                write.csv(df_pixel_snowmelt_shapefile, file=paste0(here(), "/Output/MODIS/01_Pixels_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Data_Pixel_Snowmelt_polygon.csv"), quote = FALSE, row.names=FALSE)
-                 
-              #(F): Store NDSI timeseries for all pixels within aoi Shapefile (i.e. buffer zone)
-                df_pixel_ndsi_shapefile <- df_pixel_ndsi[df_pixel_ndsi$pixel_ID %in% pixelIDs_shapefile,]
-                write.csv(df_pixel_ndsi_shapefile, file=paste0(here(), "/Output/MODIS/01_Pixels_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Data_Pixel_NDSI_polygon.csv"), quote = FALSE, row.names=FALSE)
-                unlink(paste0(here(), "/Output/MODIS/01_Pixels_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_NDSI_bbox.csv"))
-                
-              #(G): Store plots of NDSI timeseries for all pixels within aoi_Shapefile (i.e. buffer zone)
-                if(pixel_gam_plots==TRUE){
-                  plot_pixel_snowmelt_shapefile <- plot_pixel_snowmelt[which(pixelIDs %in% pixelIDs_shapefile)]
-                  plots_per_page = 25
-                  plot_pixel_snowmelt_shapefile <- split(plot_pixel_snowmelt_shapefile, ceiling(seq_along(plot_pixel_snowmelt_shapefile)/plots_per_page))
-                  pdf(paste0(here(), "/Output/MODIS/01_Pixels_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Plot_Pixel_NDSI_Snowmelt_polygon.pdf"), width=20, height=16, onefile = TRUE)
-                  for (i in seq(length(plot_pixel_snowmelt_shapefile))) { do.call("grid.arrange", plot_pixel_snowmelt_shapefile[[i]]) }
-                  dev.off()
-                  }
-                
-        #(20): Save workspace
-         #save.image(paste0(here(), "/Output/MODIS/01_Pixels_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Backup_Workspace_PixelDateOfSnowmelt.RData"))
+       #Iterate through all dataframe subsets, convert each to a feature collection, and append each to the feature collection FC_initial.
+        FC_initial <- ee$FeatureCollection(ee$List(list()))
+        for(i in 1:length(rowIDs_split)){ 
+          
+          #Select subset of rows
+           rowID_min <- min(rowIDs_split[[i]])
+           rowID_max <- max(rowIDs_split[[i]])
+          
+          #Select subset of dataframe:
+           df_tmp <- df_pixel_snowmelt[rowID_min:rowID_max,]
+          
+          #Change subset-dataframe to a SF object 
+           print("Transform df_pixel_snowmelt to a feature collection with random geometry:")
+           df_sf_tmp <- st_as_sf(x = df_tmp,                         
+                                 coords = c("lon", "lat"),
+                                 crs="+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
+          
+          #Change sf object to an earth engine feature collection by uploading it to the asset folder
+           FC_tmp <- sf_as_ee(
+             x = df_sf_tmp,
+             assetId = paste0(path_asset, "/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_df_pixel_snowmelt_", i),
+             overwrite = FALSE,
+             monitoring = TRUE,
+             via = 'getInfo_to_asset')
+           #FC_tmp <- sf_as_ee(df_sf_tmp)
+          
+          #Add feature collection to an expanding feature collection:
+           FC_initial <- FC_initial$merge(FC_tmp)
+           FC_initial <- ee$FeatureCollection(FC_initial)               
+          
+          #print progress
+           print(paste0("Progress: ", (100*i)/(length(rowIDs_split))))
+           #print(paste0("Size of FC_initial: ", FC_initial$size()$getInfo()))
+          
+        }
+        FC_pixels_snowmelt <- ee$FeatureCollection(FC_initial)
+        FC_pixels_snowmelt$first()$getInfo()
+        FC_pixels_snowmelt$size()$getInfo()
+        
+        #Inspect assets folder:
+         ee_manage_quota()
+         ee_manage_assetlist(path_asset)
+        
+   #(18): Add geometry (latitude and longitude) of each pixel_ID to FC_pixels_snowmelt
          
-        #(21): Print concluding remarks
-         {cat("\n") ; cat("\n")
-          print("--------------------------------------------------------------------------------------------------------------------------")
-          print(paste0("THE ANALYSIS HAS COMPLETED"))
-          cat("\n")
-          print(paste0("-Generated data and plots can be found at ", here(), "/Output/MODIS/01_Pixels_Snowmelt/"))
-          print("--------------------------------------------------------------------------------------------------------------------------")
-          cat("\n")}
+       #The feature collection that we want to construct should contain 'pixel_ID' and 'doy_snowmelt' as properties and should contain
+       #the original geometry corresponding to each pixel_ID. So far, FC_pixels_snowmelt contains a separate feature for each pixel, where
+       #each feature contains doy_snowmelt and pixel_ID as a property. However, the geometry (lan/lon) of each feature is randomly chosen. 
+       #We need to make sure that the actual geometry matching each pixel_ID is added instead of this random geometry.
+        
+       #To obtain the corresponding geometry (lat/lon) of every pixel_ID within aoi, we sample from a single image on a 'resolution' 
+       #resolution using img$sample(). This gives a single distinct feature for each pixel, including their geometry. We can then re-construct
+       #the property pixel_ID for every feature in this feature collection. The resulting feature collection is called FC_pixels_distinct. 
+       #The final step is then to join FC_pixels_snowmelt to FC_pixels_distinct based on an inner join with pixel_ID.
+       
+       #This step results in memory errors (on the server side) when the image contains more than 2.5 million pixels. In the latter case
+       #we need to split up our study area in several sub-areas (i.e. create separate adjacent shapefiles using QGIS). If such errors are
+       #encountered here then script "6-RGEE_TomVersluijs_PixelDateOfSnowmelt_TAY" should be run instead. 
+    
+        #(A): Select a single image from the image collection
+         img <- MODIS_clouds_filtered$first()$select("NDSI")
+        
+        #(B): Create a feature collection of points within aoi (where each point corresponds to the center of a pixel in the image)
+         FC_pixels_distinct <- img$sample(
+          region=aoi, #Sample all pixels within aoi
+          geometries=TRUE,  #Store lat/lon in geometry property
+          projection=modisProjection, #set to native projection of MODIS image
+          scale=resolution, #sampling resolution in meters
+          seed=23, #set fixed seed to be able to reproduce the sample (same as for FC_merged above)
+          dropNulls=FALSE) #Make sure NULL pixels are not dropped from image collection
+      
+        #(C): Make sure there is a NDSI value at each feature within the feature collection:
+        #Set the band value to a no data value of -9999 for all features where the band value is NULL.
+         FC_pixels_distinct <- FC_pixels_distinct$map(function(feature){
+          ndsi <- ee$List(list(feature$get('NDSI'), -9999))$reduce(ee$Reducer$firstNonNull())
+          return(feature$set("NDSI", ndsi))})
+        
+        #(D): Add latitude and longitude of each pixel as a property to each feature
+         FC_pixels_distinct <- FC_pixels_distinct$map(function(feature){
+          coordinates <- feature$geometry()$coordinates()
+          lon <- coordinates$get(0)
+          lat <- coordinates$get(1)
+          return(feature$set('lon', lon)$set('lat', lat))
+          })
+        
+        #(E): Add a pixel_ID property to each feature
+         FC_pixels_distinct <- FC_pixels_distinct$map(function(feature){
+          lon_tmp <- feature$get("lon")
+          lat_tmp <- feature$get("lat")
+          lon_tmp <- ee$Number$format(lon_tmp, '%.5f')
+          lat_tmp <- ee$Number$format(lat_tmp, '%.5f')
+          string_tmp <- ee$String("_")
+          pixel_ID <- lat_tmp$cat(string_tmp)$cat(lon_tmp)
+          return(feature$set('pixel_ID', pixel_ID))
+          })  
+         
+        #(F): Reduce feature collection properties to only contain pixel_ID  
+         FC_pixels_distinct <- FC_pixels_distinct$map(function(feature) {
+          properties_all <- feature$propertyNames()
+          properties_selection <- properties_all$filter(ee$Filter$inList('item', list('pixel_ID')))
+          return(feature$select(properties_selection))
+          })
+        
+         FC_pixels_distinct$first()$getInfo()
+         FC_pixels_distinct$size()$getInfo()
+         
+         #Thus, FC_pixels_distinct is a featurecollection that contains a single distinct feature for every pixel_ID,
+         #and contains the original lat/lon geometry of every pixel. We will now add doy_snowmelt as a new property
+         #to FC_pixels_distinct by merging it with FC_pixels_snowmelt.
+         
+        #(G): Add doy_snowmelt as property to FC_pixels_distinct   
+        
+          #Use an equals filter to specify how the collections match.
+           Filter_pixel_ID <- ee$Filter$equals(
+              leftField= 'pixel_ID',
+              rightField= 'pixel_ID')
+         
+          #Define the join.
+           innerJoin <- ee$Join$inner()
+         
+          #Apply the join.
+           Pixel_ID_Join <- innerJoin$apply(FC_pixels_distinct, FC_pixels_snowmelt,  Filter_pixel_ID)
+         
+          #Add features of second ('secondary') feature collection to those of the first ('primary') feature collection 
+           FC_Combined <- Pixel_ID_Join$map(function(pair) {
+             f1 <- ee$Feature(pair$get('primary'))
+             f2 <- ee$Feature(pair$get('secondary'))
+             return(f1$set(f2$toDictionary()))
+             })  
+          
+        #(H): To speed-up further computations with this feature collection we as an intermediate step upload and re-download it
+         
+          #create a current timestamp to prevent identical names on Google Drive
+           current_timestamp2 <- gsub('\\.', '', format(Sys.time(), "%y%m%d%H%M%OS2"))
+           
+          #Delete FC_pixels_snowmelt_optimized if it already occured in the asset folder:
+           tryCatch({ee_manage_delete(paste0(path_asset, "/", current_timestamp2, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_FC_pixels_snowmelt_optimized"))}, 
+                    error = function(cond){return("Path did not yet exist - no folder deleted")})
+           
+          #Upload to asset folder:
+           assetid2 <- paste0(path_asset, "/", current_timestamp2, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_FC_pixels_snowmelt_optimized")
+           task_vector2 <- ee_table_to_asset(
+               collection = FC_Combined,
+               overwrite = FALSE,
+               assetId = assetid2
+               )
+           task_vector2$start()
+           print("Optimize further calculations with FC_Combined by uploading it to the asset folder:")
+           ee_monitoring(task_vector2, max_attempts = 1000000)
+         
+          #Check assets folder:
+           #ee_manage_quota()
+           #ee_manage_assetlist(path_asset)
+          
+          #Save assetid2 for future downloading of FC_pixels_snowmelt_optimized
+           saveRDS(object=assetid2, file=paste0(here(), "/Output/MODIS/01_Pixels_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Variable_AssetID.Rds"))
+          
+          #Get feature collection from asset folder and create FC_pixels_snowmelt_optimized
+           #assetid2=paste0(path_asset, "/", current_timestamp2, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_FC_pixels_snowmelt_optimized")
+           FC_pixels_snowmelt_optimized <- ee$FeatureCollection(assetid2) 
+           #FC_pixels_snowmelt_optimized$first()$getInfo()
+           #FC_pixels_snowmelt_optimized$size()$getInfo()
+       
+   #(19): Transform the Feature collection FC_pixels_snowmelt_optimized to an image (with doy_snowmelt as an image band)
+           
+          #(A): Reduce feature collection FC_pixels_snowmelt_optimized to an Image with a 500m resolution:    
+           image_snowmelt <- FC_pixels_snowmelt_optimized$
+             filter(ee$Filter$notNull(list('doy_snowmelt')))$ #pre-filter data for nulls that cannot be turned into an image
+             filter(ee$Filter$neq(name='doy_snowmelt', value=-9999))$ #pre-filter data for -9999 values
+             reduceToImage(properties=list('doy_snowmelt'), reducer=ee$Reducer$first()$setOutputs(list('doy_snowmelt')))$
+             #reproject(crs=crs, crsTransform=NULL, scale=resolution) #ensures sure that reduceToImage above is done in the crs projection
+             reproject(crs=modisProjection, crsTransform=NULL, scale=resolution) #ensures sure that reduceToImage above is done in the MODIS projection
+           
+           #image_snowmelt$projection()$getInfo()
+           
+          #(B): Clip image along The specified shapefile.
+           image_snowmelt <- image_snowmelt$clipToCollection(aoi_Shapefile)
+           
+          #(C): Extract day of snowmelt in year of interest for a single point
+           ee_extract(x=image_snowmelt, y=coordinates_point, fun=ee$Reducer$first(), scale=resolution, sf=TRUE)
+         
+          #(D): Plot snowmelt day of year as a coloured image
+           MODIS_image <- MODIS_clouds_filtered$filterDate(paste0(year_ID, "-07-20"), end_date)$first()#$reproject(crs=crs, crsTransform=NULL, scale=resolution)
+           Map$setCenter(coordinates_point$getInfo()$coordinates[1], coordinates_point$getInfo()$coordinates[2], 10)
+           Map$addLayer(MODIS_image,list(bands=c("sur_refl_b01", "sur_refl_b04", "sur_refl_b03"), min=100, max=8000, gamma=c(1.9, 1.7, 1.7)), 'TRUE COLOR')+ 
+           Map$addLayer(image_snowmelt,list(bands="doy_snowmelt", min=start_date_doy, max=end_date_doy, palette=c('green', 'yellow', 'red')), 'Snowmelt_doy')
+      
+          #(E): Export original image to Google Drive (takes c.a. 2 minutes):
+         
+            #create a current timestamp to prevent identical names on Google Drive
+             current_timestamp3 <- gsub('\\.', '', format(Sys.time(), "%y%m%d%H%M%OS2"))
+           
+            #Create task to export the original doy_snowmelt image to Google Drive  
+             task_vector3 <- ee_image_to_drive(
+              fileFormat='GeoTIFF',
+              image=image_snowmelt,
+              description=paste0(current_timestamp3, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, '_Pixel_Image_DoySnowmelt'),
+              region=aoi,
+              #scale=ee$Number(resolution), #defaults to native resolution of image asset.
+              crs="EPSG:3857", #Coordinate reference system of projection of exported image
+              maxPixels=1e9, #maximum allowed number of pixels in exported image
+              dimensions=ee$Number(1024) #maximum dimension
+              )
+           
+            #Start and monitor export task:
+             task_vector3$start()
+             print("Export original image to Google Drive:")
+             ee_monitoring(task_vector3, max_attempts = 1000000)
+             ee_drive_to_local(task = task_vector3, dsn=paste0("Output/MODIS/01_Pixels_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_Image_DoySnowmelt"))
+             
+          #(F): Export RGB image to Google Drive (takes c.a. 2 minutes):
+         
+            #Convert original image to an RGB image:
+             image_snowmelt_RGB <- image_snowmelt$visualize(bands=c('doy_snowmelt'), min=start_date_doy, max=end_date_doy, palette=c('green', 'yellow', 'red'))
+             #ee_print(image_snowmelt_RGB)
+             #image_snowmelt_RGB$projection()$getInfo()
+
+            #create a current timestamp to prevent identical names on Google Drive
+             current_timestamp4 <- gsub('\\.', '', format(Sys.time(), "%y%m%d%H%M%OS2"))
+             
+            #Create task to export RGB image to Google Drive:
+             task_vector4 <- ee_image_to_drive(
+               fileFormat='GeoTIFF',
+               image=image_snowmelt_RGB,
+               description=paste0(current_timestamp4, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, '_Pixel_Image_DoySnowmelt_RGB'),
+               region=aoi,
+               #scale=ee$Number(resolution), #defaults to native resolution of image asset.
+               crs="EPSG:3857", #Coordinate reference system of projection of exported image
+               maxPixels=1e9, #maximum allowed number of pixels in exported image
+               dimensions=ee$Number(1024) #maximum dimension
+               )
+
+            #Start and monitor export task:
+             print("Export RGB image to Google Drive:")
+             task_vector4$start()
+             ee_monitoring(task_vector4, max_attempts = 1000000)
+             ee_drive_to_local(task = task_vector4, dsn=paste0("Output/MODIS/01_Pixels_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_Image_DoySnowmelt_RGB"))
+             
+   #(20): Extract the date of snowmelt for all pixels within image_snowmelt (i.e. clipped by aoi_Shapefile)         
+             
+          #(A): Extract the date of snowmelt at each pixel within image_snowmelt and store each pixel value as a separate feature.
+          #The resulting output is a feature collection of all features (pixels) for the current image
+           FC_snowmelt <- image_snowmelt$sample( #sampling is done automatically for all Bands of the input image
+             region=aoi_Shapefile, #All pixels within aoi_Shapefile will be stored as a separate feature
+             geometries=TRUE,  #if TRUE, add center of sampled pixel as the geometry property of the output feature
+             projection=modisProjection, #Set to native projection of MODIS image
+             scale=resolution, #sampling resolution in meters
+             seed=23, #Create reproducible results using the same random seed
+             dropNulls=FALSE) #If TRUE, the result is post-filtered to drop features that have a NULL value for NDSI
+             
+          #(B): Make sure there is a doy_snowmelt value at each feature within the feature collection:
+          #Set the band value to a no data value of -9999 for all features where the band value is NULL.
+           FC_snowmelt <- FC_snowmelt$map(function(feature){
+              doy_snowmelt <- ee$List(list(feature$get('doy_snowmelt'), -9999))$reduce(ee$Reducer$firstNonNull())
+              return(feature$set("doy_snowmelt", doy_snowmelt))})
+             
+          #(C): Add latitude and longitude of each pixel as a property to each feature
+           FC_snowmelt <- FC_snowmelt$map(function(feature){
+             coordinates <- feature$geometry()$coordinates()
+             lon <- coordinates$get(0)
+             lat <- coordinates$get(1)
+             return(feature$set('lon', lon)$set('lat', lat))
+              })
+             
+          #(D): Transform feature collection FC_snowmelt to a dataframe:
+             
+            #create a current timestamp to prevent identical names on Google Drive
+             current_timestamp5 <- gsub('\\.', '', format(Sys.time(), "%y%m%d%H%M%OS2"))
+           
+            #We use ee_table_to_drive() to prevent memory limits
+             a=Sys.time()
+             task_vector5 <- ee_table_to_drive(
+               collection = FC_snowmelt,
+               description = paste0(current_timestamp5, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Data_Pixel_Snowmelt_polygon"),
+               fileFormat = "CSV",
+               selectors = c('doy_snowmelt', 'lat', 'lon')
+               )
+           
+            #Execute task  
+             task_vector5$start()
+             print("Transform image_snowmelt to a feature Collection of doy_snowmelt values for all pixels:")
+             ee_monitoring(task_vector5, max_attempts = 1000000)
+             exported_stats <- ee_drive_to_local(task = task_vector5, dsn=paste0("Output/MODIS/01_Pixels_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Data_Pixel_Snowmelt_polygon"))
+             df_pixel_snowmelt_shapefile <- read.csv(exported_stats)
+             b=Sys.time()
+             print(paste0("Computation finished in ",  round(as.numeric(difftime(b, a, units="mins")),2), " minutes"))
+  
+            #Make sure each latitude/longitude combination gets its own pixel_ID (takes ca 1 minute):
+             df_pixel_snowmelt_shapefile$pixel_ID <- paste0(format(round(df_pixel_snowmelt_shapefile$lat, 5), nsmall = 5), "_", format(round(df_pixel_snowmelt_shapefile$lon, 5), nsmall = 5))
+             
+            #Only select columns "pixel_ID" and "doy_snowmelt"
+             df_pixel_snowmelt_shapefile <- df_pixel_snowmelt_shapefile[,c("pixel_ID", "doy_snowmelt")]
+             
+            #Store the pixelID of all pixels within aoi_Shapefile        
+             pixelIDs_shapefile <- unique(df_pixel_snowmelt_shapefile$pixel_ID) 
+             
+          #(E): Save dataframe with the date of snowmelt for all pixels within aoi_Shapefile (i.e. buffer zone)
+            write.csv(df_pixel_snowmelt_shapefile, file=paste0(here(), "/Output/MODIS/01_Pixels_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Data_Pixel_Snowmelt_polygon.csv"), quote = FALSE, row.names=FALSE)
+             
+          #(F): Store NDSI timeseries for all pixels within aoi Shapefile (i.e. buffer zone)
+            df_pixel_ndsi_shapefile <- df_pixel_ndsi[df_pixel_ndsi$pixel_ID %in% pixelIDs_shapefile,]
+            write.csv(df_pixel_ndsi_shapefile, file=paste0(here(), "/Output/MODIS/01_Pixels_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Data_Pixel_NDSI_polygon.csv"), quote = FALSE, row.names=FALSE)
+            unlink(paste0(here(), "/Output/MODIS/01_Pixels_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Pixel_NDSI_bbox.csv"))
+            
+          #(G): Store plots of NDSI timeseries for all pixels within aoi_Shapefile (i.e. buffer zone)
+            if(pixel_gam_plots==TRUE){
+              plot_pixel_snowmelt_shapefile <- plot_pixel_snowmelt[which(pixelIDs %in% pixelIDs_shapefile)]
+              plots_per_page = 25
+              plot_pixel_snowmelt_shapefile <- split(plot_pixel_snowmelt_shapefile, ceiling(seq_along(plot_pixel_snowmelt_shapefile)/plots_per_page))
+              pdf(paste0(here(), "/Output/MODIS/01_Pixels_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Plot_Pixel_NDSI_Snowmelt_polygon.pdf"), width=20, height=16, onefile = TRUE)
+              for (i in seq(length(plot_pixel_snowmelt_shapefile))) { do.call("grid.arrange", plot_pixel_snowmelt_shapefile[[i]]) }
+              dev.off()
+              }
+            
+   #(21): Save workspace
+     #save.image(paste0(here(), "/Output/MODIS/01_Pixels_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_NDSI", NDSI_threshold_char, "_Backup_Workspace_PixelDateOfSnowmelt.RData"))
+     
+   #(22): Print concluding remarks
+     {cat("\n") ; cat("\n")
+      print("--------------------------------------------------------------------------------------------------------------------------")
+      print(paste0("THE ANALYSIS HAS COMPLETED"))
+      cat("\n")
+      print(paste0("-Generated data and plots can be found at ", here(), "/Output/MODIS/01_Pixels_Snowmelt/"))
+      print("--------------------------------------------------------------------------------------------------------------------------")
+      cat("\n")}
          
 ###########################################################################################################################################################################
 ###########################################################################################################################################################################

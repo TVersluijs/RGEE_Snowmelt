@@ -6,7 +6,7 @@
 #creating the snow melt map, script "10-RGEE_TomVersluijs_S2_ExtractSnowFraction.R" can be used to extract time series of the 
 #fraction of snow cover for points/polygon(s) of interest from this map.
 
-#Copyright Tom Versluijs 2024-10-25. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
+#Copyright Tom Versluijs 2024-11-19. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
 
 #Before running this script make sure to install RGEE according to the instructions in script "00-RGEE_TomVersluijs_Installation.R". 
 #Note that a GoogleDrive is required. Important: make sure to run this script from within the "RGEE_Snowmelt.Rproj" project file.
@@ -31,7 +31,7 @@
        #renv::restore() #revert to last version of R-packages used to successfully run this script (optional).
        utils::install.packages("pacman")
        library(pacman)
-       p_load(sf, rgee, ggplot2, mgcv, googledrive, dplyr, tidyr, foreach, parallel, doSNOW, gridExtra)
+       p_load(sf, rgee, ggplot2, mgcv, googledrive, dplyr, tidyr, foreach, parallel, doSNOW, gridExtra, rgeeExtra, magick)
 
       #(2): Define ggplot2 plotting theme
        theme_tom <- function(){
@@ -170,7 +170,14 @@
      
      #Should counts of the number of unmasked pixels per day of year within the shapefile area be conducted (increases computation time)
      pixel_counts=TRUE
+    
+   #(i): GIF animations
      
+     #Should GIF animations be constructed (increases computation time)
+     gif_output=FALSE
+     
+     #Maximum dimension (in pixels) of GIF
+     gif_max_pixels=200
           
 ##################################################################################################################################
          
@@ -279,32 +286,32 @@
       #Clip all images to the area depicted by the shapefile (aoi_Shapefile)
        s2_col <- s2_col$map(function(img){return(img$clipToCollection(aoi_Shapefile))})
       
-      #Plot a single clipped image: 
+      #Plot a single clipped image (for debugging): 
        
-        #Select a single image for initial plot:
-         image <- s2_col$filterDate(paste0(year_ID, "-07-15"), end_date)$first()
-      
-        #Add Normalized difference snow index to this image:
-         ndsi_s2 <-  image$expression('(B3 - B11) / (B3 + B11)',
-                                      list('B11'=image$select('B11'),
-                                           'B3'=image$select('B3')))
-      
-        #Add Normalized difference vegetation index to this image:
-         ndvi_s2 <- image$expression('(B8 - B4) / (B8 + B4)',
-                                     list('B8'=image$select('B8'),
-                                          'B4'=image$select('B4')))
-         
-        #Add Normalized difference water index to this image:
-         ndwi_s2 <- image$expression('(B3 - B8) / (B3 + B8)',
-                                     list('B3'=image$select('B3'),
-                                          'B8'=image$select('B8')))
-  
-        #Plot all image Bands
-         Map$setCenter(coordinates_point$getInfo()$coordinates[1], coordinates_point$getInfo()$coordinates[2], 10)
-         Map$addLayer(image,list(bands=c("B4", "B3", "B2"), min=100, max=8000, gamma=c(1.9, 1.7, 1.7)), 'TRUE COLOR')+ 
-         Map$addLayer(ndsi_s2,list(min=-1, max=1.5, palette=c('black', '0dffff', '0524ff', 'ffffff')), 'NDSI')+
-         Map$addLayer(ndvi_s2,list(min=-1, max=1, palette=c('#FF0000','#00FF00')), 'NDVI')+
-         Map$addLayer(ndwi_s2,list(min=0, max=1, palette=c('000000', '0dffff', '0524ff', 'ffffff')), 'NDWI')
+        # #Select a single image for initial plot:
+        #  image <- s2_col$filterDate(paste0(year_ID, "-07-15"), end_date)$first()
+        # 
+        # #Add Normalized difference snow index to this image:
+        #  ndsi_s2 <-  image$expression('(B3 - B11) / (B3 + B11)',
+        #                               list('B11'=image$select('B11'),
+        #                                    'B3'=image$select('B3')))
+        # 
+        # #Add Normalized difference vegetation index to this image:
+        #  ndvi_s2 <- image$expression('(B8 - B4) / (B8 + B4)',
+        #                              list('B8'=image$select('B8'),
+        #                                   'B4'=image$select('B4')))
+        #  
+        # #Add Normalized difference water index to this image:
+        #  ndwi_s2 <- image$expression('(B3 - B8) / (B3 + B8)',
+        #                              list('B3'=image$select('B3'),
+        #                                   'B8'=image$select('B8')))
+        # 
+        # #Plot all image Bands
+        #  Map$setCenter(coordinates_point$getInfo()$coordinates[1], coordinates_point$getInfo()$coordinates[2], 10)
+        #  Map$addLayer(image,list(bands=c("B4", "B3", "B2"), min=100, max=8000, gamma=c(1.9, 1.7, 1.7)), 'TRUE COLOR')+ 
+        #  Map$addLayer(ndsi_s2,list(min=-1, max=1.5, palette=c('black', '0dffff', '0524ff', 'ffffff')), 'NDSI')+
+        #  Map$addLayer(ndvi_s2,list(min=-1, max=1, palette=c('#FF0000','#00FF00')), 'NDVI')+
+        #  Map$addLayer(ndwi_s2,list(min=0, max=1, palette=c('000000', '0dffff', '0524ff', 'ffffff')), 'NDWI')
      
     #(8) Add NDSI, NDVI, NDMI and NDWI to the clipped image collection
       
@@ -313,18 +320,32 @@
         map(getNDSI)$
         map(getNDVI)$
         map(getNDMI)$
-        map(getNDWI)
+        map(getNDWI)$
+        map(add_Date)
     
     #(9) Create a timeseries gif of RGB images for the shapefile area
-      
-      #Check number of images in collection
-      s2_col$size()$getInfo()
-      
-      #Create a timelapse video of RGB band
-      videoArgs <- list(dimensions=200, region=aoi,framesPerSecond=5, crs='EPSG:3857', bands=c("B4", "B3", "B2"), min=0, max=10000, gamma=c(1.9, 1.7, 1.7))
-      tryCatch({browseURL(s2_col$getVideoThumbURL(videoArgs))}, error = function(cond){return("Too many pixels. Reduce dimensions.")})
-      
+      if(gif_output==TRUE){
         
+        #(a): GIF of RGB-images
+        f_img_col_to_gif(img_col=s2_col,  #image collection
+                         RGB_bands=c("B4", "B3", "B2"), #names of RGB-bands in image collection
+                         shapefile=aoi_Shapefile, #shapefile of area of interest
+                         centroid_buffer_m=0, #buffer zone surrounding centroid of shapefile in meters (to enlarge area for GIF)
+                         gif_dimensions=gif_max_pixels, #Maximum dimensions of GIF (pixels)
+                         gif_fps=5, #Frames per second of GIF
+                         gif_min=0, #Value to map to 0 (to improve contrast). A good rule of thumb is to set min to values that represent the 2nd percentile of the data
+                         gif_max=12000, #Value to map to 255 (to improve contrast). A good rule of thumb is to set max to values that represent the 98th percentile of the data
+                         gif_gamma=c(1.9, 1.7, 1.7), #Gamma correction factors (one for each band)
+                         gif_crs='EPSG:3857', #CRS project of the output
+                         gif_text_position="northwest", #Location of text (datetime string)
+                         gif_text_position_adjustment="+0+0", #Small scale adjustment of text in meters
+                         gif_text_size=14, #Size of text
+                         gif_text_col="#FFFFFF",
+                         output_fldr=paste0(root_fldr, "/Output/S2/05_Pixels_Snowmelt/"),
+                         file_name="GIF_RGB")
+        
+      }
+
 ##################################################################################################################################
         
 #IV: Filter and mask clouds within the image collection
@@ -348,9 +369,7 @@
           #Add the fraction of cloud-covered pixels within the shapefile area as image property
           map(Add_CloudFraction)$
           #Add NULL to those images in which cloudfraction could not be calculated
-          map(Add_NULL_CloudFraction)$
-          #Add date characteristics to each image
-          map(add_Date)
+          map(Add_NULL_CloudFraction)
         
         # #Check if CloudFraction property has been added to each image
         # s2_col$first()$propertyNames()$getInfo()
@@ -407,18 +426,14 @@
            #Apply cloudmask for individual pixels
            map(Add_CloudMask)
          
-        # #Create timelapse video of the cloud filtered/masked RGB images (for debugging)
-        #  videoArgs <- list(dimensions=200, region=aoi,framesPerSecond=5, crs='EPSG:3857', bands=c("B4", "B3", "B2"), min=100, max=10000, gamma=c(1.9, 1.7, 1.7))
-        #  tryCatch({browseURL(s2_clouds_filtered$getVideoThumbURL(videoArgs))}, error = function(cond){return("Too many pixels. Reduce dimensions.")})
-        }
+          }
     if(mask_clouds==FALSE){
     
       #print message   
       print("Cloud masking = FALSE")
       
-      #Add Date characteristics to each image
-      s2_clouds_filtered <- s2_col$
-        map(add_Date)
+      #Set s2_clouds_filtered equal to s2_col
+      s2_clouds_filtered <- s2_col
       
     }
          
@@ -480,10 +495,6 @@
            
        #Apply the final watermask:
        s2_clouds_filtered <- s2_clouds_filtered$map(Add_WaterMask)
-           
-       # #Create a timeseries GIF of RGB images of the water and cloud filtered image collection (for debugging)
-       # videoArgs <- list(dimensions=200, region=aoi,framesPerSecond=5, crs='EPSG:3857', bands=c("B4", "B3", "B2"), min=0, max=10000, gamma=c(1.9, 1.7, 1.7))
-       # tryCatch({browseURL(s2_clouds_filtered$getVideoThumbURL(videoArgs))}, error = function(cond){return("Too many pixels. Reduce dimensions.")})
            
        }
    if(mask_water==FALSE){
@@ -565,8 +576,133 @@
     }
 
 ##################################################################################################################################
+
+#VII: Create timelapse videos of the RGB bands, and the NDSI-, NDVI-, NDMI- and NDMI-bands for aoi_Polygons (Cloud and Water masked)
+
+##################################################################################################################################
+
+   #Create timeseries GIF animations
+   if(gif_output==TRUE){
+      
+      #(a): GIF of RGB-images
+      f_img_col_to_gif(img_col=s2_clouds_filtered,  #image collection
+                       RGB_bands=c("B4", "B3", "B2"), #names of RGB-bands in image collection
+                       shapefile=aoi_Shapefile, #shapefile of area of interest
+                       centroid_buffer_m=0, #buffer zone surrounding centroid of shapefile in meters (to enlarge area for GIF)
+                       gif_dimensions=gif_max_pixels, #Maximum dimensions of GIF (pixels)
+                       gif_fps=5, #Frames per second of GIF
+                       gif_min=0, #Value to map to 0 (to improve contrast). A good rule of thumb is to set min to values that represent the 2nd percentile of the data
+                       gif_max=12000, #Value to map to 255 (to improve contrast). A good rule of thumb is to set max to values that represent the 98th percentile of the data
+                       gif_gamma=c(1.9, 1.7, 1.7), #Gamma correction factors (one for each band)
+                       gif_crs='EPSG:3857', #CRS project of the output
+                       gif_text_position="northwest", #Location of text (datetime string)
+                       gif_text_position_adjustment="+0+0", #Small scale adjustment of text in meters
+                       gif_text_size=14, #Size of text
+                       gif_text_col="#FFFFFF",
+                       output_fldr=paste0(root_fldr, "/Output/S2/05_Pixels_Snowmelt/"),
+                       file_name="GIF_RGB_masked")
+      
+      #(b): GIF of NDSI-images
+      
+        #Transform NDSI-band to RGB bands
+        s2_clouds_filtered_ndsi <- s2_clouds_filtered$map(ee_utils_pyfunc(function(image){
+          f_band_to_RGB(img=image, band='NDSI', min_value=-1, max_value=1.5, palette=c('#000000', '#0dffff', '#0524ff', '#ffffff'))}))
         
-#VII: Calculate the date of snowmelt for every 10mx10m pixel within the study area by fitting a GAM through the NDSI data
+        #Create gif of the transformed NDSI-band
+        f_img_col_to_gif(img_col=s2_clouds_filtered_ndsi,  #image collection
+                         RGB_bands=c("vis-red", "vis-green", "vis-blue"), #names of RGB-bands in image collection
+                         shapefile=aoi_Shapefile, #shapefile of area of interest
+                         centroid_buffer_m=0, #buffer zone surrounding centroid of shapefile in meters (to enlarge area for GIF)
+                         gif_dimensions=gif_max_pixels, #Maximum dimensions of GIF (pixels)
+                         gif_fps=5, #Frames per second of GIF
+                         gif_min=0, #Value to map to 0 (to improve contrast). A good rule of thumb is to set min to values that represent the 2nd percentile of the data
+                         gif_max=255, #Value to map to 255 (to improve contrast). A good rule of thumb is to set max to values that represent the 98th percentile of the data
+                         gif_gamma=c(1, 1, 1), #Gamma correction factors (one for each band)
+                         gif_crs='EPSG:3857', #CRS project of the output
+                         gif_text_position="northwest", #Location of text (datetime string)
+                         gif_text_position_adjustment="+0+0", #Small scale adjustment of text in meters
+                         gif_text_size=14, #Size of text
+                         gif_text_col="#FFFFFF",
+                         output_fldr=paste0(root_fldr, "/Output/S2/05_Pixels_Snowmelt/"),
+                         file_name="GIF_NDSI_masked")
+      
+      # #(c): GIF of NDVI-images
+      #    
+      #    #Transform NDVI-band to RGB bands
+      #    s2_clouds_filtered_ndvi <- s2_clouds_filtered$map(ee_utils_pyfunc(function(image){
+      #      f_band_to_RGB(img=image, band='NDVI', min_value=-0.25, max_value=1, palette=c("#cccccc", "#f46d43", "#fdae61", "#fee08b", "#d9ef8b", "#a6d96a", "#66bd63", "#1a9850"))}))
+      #    
+      #    #Create gif of the transformed NDVI-band
+      #    f_img_col_to_gif(img_col=s2_clouds_filtered_ndvi,  #image collection
+      #                     RGB_bands=c("vis-red", "vis-green", "vis-blue"), #names of RGB-bands in image collection
+      #                     shapefile=aoi_Shapefile, #shapefile of area of interest
+      #                     centroid_buffer_m=0, #buffer zone surrounding centroid of shapefile in meters (to enlarge area for GIF)
+      #                     gif_dimensions=gif_max_pixels, #Maximum dimensions of GIF (pixels)
+      #                     gif_fps=5, #Frames per second of GIF
+      #                     gif_min=0, #Value to map to 0 (to improve contrast). A good rule of thumb is to set min to values that represent the 2nd percentile of the data
+      #                     gif_max=255, #Value to map to 255 (to improve contrast). A good rule of thumb is to set max to values that represent the 98th percentile of the data
+      #                     gif_gamma=c(1, 1, 1), #Gamma correction factors (one for each band)
+      #                     gif_crs='EPSG:3857', #CRS project of the output
+      #                     gif_text_position="northwest", #Location of text (datetime string)
+      #                     gif_text_position_adjustment="+0+0", #Small scale adjustment of text in meters
+      #                     gif_text_size=14, #Size of text
+      #                     gif_text_col="#FFFFFF",
+      #                     output_fldr=paste0(root_fldr, "/Output/S2/05_Pixels_Snowmelt/"),
+      #                     file_name="GIF_NDVI_masked")
+      # 
+      # #(d): GIF of NDMI-images
+      #    
+      #    #Transform NDMI-band to RGB bands
+      #    s2_clouds_filtered_ndmi <- s2_clouds_filtered$map(ee_utils_pyfunc(function(image){
+      #      f_band_to_RGB(img=image, band='NDMI', min_value=-0.75, max_value=1, palette=c("#d73027", "#f46d43", "#fdae61", "#fee08b", "#d9ef8b", "#a6d96a", "#66bd63", "#1a9850", "#6ad99e", "#387ad9", "#003dd6"))}))
+      #    
+      #    #Create gif of the transformed NDMI-band
+      #    f_img_col_to_gif(img_col=s2_clouds_filtered_ndmi,  #image collection
+      #                     RGB_bands=c("vis-red", "vis-green", "vis-blue"), #names of RGB-bands in image collection
+      #                     shapefile=aoi_Shapefile, #shapefile of area of interest
+      #                     centroid_buffer_m=0, #buffer zone surrounding centroid of shapefile in meters (to enlarge area for GIF)
+      #                     gif_dimensions=gif_max_pixels, #Maximum dimensions of GIF (pixels)
+      #                     gif_fps=5, #Frames per second of GIF
+      #                     gif_min=0, #Value to map to 0 (to improve contrast). A good rule of thumb is to set min to values that represent the 2nd percentile of the data
+      #                     gif_max=255, #Value to map to 255 (to improve contrast). A good rule of thumb is to set max to values that represent the 98th percentile of the data
+      #                     gif_gamma=c(1, 1, 1), #Gamma correction factors (one for each band)
+      #                     gif_crs='EPSG:3857', #CRS project of the output
+      #                     gif_text_position="northwest", #Location of text (datetime string)
+      #                     gif_text_position_adjustment="+0+0", #Small scale adjustment of text in meters
+      #                     gif_text_size=14, #Size of text
+      #                     gif_text_col="#FFFFFF",
+      #                     output_fldr=paste0(root_fldr, "/Output/S2/05_Pixels_Snowmelt/"),
+      #                     file_name="GIF_NDMI_masked")
+      # 
+      # #(e): GIF of NDWI-images
+      #    
+      #    #Transform NDWI-band to RGB bands
+      #    s2_clouds_filtered_ndwi <- s2_clouds_filtered$map(ee_utils_pyfunc(function(image){
+      #      f_band_to_RGB(img=image, band='NDWI', min_value=-0.5, max_value=1, palette=c('#000000', '#0dffff', '#0524ff', '#ffffff'))}))
+      #    
+      #    #Create gif of the transformed NDWI-band
+      #    f_img_col_to_gif(img_col=s2_clouds_filtered_ndwi,  #image collection
+      #                     RGB_bands=c("vis-red", "vis-green", "vis-blue"), #names of RGB-bands in image collection
+      #                     shapefile=aoi_Shapefile, #shapefile of area of interest
+      #                     centroid_buffer_m=0, #buffer zone surrounding centroid of shapefile in meters (to enlarge area for GIF)
+      #                     gif_dimensions=gif_max_pixels, #Maximum dimensions of GIF (pixels)
+      #                     gif_fps=5, #Frames per second of GIF
+      #                     gif_min=0, #Value to map to 0 (to improve contrast). A good rule of thumb is to set min to values that represent the 2nd percentile of the data
+      #                     gif_max=255, #Value to map to 255 (to improve contrast). A good rule of thumb is to set max to values that represent the 98th percentile of the data
+      #                     gif_gamma=c(1, 1, 1), #Gamma correction factors (one for each band)
+      #                     gif_crs='EPSG:3857', #CRS project of the output
+      #                     gif_text_position="northwest", #Location of text (datetime string)
+      #                     gif_text_position_adjustment="+0+0", #Small scale adjustment of text in meters
+      #                     gif_text_size=14, #Size of text
+      #                     gif_text_col="#FFFFFF",
+      #                     output_fldr=paste0(root_fldr, "/Output/S2/05_Pixels_Snowmelt/"),
+      #                     file_name="GIF_NDWI_masked")
+      
+    }
+      
+##################################################################################################################################
+        
+#VIII: Calculate the date of snowmelt for every 10mx10m pixel within the study area by fitting a GAM through the NDSI data
         
 ##################################################################################################################################            
          

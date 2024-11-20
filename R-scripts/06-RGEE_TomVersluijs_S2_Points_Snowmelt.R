@@ -33,7 +33,7 @@
 #issue because no shapefile is required as input. The downside of the current script is that it might take significantly longer to 
 #run than script '08-RGEE_TomVersluijs_S2_Shapefile_Points_Snowmelt'.
 
-#Copyright Tom Versluijs 2024-10-25. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
+#Copyright Tom Versluijs 2024-11-19. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
 
 #Before running this script make sure to install RGEE according to the instructions in script "00-RGEE_TomVersluijs_Installation.R". 
 #Note that a GoogleDrive is required. Important: make sure to run this script from within the "RGEE_Snowmelt.Rproj" project file.
@@ -58,7 +58,7 @@
        #renv::restore() #revert to last version of R-packages used to successfully run this script (optional).
        utils::install.packages("pacman")
        library(pacman)
-       p_load(sf, rgee, ggplot2, mgcv, googledrive, dplyr, tidyr, foreach, parallel, doSNOW, gridExtra)
+       p_load(sf, rgee, ggplot2, mgcv, googledrive, dplyr, tidyr, foreach, parallel, doSNOW, gridExtra, rgeeExtra, magick)
 
       #(2): Define ggplot2 plotting theme
        theme_tom <- function(){
@@ -224,6 +224,13 @@
      #Should counts of the number of unmasked pixels per day of year within the shapefile area be conducted (increases computation time)
      pixel_counts=TRUE
      
+   #(j): GIF animations
+     
+     #Should GIF animations be constructed (increases computation time) 
+     gif_output=FALSE
+     
+     #Maximum dimension (in pixels) of GIF
+     gif_max_pixels=300
      
 ##################################################################################################################################
           
@@ -440,7 +447,8 @@
        map(getNDSI)$
        map(getNDVI)$
        map(getNDMI)$
-       map(getNDWI)      
+       map(getNDWI)$
+       map(add_Date)
     
     # #Plot the first image in s2_col (for Debugging):
     #  image <- s2_col$filterDate(paste0(year_ID, "-06-17"), end_date)$first()
@@ -449,19 +457,60 @@
     # Map$setCenter(coordinates_point[1], coordinates_point[2], 10)
     # Map$addLayer(image, list(bands=c("B4", "B3", "B2"), min=100, max=8000, gamma=c(1.9, 1.7, 1.7)), 'TRUE COLOR')+
     #   Map$addLayer(image, list(bands=c("NDSI"), min=-1, max=1.5, palette=c('black', '0dffff', '0524ff', 'ffffff')), 'NDSI')+
-    #   Map$addLayer(image, list(bands=c("NDVI"),min=-1, max=1, palette=c('#FF0000','#00FF00')), 'NDVI')+
-    #   Map$addLayer(image, list(bands=c("NDMI"),min=-1, max=1, palette=c('000000', '0dffff', '0524ff', 'ffffff')), 'NDMI')+
-    #   Map$addLayer(image, list(bands=c("NDWI"),min=0, max=1, palette=c('000000', '0dffff', '0524ff', 'ffffff')), 'NDWI')
+    #   #Map$addLayer(image, list(bands=c("NDVI"),min=-1, max=1, palette=c('#FF0000','#00FF00')), 'NDVI')+
+    #   #Map$addLayer(image, list(bands=c("NDMI"),min=-1, max=1, palette=c('000000', '0dffff', '0524ff', 'ffffff')), 'NDMI')+
+    #   #Map$addLayer(image, list(bands=c("NDWI"),min=0, max=1, palette=c('000000', '0dffff', '0524ff', 'ffffff')), 'NDWI')+
+    #   Map$addLayer(aoi, list(color="grey"), name='Bounding Box')+
+    #   Map$addLayer(aoi_Shapefile, list(color="red"), name='Study area')+
+    #   Map$addLayer(coordinates_point, list(color="black"), name='Central point') 
     
-    #Create a timeseries gif of RGB images for the area of interest (For debugging)
-    
-      # #Check number of images in collection
-      # s2_col$size()$getInfo()
-
-      # #Create a timelapse video of RGB band
-      # videoArgs <- list(dimensions=200, region=aoi,framesPerSecond=5, crs='EPSG:3857', bands=c("B4", "B3", "B2"), min=0, max=10000, gamma=c(1.9, 1.7, 1.7))
-      # tryCatch({browseURL(s2_col$getVideoThumbURL(videoArgs))}, error = function(cond){return("Too many pixels. Reduce dimensions.")})
-    
+    #Create a timeseries GIF of unmasked RGB and NDSI images for aoi_Shapefile
+     if(gif_output==TRUE){
+       
+       #(a): GIF of RGB-images
+       f_img_col_to_gif(img_col=s2_col,  #image collection
+                        RGB_bands=c("B4", "B3", "B2"), #names of RGB-bands in image collection
+                        shapefile=aoi_Shapefile, #shapefile of area of interest
+                        centroid_buffer_m=0, #buffer zone surrounding centroid of shapefile in meters (to enlarge area for GIF)
+                        gif_dimensions=gif_max_pixels, #Maximum dimensions of GIF (pixels)
+                        gif_fps=5, #Frames per second of GIF
+                        gif_min=0, #Value to map to 0 (to improve contrast). A good rule of thumb is to set min to values that represent the 2nd percentile of the data
+                        gif_max=12000, #Value to map to 255 (to improve contrast). A good rule of thumb is to set max to values that represent the 98th percentile of the data
+                        gif_gamma=c(1.9, 1.7, 1.7), #Gamma correction factors (one for each band)
+                        gif_crs='EPSG:3857', #CRS project of the output
+                        gif_text_position="northwest", #Location of text (datetime string)
+                        gif_text_position_adjustment="+0+0", #Small scale adjustment of text in meters
+                        gif_text_size=14, #Size of text
+                        gif_text_col="#FFFFFF",
+                        output_fldr=paste0(here(), "/Output/S2/06_Points_Snowmelt/DataLocations/"),
+                        file_name=paste0("_", Location_ID, "_GIF_RGB"))
+       
+       #(b): GIF of NDSI-images
+       
+       #Transform NDSI-band to RGB bands
+       s2_col_ndsi <- s2_col$map(ee_utils_pyfunc(function(image){
+         f_band_to_RGB(img=image, band='NDSI', min_value=-1, max_value=1.5, palette=c('#000000', '#0dffff', '#0524ff', '#ffffff'))}))
+       
+       #Create gif of the transformed NDSI-band
+       f_img_col_to_gif(img_col=s2_col_ndsi,  #image collection
+                        RGB_bands=c("vis-red", "vis-green", "vis-blue"), #names of RGB-bands in image collection
+                        shapefile=aoi_Shapefile, #shapefile of area of interest
+                        centroid_buffer_m=0, #buffer zone surrounding centroid of shapefile in meters (to enlarge area for GIF)
+                        gif_dimensions=gif_max_pixels, #Maximum dimensions of GIF (pixels)
+                        gif_fps=5, #Frames per second of GIF
+                        gif_min=0, #Value to map to 0 (to improve contrast). A good rule of thumb is to set min to values that represent the 2nd percentile of the data
+                        gif_max=255, #Value to map to 255 (to improve contrast). A good rule of thumb is to set max to values that represent the 98th percentile of the data
+                        gif_gamma=c(1, 1, 1), #Gamma correction factors (one for each band)
+                        gif_crs='EPSG:3857', #CRS project of the output
+                        gif_text_position="northwest", #Location of text (datetime string)
+                        gif_text_position_adjustment="+0+0", #Small scale adjustment of text in meters
+                        gif_text_size=14, #Size of text
+                        gif_text_col="#FFFFFF",
+                        output_fldr=paste0(here(), "/Output/S2/06_Points_Snowmelt/DataLocations/"),
+                        file_name=paste0("_", Location_ID, "_GIF_NDSI"))
+       
+     }
+        
  #(D): Filter and mask clouds within the image collection
     
     #There are many images that are almost fully covered in dense clouds. We thus first filter and mask clouds in the image collection.
@@ -481,8 +530,6 @@
          map(Add_CloudFraction)$
          #Add NULL to those images in which cloudfraction could not be calculated
          map(Add_NULL_CloudFraction)$
-         #Add date and time characteristics to each image
-         map(add_Date)$
          #Add 'seconds since 1st of january' as a new band to each image to make sure that each pixel in the composite image can be traced back to the original image.
          map(add_Time)
     
@@ -533,11 +580,7 @@
           filter(ee$Filter$lt('CloudFraction', max_cloud_fraction))$
           #Apply cloudmask for individual pixels
           map(Add_CloudMask)
-    
-       # #Create timelapse video of the cloud filtered/masked RGB images (for debugging)
-       # videoArgs <- list(dimensions=200, region=aoi,framesPerSecond=5, crs='EPSG:3857', bands=c("B4", "B3", "B2"), min=100, max=10000, gamma=c(1.9, 1.7, 1.7))
-       # tryCatch({browseURL(s2_clouds_filtered$getVideoThumbURL(videoArgs))}, error = function(cond){return("Too many pixels. Reduce dimensions.")})
-    
+       
        }
      if(mask_clouds==FALSE){
       
@@ -546,7 +589,6 @@
       
        #Add Date and Time characteristics to each image
        s2_clouds_filtered <- s2_col$
-         map(add_Date)$
          #Add 'seconds since 1st of january' as a new band to each image to make sure that each pixel in the composite image can be traced back to the original image.
          map(add_Time)
       
@@ -607,10 +649,6 @@
        
          #Apply the final watermask:
          s2_clouds_filtered <- s2_clouds_filtered$map(Add_WaterMask)
-      
-       # #Create a timeseries GIF of RGB images of the water and cloud filtered image collection (for debugging)
-       # videoArgs <- list(dimensions=200, region=aoi,framesPerSecond=5, crs='EPSG:3857', bands=c("B4", "B3", "B2"), min=0, max=10000, gamma=c(1.9, 1.7, 1.7))
-       # tryCatch({browseURL(s2_clouds_filtered$getVideoThumbURL(videoArgs))}, error = function(cond){return("Too many pixels. Reduce dimensions.")})
       
       }
      if(mask_water==FALSE){
@@ -738,12 +776,7 @@
      s2_col_composite <- s2_clouds_filtered
      
    }
-       
-    # #Create a timelapse video of RGB band
-    # videoArgs <- list(dimensions=400, region=aoi, framesPerSecond=5, crs='EPSG:3857', bands=c("B4", "B3", "B2"), min=0, max=10000, gamma=c(1.9, 1.7, 1.7))
-    # tryCatch({browseURL(s2_col_composite$getVideoThumbURL(videoArgs)) }, error = function(cond){return("Too many pixels. Reduce dimensions.")})
-    # #Note that missing pixels are actually not recorded by the satellite and are NOT caused by coding errors    
-
+    
  #(G): Count the total number of unmasked pixels and the total number of pixels per doy within aoi_Shapefile
      
     if(pixel_counts==TRUE){ 
@@ -810,7 +843,127 @@
      
     }
      
-  #(H): Extract Sentinel-2 mean band values (NDSI, NDVI, NDMI) within the buffer zone of 'Location' for all images in the image collection
+ #(H): Create timeseries GIF animations
+     
+    if(gif_output==TRUE){
+       
+       #(a): GIF of RGB-images
+       f_img_col_to_gif(img_col=s2_col_composite,  #image collection
+                        RGB_bands=c("B4", "B3", "B2"), #names of RGB-bands in image collection
+                        shapefile=aoi_Shapefile, #shapefile of area of interest
+                        centroid_buffer_m=0, #buffer zone surrounding centroid of shapefile in meters (to enlarge area for GIF)
+                        gif_dimensions=gif_max_pixels, #Maximum dimensions of GIF (pixels)
+                        gif_fps=5, #Frames per second of GIF
+                        gif_min=0, #Value to map to 0 (to improve contrast). A good rule of thumb is to set min to values that represent the 2nd percentile of the data
+                        gif_max=12000, #Value to map to 255 (to improve contrast). A good rule of thumb is to set max to values that represent the 98th percentile of the data
+                        gif_gamma=c(1.9, 1.7, 1.7), #Gamma correction factors (one for each band)
+                        gif_crs='EPSG:3857', #CRS project of the output
+                        gif_text_position="northwest", #Location of text (datetime string)
+                        gif_text_position_adjustment="+0+0", #Small scale adjustment of text in meters
+                        gif_text_size=14, #Size of text
+                        gif_text_col="#FFFFFF",
+                        output_fldr=paste0(here(), "/Output/S2/06_Points_Snowmelt/DataLocations/"),
+                        file_name=paste0("_", Location_ID, "_GIF_RGB_masked"))
+       
+       #(b): GIF of NDSI-images
+       
+         #Transform NDSI-band to RGB bands
+         s2_col_composite_ndsi <- s2_col_composite$map(ee_utils_pyfunc(function(image){
+           f_band_to_RGB(img=image, band='NDSI', min_value=-1, max_value=1.5, palette=c('#000000', '#0dffff', '#0524ff', '#ffffff'))}))
+         
+         #Create gif of the transformed NDSI-band
+         f_img_col_to_gif(img_col=s2_col_composite_ndsi,  #image collection
+                          RGB_bands=c("vis-red", "vis-green", "vis-blue"), #names of RGB-bands in image collection
+                          shapefile=aoi_Shapefile, #shapefile of area of interest
+                          centroid_buffer_m=0, #buffer zone surrounding centroid of shapefile in meters (to enlarge area for GIF)
+                          gif_dimensions=gif_max_pixels, #Maximum dimensions of GIF (pixels)
+                          gif_fps=5, #Frames per second of GIF
+                          gif_min=0, #Value to map to 0 (to improve contrast). A good rule of thumb is to set min to values that represent the 2nd percentile of the data
+                          gif_max=255, #Value to map to 255 (to improve contrast). A good rule of thumb is to set max to values that represent the 98th percentile of the data
+                          gif_gamma=c(1, 1, 1), #Gamma correction factors (one for each band)
+                          gif_crs='EPSG:3857', #CRS project of the output
+                          gif_text_position="northwest", #Location of text (datetime string)
+                          gif_text_position_adjustment="+0+0", #Small scale adjustment of text in meters
+                          gif_text_size=14, #Size of text
+                          gif_text_col="#FFFFFF",
+                          output_fldr=paste0(here(), "/Output/S2/06_Points_Snowmelt/DataLocations/"),
+                          file_name=paste0("_", Location_ID, "_GIF_NDSI_masked"))
+       
+       # #(c): GIF of NDVI-images
+       #    
+       #    #Transform NDVI-band to RGB bands
+       #    s2_col_composite_ndvi <- s2_col_composite$map(ee_utils_pyfunc(function(image){
+       #      f_band_to_RGB(img=image, band='NDVI', min_value=-0.25, max_value=1, palette=c("#cccccc", "#f46d43", "#fdae61", "#fee08b", "#d9ef8b", "#a6d96a", "#66bd63", "#1a9850"))}))
+       #    
+       #    #Create gif of the transformed NDVI-band
+       #    f_img_col_to_gif(img_col=s2_col_composite_ndvi,  #image collection
+       #                     RGB_bands=c("vis-red", "vis-green", "vis-blue"), #names of RGB-bands in image collection
+       #                     shapefile=aoi_Shapefile, #shapefile of area of interest
+       #                     centroid_buffer_m=0, #buffer zone surrounding centroid of shapefile in meters (to enlarge area for GIF)
+       #                     gif_dimensions=gif_max_pixels, #Maximum dimensions of GIF (pixels)
+       #                     gif_fps=5, #Frames per second of GIF
+       #                     gif_min=0, #Value to map to 0 (to improve contrast). A good rule of thumb is to set min to values that represent the 2nd percentile of the data
+       #                     gif_max=255, #Value to map to 255 (to improve contrast). A good rule of thumb is to set max to values that represent the 98th percentile of the data
+       #                     gif_gamma=c(1, 1, 1), #Gamma correction factors (one for each band)
+       #                     gif_crs='EPSG:3857', #CRS project of the output
+       #                     gif_text_position="northwest", #Location of text (datetime string)
+       #                     gif_text_position_adjustment="+0+0", #Small scale adjustment of text in meters
+       #                     gif_text_size=14, #Size of text
+       #                     gif_text_col="#FFFFFF",
+       #                     output_fldr=paste0(here(), "/Output/S2/06_Points_Snowmelt/DataLocations/"),
+       #                     file_name=paste0("_", Location_ID, "_GIF_NDVI_masked"))
+       # 
+       # #(d): GIF of NDMI-images
+       #    
+       #    #Transform NDMI-band to RGB bands
+       #    s2_col_composite_ndmi <- s2_col_composite$map(ee_utils_pyfunc(function(image){
+       #      f_band_to_RGB(img=image, band='NDMI', min_value=-0.75, max_value=1, palette=c("#d73027", "#f46d43", "#fdae61", "#fee08b", "#d9ef8b", "#a6d96a", "#66bd63", "#1a9850", "#6ad99e", "#387ad9", "#003dd6"))}))
+       #    
+       #    #Create gif of the transformed NDMI-band
+       #    f_img_col_to_gif(img_col=s2_col_composite_ndmi,  #image collection
+       #                     RGB_bands=c("vis-red", "vis-green", "vis-blue"), #names of RGB-bands in image collection
+       #                     shapefile=aoi_Shapefile, #shapefile of area of interest
+       #                     centroid_buffer_m=0, #buffer zone surrounding centroid of shapefile in meters (to enlarge area for GIF)
+       #                     gif_dimensions=gif_max_pixels, #Maximum dimensions of GIF (pixels)
+       #                     gif_fps=5, #Frames per second of GIF
+       #                     gif_min=0, #Value to map to 0 (to improve contrast). A good rule of thumb is to set min to values that represent the 2nd percentile of the data
+       #                     gif_max=255, #Value to map to 255 (to improve contrast). A good rule of thumb is to set max to values that represent the 98th percentile of the data
+       #                     gif_gamma=c(1, 1, 1), #Gamma correction factors (one for each band)
+       #                     gif_crs='EPSG:3857', #CRS project of the output
+       #                     gif_text_position="northwest", #Location of text (datetime string)
+       #                     gif_text_position_adjustment="+0+0", #Small scale adjustment of text in meters
+       #                     gif_text_size=14, #Size of text
+       #                     gif_text_col="#FFFFFF",
+       #                     output_fldr=paste0(here(), "/Output/S2/06_Points_Snowmelt/DataLocations/"),
+       #                     file_name=paste0("_", Location_ID, "_GIF_NDMI_masked"))
+       # 
+       # #(e): GIF of NDWI-images
+       #    
+       #    #Transform NDWI-band to RGB bands
+       #    s2_col_composite_ndwi <- s2_col_composite$map(ee_utils_pyfunc(function(image){
+       #      f_band_to_RGB(img=image, band='NDWI', min_value=-0.5, max_value=1, palette=c('#000000', '#0dffff', '#0524ff', '#ffffff'))}))
+       #    
+       #    #Create gif of the transformed NDWI-band
+       #    f_img_col_to_gif(img_col=s2_col_composite_ndwi,  #image collection
+       #                     RGB_bands=c("vis-red", "vis-green", "vis-blue"), #names of RGB-bands in image collection
+       #                     shapefile=aoi_Shapefile, #shapefile of area of interest
+       #                     centroid_buffer_m=0, #buffer zone surrounding centroid of shapefile in meters (to enlarge area for GIF)
+       #                     gif_dimensions=gif_max_pixels, #Maximum dimensions of GIF (pixels)
+       #                     gif_fps=5, #Frames per second of GIF
+       #                     gif_min=0, #Value to map to 0 (to improve contrast). A good rule of thumb is to set min to values that represent the 2nd percentile of the data
+       #                     gif_max=255, #Value to map to 255 (to improve contrast). A good rule of thumb is to set max to values that represent the 98th percentile of the data
+       #                     gif_gamma=c(1, 1, 1), #Gamma correction factors (one for each band)
+       #                     gif_crs='EPSG:3857', #CRS project of the output
+       #                     gif_text_position="northwest", #Location of text (datetime string)
+       #                     gif_text_position_adjustment="+0+0", #Small scale adjustment of text in meters
+       #                     gif_text_size=14, #Size of text
+       #                     gif_text_col="#FFFFFF",
+       #                     output_fldr=paste0(here(), "/Output/S2/06_Points_Snowmelt/DataLocations/"),
+       #                     file_name=paste0("_", Location_ID, "_GIF_NDWI_masked"))
+       
+     }
+    
+ #(I): Extract Sentinel-2 mean band values (NDSI, NDVI, NDMI) within the buffer zone of 'Location' for all images in the image collection
 
     if("avg_NDSI" %in% method){
 
@@ -917,7 +1070,7 @@
 
      }
    
-  #(I): Extract the fraction of snow covered pixels within the buffer zone of 'Location' for all images in the image collection
+ #(J): Extract the fraction of snow covered pixels within the buffer zone of 'Location' for all images in the image collection
     
     if("snowfraction" %in% method){ 
      
@@ -1037,7 +1190,7 @@
 
     }
  
-  #(J): Calculate the date of snowmelt for every pixel within aoi_Shapefile by fitting a GAM through the pixel-specific NDSI data
+ #(K): Calculate the date of snowmelt for every pixel within aoi_Shapefile by fitting a GAM through the pixel-specific NDSI data
 
     if("pixel_gam" %in% method){
 

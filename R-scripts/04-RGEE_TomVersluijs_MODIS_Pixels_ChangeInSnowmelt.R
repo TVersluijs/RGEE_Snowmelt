@@ -5,7 +5,7 @@
 #snowmelt over the years for each pixel (i.e. slope of linear regression) and another image with the average timing of snowmelt 
 #over the years for each pixel (i.e. intercept of linear regression).
 
-#Copyright Tom Versluijs 2024-10-25. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
+#Copyright Tom Versluijs 2024-11-19. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
 
 #Before running this script make sure to install RGEE according to the instructions in script "00-RGEE_TomVersluijs_Installation.R". 
 #Note that a GoogleDrive is required. Important: make sure to run this script from within the "RGEE_Snowmelt.Rproj" project file.
@@ -30,7 +30,7 @@
        #renv::restore() #revert to last version of R-packages used to successfully run this script (optional).
        utils::install.packages("pacman")
        library(pacman)
-       p_load(sf, rgee, ggplot2, mgcv, googledrive, dplyr, foreach, parallel, doSNOW, gridExtra)    
+       p_load(sf, rgee, ggplot2, mgcv, googledrive, dplyr, foreach, parallel, doSNOW, gridExtra, rgeeExtra, magick)    
 
       #(2): Define ggplot2 plotting theme
       theme_tom <- function(){
@@ -42,7 +42,7 @@
           complete = TRUE)}
       
       #(3): Load auxiliary functions
-      source_files <- list.files(path=paste0(here(), "/Input"), full.names=TRUE, recursive = TRUE, pattern = "0-RGEE_MODIS_AuxiliaryFunctions_SnowmeltChangeAndIntercept.R")
+      source_files <- list.files(path=paste0(here(), "/Input"), full.names=TRUE, recursive = TRUE, pattern = "0-RGEE_MODIS_AuxiliaryFunctions")
       sapply(source_files, source, chdir = TRUE) ; rm(source_files)
       
       #(4): Initialize earth engine and google drive
@@ -92,6 +92,14 @@
      #Define which MODIS cloud masking algorithm has been used for each year in the analysis ("PGE11", "MOD35", or "Combined)
      MODIS_cloud_masking_algorithm = 'PGE11' #default is PGE11
 
+   #(e): GIF animations
+     
+     #Should a GIF animation be constructed (increases computation time)
+     gif_output=FALSE
+     
+     #Maximum dimension (in pixels) of GIF
+     gif_max_pixels=600
+     
 
 #################################################################################################################
    
@@ -242,7 +250,7 @@
               seed=23, #Create reproducable results using the same random seed
               dropNulls=FALSE) #If TRUE, the result is post-filtered to drop features that have a NULL value for all bands
             
-            #Make sure there is a NDSI value at each feature within the feature collection (now redundant due to dropNulls=T above):
+            #Make sure there is a doy_snowmelt value at each feature within the feature collection (now redundant due to dropNulls=T above):
             #Set the band value to a no data value of -9999 for all features where the band value is NULL.
             FC_image_clipped <- FC_image_clipped$map(function(feature){
               Year <- ee$List(list(feature$get('Year'), -9999))$reduce(ee$Reducer$firstNonNull())
@@ -293,13 +301,33 @@
          }
        
        #Create a RGB-timelapse video of (clipped) MODIS snowmelt images
-       visFun_Snowmelt <-  function(img) {
-        return(img$visualize(bands="doy_snowmelt", min=start_date_doy, max=end_date_doy, palette=c('green', 'yellow', 'red'))$copyProperties(img, img$propertyNames()))
-        }
-       MODIS_images_snowmelt_RGB <- MODIS_images_snowmelt$map(clip_to_aoi_Outline)$map(visFun_Snowmelt)
-       videoArgs <- list(dimensions=600, region=aoi, framesPerSecond=4, crs='EPSG:3857', bands=c('vis-red', 'vis-green', 'vis-blue'), min=0, max=255)
-       tryCatch({browseURL(MODIS_images_snowmelt_RGB$getVideoThumbURL(videoArgs)) }, error = function(cond){return("Too many pixels. Reduce dimensions.")})
-      
+       if(gif_output==TRUE){
+       
+         #Transform doy_snowmelt-band to RGB bands
+         MODIS_images_snowmelt_gif <- MODIS_images_snowmelt$map(ee_utils_pyfunc(function(image){
+           f_band_to_RGB(img=image, band='doy_snowmelt', min_value=start_date_doy, max_value=end_date_doy, palette=c('green', 'yellow', 'red'))}))
+         
+         #Create gif of the transformed doy_snowmelt-band
+         f_img_col_to_gif(img_col=MODIS_images_snowmelt_gif,  #image collection
+                          RGB_bands=c("vis-red", "vis-green", "vis-blue"), #names of RGB-bands in image collection
+                          shapefile=aoi_Shapefile, #IF ERROR THEN USE aoi. shapefile of area of interest
+                          centroid_buffer_m=0, #buffer zone surrounding centroid of shapefile in meters (to enlarge area for GIF)
+                          gif_dimensions=gif_max_pixels, #Maximum dimensions of GIF (pixels)
+                          gif_fps=4, #Frames per second of GIF
+                          gif_min=0, #Value to map to 0 (to improve contrast). A good rule of thumb is to set min to values that represent the 2nd percentile of the data
+                          gif_max=255, #Value to map to 255 (to improve contrast). A good rule of thumb is to set max to values that represent the 98th percentile of the data
+                          gif_gamma=c(1, 1, 1), #Gamma correction factors (one for each band)
+                          gif_crs='EPSG:3857', #CRS project of the output
+                          gif_text_property="Year_property", #Name of property in each image which will be used to annotate each frame of the GIF
+                          gif_text_position="northwest", #Location of text (datetime string)
+                          gif_text_position_adjustment="+0+0", #Small scale adjustment of text in meters
+                          gif_text_size=14, #Size of text
+                          gif_text_col="#FFFFFF",
+                          output_fldr=paste0(root_fldr, "/Output/MODIS/04_Pixels_ChangeInSnowmelt/"),
+                          file_name="GIF_doy_snowmelt")
+         
+         }
+         
      #(B): Transform the feature collection for region 'aoi' to a dataframe where each row contains a pixel_ID, year and date of snow melt:
        
        #create a current timestamp to prevent identical names on Google Drive

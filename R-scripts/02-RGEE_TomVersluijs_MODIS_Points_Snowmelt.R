@@ -22,8 +22,7 @@
 #which thus still includes all unfiltered noise. It is harder to justify the avg_NDSI method, because it is rather unclear
 #what this average NDSI value entails.
 
-
-#Copyright Tom Versluijs 2024-10-25. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
+#Copyright Tom Versluijs 2024-11-19. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
 
 #Before running this script make sure to install RGEE according to the instructions in script "00-RGEE_TomVersluijs_Installation.R". 
 #Note that a GoogleDrive is required. Important: make sure to run this script from within the "RGEE_Snowmelt.Rproj" project file.
@@ -48,7 +47,7 @@
        #renv::restore() #revert to last version of R-packages used to successfully run this script (optional).
        utils::install.packages("pacman")
        library(pacman)
-       p_load(sf, rgee, ggplot2, mgcv, googledrive, dplyr, tidyr, foreach, parallel, doSNOW, gridExtra)       
+       p_load(sf, rgee, ggplot2, mgcv, googledrive, dplyr, tidyr, foreach, parallel, doSNOW, gridExtra, rgeeExtra, magick)       
 
       #(2): Define ggplot2 plotting theme
        theme_tom <- function(){
@@ -174,6 +173,13 @@
     #Should counts of the number of unmasked pixels per day of year within the shapefile area be conducted (increases computation time)
     pixel_counts=TRUE
     
+  #(i): GIF animations
+    
+    #Should GIF animations be constructed (increases computation time)
+    gif_output=FALSE
+    
+    #Maximum dimension (in pixels) of GIF
+    gif_max_pixels=300
 
 ##################################################################################################################################
          
@@ -361,29 +367,68 @@
        map(getNDSI)$
        map(getNDVI)$
        map(getNDMI)$
-       map(getNDWI)
+       map(getNDWI)$
+       map(add_Date)
 
-    # #Plot the first image in MODIS_col (for Debugging):
+    # # #Plot all layers (for debugging)
     #  image <- MODIS_col$filterDate(paste0(year_ID, "-06-10"), end_date)$first()
-    # 
-    # #Plot an RGB, NDSI and NDVI, NDMI and NDWI image for the first extracted satellite image
-    #  Map$setCenter(coordinates_point[1], coordinates_point[2], 10)
-    #  Map$addLayer(image,list(bands=c("sur_refl_b01", "sur_refl_b04", "sur_refl_b03"), min=100, max=8000, gamma=c(1.9, 1.7, 1.7)), 'TRUE COLOR')+ 
-    #   Map$addLayer(image, list(bands=c("NDSI"), min=-1, max=1.5, palette=c('black', '0dffff', '0524ff', 'ffffff')), 'NDSI')+
-    #   Map$addLayer(image, list(bands=c("NDVI"),min=-1, max=1, palette=c('#FF0000','#00FF00')), 'NDVI')+
-    #   Map$addLayer(image, list(bands=c("NDMI"),min=-1, max=1, palette=c('000000', '0dffff', '0524ff', 'ffffff')), 'NDMI')+
-    #   Map$addLayer(image, list(bands=c("NDWI"),min=0, max=1, palette=c('000000', '0dffff', '0524ff', 'ffffff')), 'NDWI')
-
-    #Create a timeseries gif of RGB images for the area of interest (For debugging)
-
-      # #Check number of images in collection
-      # MODIS_col$size()$getInfo()
-
-      # #Create a timelapse video of RGB band
-      # videoArgs <- list(dimensions=300, region=aoi,framesPerSecond=5, crs='EPSG:3857', bands=c("sur_refl_b01", "sur_refl_b04", "sur_refl_b03"), min=100, max=10000, gamma=c(1.9, 1.7, 1.7))
-      # tryCatch({browseURL(MODIS_col$getVideoThumbURL(videoArgs))}, error = function(cond){return("Too many pixels. Reduce dimensions.")})
+    #  Map$setCenter(coordinates_point$getInfo()$coordinates[1], coordinates_point$getInfo()$coordinates[2], 10)
+    #  Map$addLayer(image,list(bands=c("sur_refl_b01", "sur_refl_b04", "sur_refl_b03"), min=100, max=8000, gamma=c(1.9, 1.7, 1.7)), 'TRUE COLOR')+
+    #  Map$addLayer(image,list(bands=c("NDSI"), min=-1, max=1.5, palette=c('black', '0dffff', '0524ff', 'ffffff')), 'NDSI')+
+    #  #Map$addLayer(image,list(bands=c("NDVI"), min=-1, max=1, palette=c('#FF0000','#00FF00')), 'NDVI')+
+    #  #Map$addLayer(image,list(bands=c("NDWI"), min=0, max=1, palette=c('000000', '0dffff', '0524ff', 'ffffff')), 'NDWI')+
+    #  Map$addLayer(aoi, list(color="grey"), name='Bounding Box')+
+    #  Map$addLayer(aoi_Shapefile, list(color="red"), name='Study area')+
+    #  Map$addLayer(coordinates_point, list(color="black"), name='Central point') 
     
- #(D): Filter and mask clouds within the image collection
+ #(D): Create a timeseries GIF of unmasked RGB and NDSI images for aoi_Shapefile
+   if(gif_output==TRUE){
+     
+     #(a): GIF of RGB-images
+     f_img_col_to_gif(img_col=MODIS_col,  #image collection
+                      RGB_bands=c("sur_refl_b01", "sur_refl_b04", "sur_refl_b03"), #names of RGB-bands in image collection
+                      shapefile=aoi_Shapefile, #shapefile of area of interest
+                      centroid_buffer_m=0, #buffer zone surrounding centroid of shapefile in meters (to enlarge area for GIF)
+                      gif_dimensions=gif_max_pixels, #Maximum dimensions of GIF (pixels)
+                      gif_fps=5, #Frames per second of GIF
+                      gif_min=0, #Value to map to 0 (to improve contrast). A good rule of thumb is to set min to values that represent the 2nd percentile of the data
+                      gif_max=12000, #Value to map to 255 (to improve contrast). A good rule of thumb is to set max to values that represent the 98th percentile of the data
+                      gif_gamma=c(1.9, 1.7, 1.7), #Gamma correction factors (one for each band)
+                      gif_crs='EPSG:3857', #CRS project of the output
+                      gif_text_position="northwest", #Location of text (datetime string)
+                      gif_text_position_adjustment="+0+0", #Small scale adjustment of text in meters
+                      gif_text_size=14, #Size of text
+                      gif_text_col="#FFFFFF",
+                      output_fldr=paste0(here(), "/Output/MODIS/02_Points_Snowmelt/DataLocations/"),
+                      file_name=paste0("_", Location_ID, "_GIF_RGB"))
+     
+     #(b): GIF of NDSI-images
+     
+       #Transform NDSI-band to RGB bands
+       MODIS_col_ndsi <- MODIS_col$map(ee_utils_pyfunc(function(image){
+         f_band_to_RGB(img=image, band='NDSI', min_value=-1, max_value=1.5, palette=c('#000000', '#0dffff', '#0524ff', '#ffffff'))}))
+       
+       #Create gif of the transformed NDSI-band
+       f_img_col_to_gif(img_col=MODIS_col_ndsi,  #image collection
+                        RGB_bands=c("vis-red", "vis-green", "vis-blue"), #names of RGB-bands in image collection
+                        shapefile=aoi_Shapefile, #shapefile of area of interest
+                        centroid_buffer_m=0, #buffer zone surrounding centroid of shapefile in meters (to enlarge area for GIF)
+                        gif_dimensions=gif_max_pixels, #Maximum dimensions of GIF (pixels)
+                        gif_fps=5, #Frames per second of GIF
+                        gif_min=0, #Value to map to 0 (to improve contrast). A good rule of thumb is to set min to values that represent the 2nd percentile of the data
+                        gif_max=255, #Value to map to 255 (to improve contrast). A good rule of thumb is to set max to values that represent the 98th percentile of the data
+                        gif_gamma=c(1, 1, 1), #Gamma correction factors (one for each band)
+                        gif_crs='EPSG:3857', #CRS project of the output
+                        gif_text_position="northwest", #Location of text (datetime string)
+                        gif_text_position_adjustment="+0+0", #Small scale adjustment of text in meters
+                        gif_text_size=14, #Size of text
+                        gif_text_col="#FFFFFF",
+                        output_fldr=paste0(here(), "/Output/MODIS/02_Points_Snowmelt/DataLocations/"),
+                        file_name=paste0("_", Location_ID, "_GIF_NDSI"))
+     
+     }
+     
+ #(E): Filter and mask clouds within the image collection
 
     #There are many images that are almost fully covered in dense clouds. We thus first filter and mask clouds in the image collection.
     #We delete all images with a cloud cover fraction >= max_cloud_fraction. In the remaining images we mask all pixels that are
@@ -409,9 +454,7 @@
          #Add the fraction of cloud-covered pixels within the area of interest as image property
          map(AddCloudFraction)$
          #Add NULL to those images in which cloudfraction could not be calculated
-         map(AddNULLCloudFraction)$
-         #Add date characteristics to each image
-         map(add_Date)
+         map(AddNULLCloudFraction)
 
         # #Check if Cloud information has been added to the properties of each image (for debugging)
         # MODIS_col$first()$propertyNames()$getInfo()
@@ -473,21 +516,15 @@
           filter(ee$Filter$lt(clouds_fraction, max_cloud_fraction))$
           #Apply cloudmask for individual pixels
           map(AddCloudMask)
-
-       # #Create timelapse video of the cloud filtered/masked RGB images (for debugging)
-       #  videoArgs <- list(dimensions=380, region=aoi,framesPerSecond=5, crs='EPSG:3857', bands=c("sur_refl_b01", "sur_refl_b04", "sur_refl_b03"), min=100, max=10000, gamma=c(1.9, 1.7, 1.7))
-       #  tryCatch({browseURL(MODIS_clouds_filtered$map(function(img){return(img$clipToCollection(aoi_Shapefile))})$getVideoThumbURL(videoArgs))}, error = function(cond){return("Too many pixels. Reduce dimensions.")})
-
+      
        }
      if(mask_clouds==FALSE){
 
        #print message
         print("Cloud masking = FALSE")
 
-       #Add Date and Time characteristics to each image
-       MODIS_clouds_filtered <- MODIS_col$
-         #Add date characteristics to each image
-         map(add_Date)
+       #Set MODIS_clouds_filtered equal to MODIS_col
+       MODIS_clouds_filtered <- MODIS_col
 
      }
 
@@ -496,7 +533,7 @@
      
     #Note that MODIS_clouds_filtered is not yet clipped by aoi_Shapefile (only by aoi)!
 
- #(E): Mask permanent waterbodies (ponds, lakes, rivers, sea) within the image collection   
+ #(F): Mask permanent waterbodies (ponds, lakes, rivers, sea) within the image collection   
     
     #Mask permanent waterbodies if mask_water==TRUE
      if(mask_water==TRUE){
@@ -525,10 +562,6 @@
          #Apply the final watermask:
          MODIS_clouds_filtered <- MODIS_clouds_filtered$map(Add_WaterMask_MODIS)
 
-         # #Create a timeseries GIF of RGB images of the water and cloud filtered image collection (for debugging)
-         # videoArgs <- list(dimensions=380, region=aoi,framesPerSecond=5, crs='EPSG:3857', bands=c("sur_refl_b01", "sur_refl_b04", "sur_refl_b03"), min=100, max=10000, gamma=c(1.9, 1.7, 1.7))
-         # tryCatch({browseURL(MODIS_clouds_filtered$getVideoThumbURL(videoArgs))}, error = function(cond){return("Too many pixels. Reduce dimensions.")})
-
        }
      if(mask_water==FALSE){
 
@@ -539,80 +572,200 @@
 
     #Note that MODIS_clouds_filtered is not yet clipped by aoi_Shapefile (only by aoi)!
     
- #(F): Create a composite image for each day by mosaicking all images from the that day    
+ #(G): Create a composite image for each day by mosaicking all images from the that day    
     
      #For Sentinel-2 data there might be days for which multiple satellite photos are available that can slightly overlap. In
      #that case we need to deal with these overlapping pixels and we can do that by making a composite image by selecting 
      #the overlaping pixel with e.g. the least cloudcover. In contrast, MODIS data by default already is composite image for 
      #each day, thus there is no need to conduct this step.
 
- #(G): Count the total number of unmasked pixels and the total number of pixels per doy within aoi_Shapefile
+ #(H): Count the total number of unmasked pixels and the total number of pixels per doy within aoi_Shapefile
      
      if(pixel_counts==TRUE){
      
-     #Add pixel counts within the area of interest to each separate image by mapping the pixel count functions over the image collection
-      MODIS_clouds_filtered <- MODIS_clouds_filtered$
-        #Count number of unmasked pixels within aoi_Shapefile
-        map(AddPixelCount)$
-        #Add NULL to those images in which pixel count could not be calculated
-        map(AddNULLPixelCount)
-     
-     #Extract pixel_counts of all images in image collection for aoi_Shapefile
-     
-       #create a current timestamp to prevent identical names on Google Drive
-        current_timestamp0 <- gsub('\\.', '', format(Sys.time(), "%y%m%d%H%M%OS2"))
+       #Add pixel counts within the area of interest to each separate image by mapping the pixel count functions over the image collection
+        MODIS_clouds_filtered <- MODIS_clouds_filtered$
+          #Count number of unmasked pixels within aoi_Shapefile
+          map(AddPixelCount)$
+          #Add NULL to those images in which pixel count could not be calculated
+          map(AddNULLPixelCount)
        
-       #We use ee_table_to_drive() to prevent memory limits
-        task_vector0 <- ee_table_to_drive(
-          collection = MODIS_clouds_filtered,
-          description = paste0(current_timestamp0, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_", Location_ID, "_Data_Pixel_Counts_polygon"),
-          fileFormat = "CSV",
-          selectors = c('doy', 'unmasked', 'total')
-          )
+       #Extract pixel_counts of all images in image collection for aoi_Shapefile
        
-       #Monitor the task
-        task_vector0$start()
-        print("Count the number of unmasked pixels within the shapefile per doy:")
-        ee_monitoring(task_vector0, quiet=T, max_attempts=1000000)
+         #create a current timestamp to prevent identical names on Google Drive
+          current_timestamp0 <- gsub('\\.', '', format(Sys.time(), "%y%m%d%H%M%OS2"))
+         
+         #We use ee_table_to_drive() to prevent memory limits
+          task_vector0 <- ee_table_to_drive(
+            collection = MODIS_clouds_filtered,
+            description = paste0(current_timestamp0, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_", Location_ID, "_Data_Pixel_Counts_polygon"),
+            fileFormat = "CSV",
+            selectors = c('doy', 'unmasked', 'total')
+            )
+         
+         #Monitor the task
+          task_vector0$start()
+          print("Count the number of unmasked pixels within the shapefile per doy:")
+          ee_monitoring(task_vector0, quiet=T, max_attempts=1000000)
+         
+         #Export results to local folder
+          exported_stats <- ee_drive_to_local(task = task_vector0, dsn=paste0(here(), "/Output/MODIS/02_Points_Snowmelt/DataLocations/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_", Location_ID, "_Data_Pixel_Counts_polygon"))
+          df_pixelcount <- read.csv(exported_stats)
+          unlink(exported_stats)
        
-       #Export results to local folder
-        exported_stats <- ee_drive_to_local(task = task_vector0, dsn=paste0(here(), "/Output/MODIS/02_Points_Snowmelt/DataLocations/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_", Location_ID, "_Data_Pixel_Counts_polygon"))
-        df_pixelcount <- read.csv(exported_stats)
-        unlink(exported_stats)
-     
-     #Replace -9999 values by NA (for debugging)
-      df_pixelcount$unmasked[df_pixelcount$unmasked < -9000] <- NA
-      df_pixelcount$total[df_pixelcount$total < -9000] <- NA
-      df_pixelcount$doy[df_pixelcount$doy < -9000] <- NA
-     
-     #Add missing dates with 0 unmasked pixels to the dataframe
-      df_doy_missing <- data.frame(doy=seq(start_date_doy, end_date_doy)[!(seq(start_date_doy, end_date_doy) %in% df_pixelcount$doy)],
-                                   unmasked=0,
-                                   total=max(df_pixelcount$total))
-      df_pixelcount <- rbind(df_pixelcount, df_doy_missing)
-      df_pixelcount <- df_pixelcount[order(df_pixelcount$doy),]
-      write.csv(df_pixelcount, file=paste0(here(), "/Output/MODIS/02_Points_Snowmelt/DataLocations/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_", Location_ID, "_Data_Pixel_Counts_polygon.csv"), quote=FALSE, row.names=FALSE)
-     
-     #Create barplot with the pixel counts per day of year within aoi_Shapefile
-      df_pixelcount$masked <- df_pixelcount$total - df_pixelcount$unmasked
-      df_pixelcount <- df_pixelcount[,-which(colnames(df_pixelcount) %in% "total")]
-      df_pixelcount <- tidyr::pivot_longer(df_pixelcount, cols=c(unmasked, masked), names_to = "pixels")
-      p_pixelcounts <- ggplot()+
-        geom_bar(data=df_pixelcount, aes(x=doy, y=value, fill=pixels), stat="identity",colour="black", position="stack", width=1)+
-        #geom_rect(aes(xmin=min(df_pixelcount$doy)-1, xmax=max(df_pixelcount$doy)+1, ymin=0, ymax=max(df_pixelcount$value)), alpha=0.5, fill="white")+
-        scale_fill_manual(values = c("black", "#FFA52C"))+
-        xlab("Time (day of year)")+
-        ylab("Pixel count")+
-        theme_classic()
-     
-     #Save barplot
-      pdf(paste0(here(), "/Output/MODIS/02_Points_Snowmelt/DataLocations/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_", Location_ID, "_Plot_Pixel_Counts_polygon.pdf"), width=12, height=8)
-      print(p_pixelcounts)
-      dev.off()
+       #Replace -9999 values by NA (for debugging)
+        df_pixelcount$unmasked[df_pixelcount$unmasked < -9000] <- NA
+        df_pixelcount$total[df_pixelcount$total < -9000] <- NA
+        df_pixelcount$doy[df_pixelcount$doy < -9000] <- NA
+       
+       #Add missing dates with 0 unmasked pixels to the dataframe
+        df_doy_missing <- data.frame(doy=seq(start_date_doy, end_date_doy)[!(seq(start_date_doy, end_date_doy) %in% df_pixelcount$doy)],
+                                     unmasked=0,
+                                     total=max(df_pixelcount$total))
+        df_pixelcount <- rbind(df_pixelcount, df_doy_missing)
+        df_pixelcount <- df_pixelcount[order(df_pixelcount$doy),]
+        write.csv(df_pixelcount, file=paste0(here(), "/Output/MODIS/02_Points_Snowmelt/DataLocations/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_", Location_ID, "_Data_Pixel_Counts_polygon.csv"), quote=FALSE, row.names=FALSE)
+       
+       #Create barplot with the pixel counts per day of year within aoi_Shapefile
+        df_pixelcount$masked <- df_pixelcount$total - df_pixelcount$unmasked
+        df_pixelcount <- df_pixelcount[,-which(colnames(df_pixelcount) %in% "total")]
+        df_pixelcount <- tidyr::pivot_longer(df_pixelcount, cols=c(unmasked, masked), names_to = "pixels")
+        p_pixelcounts <- ggplot()+
+          geom_bar(data=df_pixelcount, aes(x=doy, y=value, fill=pixels), stat="identity",colour="black", position="stack", width=1)+
+          #geom_rect(aes(xmin=min(df_pixelcount$doy)-1, xmax=max(df_pixelcount$doy)+1, ymin=0, ymax=max(df_pixelcount$value)), alpha=0.5, fill="white")+
+          scale_fill_manual(values = c("black", "#FFA52C"))+
+          xlab("Time (day of year)")+
+          ylab("Pixel count")+
+          theme_classic()
+       
+       #Save barplot
+        pdf(paste0(here(), "/Output/MODIS/02_Points_Snowmelt/DataLocations/", timestamp, "_", data_ID, "_Buffer", Buffer_radius_m, "_Res", resolution, "_", Location_ID, "_Plot_Pixel_Counts_polygon.pdf"), width=12, height=8)
+        print(p_pixelcounts)
+        dev.off()
       
      }
+    
+ #(I): Create timeseries GIF animations
      
- #(H): Extract MODIS mean band values (NDSI, NDVI, NDMI) within the buffer zone of 'Location' for all images in the image collection
+     if(gif_output==TRUE){
+       
+       #(a): GIF of RGB-images
+       f_img_col_to_gif(img_col=MODIS_clouds_filtered,  #image collection
+                        RGB_bands=c("sur_refl_b01", "sur_refl_b04", "sur_refl_b03"), #names of RGB-bands in image collection
+                        shapefile=aoi_Shapefile, #shapefile of area of interest
+                        centroid_buffer_m=0, #buffer zone surrounding centroid of shapefile in meters (to enlarge area for GIF)
+                        gif_dimensions=gif_max_pixels, #Maximum dimensions of GIF (pixels)
+                        gif_fps=5, #Frames per second of GIF
+                        gif_min=0, #Value to map to 0 (to improve contrast). A good rule of thumb is to set min to values that represent the 2nd percentile of the data
+                        gif_max=12000, #Value to map to 255 (to improve contrast). A good rule of thumb is to set max to values that represent the 98th percentile of the data
+                        gif_gamma=c(1.9, 1.7, 1.7), #Gamma correction factors (one for each band)
+                        gif_crs='EPSG:3857', #CRS project of the output
+                        gif_text_position="northwest", #Location of text (datetime string)
+                        gif_text_position_adjustment="+0+0", #Small scale adjustment of text in meters
+                        gif_text_size=14, #Size of text
+                        gif_text_col="#FFFFFF",
+                        output_fldr=paste0(here(), "/Output/MODIS/02_Points_Snowmelt/DataLocations/"),
+                        file_name=paste0("_", Location_ID, "_GIF_RGB_masked"))
+       
+       #(b): GIF of NDSI-images
+       
+         #Transform NDSI-band to RGB bands
+         MODIS_clouds_filtered_ndsi <- MODIS_clouds_filtered$map(ee_utils_pyfunc(function(image){
+           f_band_to_RGB(img=image, band='NDSI', min_value=-1, max_value=1.5, palette=c('#000000', '#0dffff', '#0524ff', '#ffffff'))}))
+         
+         #Create gif of the transformed NDSI-band
+         f_img_col_to_gif(img_col=MODIS_clouds_filtered_ndsi,  #image collection
+                          RGB_bands=c("vis-red", "vis-green", "vis-blue"), #names of RGB-bands in image collection
+                          shapefile=aoi_Shapefile, #shapefile of area of interest
+                          centroid_buffer_m=0, #buffer zone surrounding centroid of shapefile in meters (to enlarge area for GIF)
+                          gif_dimensions=gif_max_pixels, #Maximum dimensions of GIF (pixels)
+                          gif_fps=5, #Frames per second of GIF
+                          gif_min=0, #Value to map to 0 (to improve contrast). A good rule of thumb is to set min to values that represent the 2nd percentile of the data
+                          gif_max=255, #Value to map to 255 (to improve contrast). A good rule of thumb is to set max to values that represent the 98th percentile of the data
+                          gif_gamma=c(1, 1, 1), #Gamma correction factors (one for each band)
+                          gif_crs='EPSG:3857', #CRS project of the output
+                          gif_text_position="northwest", #Location of text (datetime string)
+                          gif_text_position_adjustment="+0+0", #Small scale adjustment of text in meters
+                          gif_text_size=14, #Size of text
+                          gif_text_col="#FFFFFF",
+                          output_fldr=paste0(here(), "/Output/MODIS/02_Points_Snowmelt/DataLocations/"),
+                          file_name=paste0("_", Location_ID, "_GIF_NDSI_masked"))
+       
+       # #(c): GIF of NDVI-images
+       #    
+       #    #Transform NDVI-band to RGB bands
+       #    MODIS_clouds_filtered_ndvi <- MODIS_clouds_filtered$map(ee_utils_pyfunc(function(image){
+       #      f_band_to_RGB(img=image, band='NDVI', min_value=-0.25, max_value=1, palette=c("#cccccc", "#f46d43", "#fdae61", "#fee08b", "#d9ef8b", "#a6d96a", "#66bd63", "#1a9850"))}))
+       #    
+       #    #Create gif of the transformed NDVI-band
+       #    f_img_col_to_gif(img_col=MODIS_clouds_filtered_ndvi,  #image collection
+       #                     RGB_bands=c("vis-red", "vis-green", "vis-blue"), #names of RGB-bands in image collection
+       #                     shapefile=aoi_Shapefile, #shapefile of area of interest
+       #                     centroid_buffer_m=0, #buffer zone surrounding centroid of shapefile in meters (to enlarge area for GIF)
+       #                     gif_dimensions=gif_max_pixels, #Maximum dimensions of GIF (pixels)
+       #                     gif_fps=5, #Frames per second of GIF
+       #                     gif_min=0, #Value to map to 0 (to improve contrast). A good rule of thumb is to set min to values that represent the 2nd percentile of the data
+       #                     gif_max=255, #Value to map to 255 (to improve contrast). A good rule of thumb is to set max to values that represent the 98th percentile of the data
+       #                     gif_gamma=c(1, 1, 1), #Gamma correction factors (one for each band)
+       #                     gif_crs='EPSG:3857', #CRS project of the output
+       #                     gif_text_position="northwest", #Location of text (datetime string)
+       #                     gif_text_position_adjustment="+0+0", #Small scale adjustment of text in meters
+       #                     gif_text_size=14, #Size of text
+       #                     gif_text_col="#FFFFFF",
+       #                     output_fldr=paste0(here(), "/Output/MODIS/02_Points_Snowmelt/DataLocations/"),
+       #                     file_name=paste0("_", Location_ID, "_GIF_NDVI_masked"))
+       # 
+       # #(d): GIF of NDMI-images
+       #    
+       #    #Transform NDMI-band to RGB bands
+       #    MODIS_clouds_filtered_ndmi <- MODIS_clouds_filtered$map(ee_utils_pyfunc(function(image){
+       #      f_band_to_RGB(img=image, band='NDMI', min_value=-0.75, max_value=1, palette=c("#d73027", "#f46d43", "#fdae61", "#fee08b", "#d9ef8b", "#a6d96a", "#66bd63", "#1a9850", "#6ad99e", "#387ad9", "#003dd6"))}))
+       #    
+       #    #Create gif of the transformed NDMI-band
+       #    f_img_col_to_gif(img_col=MODIS_clouds_filtered_ndmi,  #image collection
+       #                     RGB_bands=c("vis-red", "vis-green", "vis-blue"), #names of RGB-bands in image collection
+       #                     shapefile=aoi_Shapefile, #shapefile of area of interest
+       #                     centroid_buffer_m=0, #buffer zone surrounding centroid of shapefile in meters (to enlarge area for GIF)
+       #                     gif_dimensions=gif_max_pixels, #Maximum dimensions of GIF (pixels)
+       #                     gif_fps=5, #Frames per second of GIF
+       #                     gif_min=0, #Value to map to 0 (to improve contrast). A good rule of thumb is to set min to values that represent the 2nd percentile of the data
+       #                     gif_max=255, #Value to map to 255 (to improve contrast). A good rule of thumb is to set max to values that represent the 98th percentile of the data
+       #                     gif_gamma=c(1, 1, 1), #Gamma correction factors (one for each band)
+       #                     gif_crs='EPSG:3857', #CRS project of the output
+       #                     gif_text_position="northwest", #Location of text (datetime string)
+       #                     gif_text_position_adjustment="+0+0", #Small scale adjustment of text in meters
+       #                     gif_text_size=14, #Size of text
+       #                     gif_text_col="#FFFFFF",
+       #                     output_fldr=paste0(here(), "/Output/MODIS/02_Points_Snowmelt/DataLocations/"),
+       #                     file_name=paste0("_", Location_ID, "_GIF_NDMI_masked"))
+       # 
+       # #(e): GIF of NDWI-images
+       #    
+       #    #Transform NDWI-band to RGB bands
+       #    MODIS_clouds_filtered_ndwi <- MODIS_clouds_filtered$map(ee_utils_pyfunc(function(image){
+       #      f_band_to_RGB(img=image, band='NDWI', min_value=-0.5, max_value=1, palette=c('#000000', '#0dffff', '#0524ff', '#ffffff'))}))
+       #    
+       #    #Create gif of the transformed NDWI-band
+       #    f_img_col_to_gif(img_col=MODIS_clouds_filtered_ndwi,  #image collection
+       #                     RGB_bands=c("vis-red", "vis-green", "vis-blue"), #names of RGB-bands in image collection
+       #                     shapefile=aoi_Shapefile, #shapefile of area of interest
+       #                     centroid_buffer_m=0, #buffer zone surrounding centroid of shapefile in meters (to enlarge area for GIF)
+       #                     gif_dimensions=gif_max_pixels, #Maximum dimensions of GIF (pixels)
+       #                     gif_fps=5, #Frames per second of GIF
+       #                     gif_min=0, #Value to map to 0 (to improve contrast). A good rule of thumb is to set min to values that represent the 2nd percentile of the data
+       #                     gif_max=255, #Value to map to 255 (to improve contrast). A good rule of thumb is to set max to values that represent the 98th percentile of the data
+       #                     gif_gamma=c(1, 1, 1), #Gamma correction factors (one for each band)
+       #                     gif_crs='EPSG:3857', #CRS project of the output
+       #                     gif_text_position="northwest", #Location of text (datetime string)
+       #                     gif_text_position_adjustment="+0+0", #Small scale adjustment of text in meters
+       #                     gif_text_size=14, #Size of text
+       #                     gif_text_col="#FFFFFF",
+       #                     output_fldr=paste0(here(), "/Output/MODIS/02_Points_Snowmelt/DataLocations/"),
+       #                     file_name=paste0("_", Location_ID, "_GIF_NDWI_masked"))
+       
+     }
+      
+ #(J): Extract MODIS mean band values (NDSI, NDVI, NDMI) within the buffer zone of 'Location' for all images in the image collection
 
      if("avg_NDSI" %in% method){
 
@@ -719,7 +872,7 @@
 
        }
      
- #(I): Extract the fraction of snow covered pixels within the buffer zone of 'Location' for all images in the image collection
+ #(K): Extract the fraction of snow covered pixels within the buffer zone of 'Location' for all images in the image collection
      
      if("snowfraction" %in% method){      
     
@@ -839,7 +992,7 @@
        
        }
            
- #(J): Calculate the date of snowmelt for every pixel within aoi_Shapefile by fitting a GAM through the pixel-specific NDSI data
+ #(L): Calculate the date of snowmelt for every pixel within aoi_Shapefile by fitting a GAM through the pixel-specific NDSI data
      
      if("pixel_gam" %in% method){
        
