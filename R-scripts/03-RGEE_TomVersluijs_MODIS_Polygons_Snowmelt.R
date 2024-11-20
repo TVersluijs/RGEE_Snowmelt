@@ -629,7 +629,7 @@
      df_pixelcount <- df_pixelcount[order(df_pixelcount$doy),]
      df_pixelcount$location <- area_name
      df_pixelcount$year <- year_ID
-     write.csv(df_pixelcount, file=paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Data_Pixel_Counts_polygon.csv"), quote=FALSE, row.names=FALSE)
+     #write.csv(df_pixelcount, file=paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Data_Pixel_Counts_polygon.csv"), quote=FALSE, row.names=FALSE)
 
     #(E): Create barplot with the pixel counts per day of year within aoi_Shapefile
      df_pixelcount$masked <- df_pixelcount$total - df_pixelcount$unmasked
@@ -644,10 +644,10 @@
       ggtitle(paste0("Year: ", year_ID))+
       theme_classic()
 
-    #(F): Save barplot
-     pdf(paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Plot_Pixel_Counts_polygon.pdf"), width=12, height=8)
-     print(p_pixelcounts)
-     dev.off()
+    # #(F): Save barplot
+    #  pdf(paste0(here(), "/Output/MODIS/03_Polygons_Snowmelt/", timestamp, "_", data_ID, "_Res", resolution, "_Polygons_Plot_Pixel_Counts_polygon.pdf"), width=12, height=8)
+    #  print(p_pixelcounts)
+    #  dev.off()
 
   }
 
