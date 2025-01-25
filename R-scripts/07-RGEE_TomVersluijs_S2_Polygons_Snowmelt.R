@@ -1405,7 +1405,8 @@
                
                   #Refit GAM through data
                    index <- which(df_Polygon_SnowFraction_GAM_new$outliers==FALSE)
-                   mod_gam <- with(df_Polygon_SnowFraction_GAM_new[index,], mgcv::gam(SnowFraction ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
+                   max_k_length1 <- length(unique(df_Polygon_SnowFraction_GAM_new[index, 'doy']))
+                   mod_gam <- with(df_Polygon_SnowFraction_GAM_new[index,], mgcv::gam(SnowFraction ~ s(doy, k=min(gam_k, length(index)-1, max_k_length1-1)), method="REML"))
                
                   #Use GAM to make predictions on a more detailed (1-day) day of year interval
                    df_Polygon_SnowFraction_GAM_predictions_new <- data.frame(Polygon=i, NDSI_threshold=j, doy=seq(min(df_Polygon_SnowFraction_GAM_new$doy), max(df_Polygon_SnowFraction_GAM_new$doy), 0.01))
@@ -1637,7 +1638,8 @@
     
               #Refit GAM through data
                index <- which(df_Polygon_FSC_Gascoin2020_GAM_new$outliers==FALSE)
-               mod_gam <- with(df_Polygon_FSC_Gascoin2020_GAM_new[index,], mgcv::gam(FSC_Gascoin2020 ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
+               max_k_length2 <- length(unique(df_Polygon_FSC_Gascoin2020_GAM_new[index, 'doy']))
+               mod_gam <- with(df_Polygon_FSC_Gascoin2020_GAM_new[index,], mgcv::gam(FSC_Gascoin2020 ~ s(doy, k=min(gam_k, length(index)-1, max_k_length2-1)), method="REML"))
     
               #Use gam to make predictions on a more detailed interval
                df_Polygon_FSC_Gascoin2020_GAM_predictions_new <- data.frame(Polygon=i, doy=seq(min(df_Polygon_FSC_Gascoin2020_GAM_new$doy), max(df_Polygon_FSC_Gascoin2020_GAM_new$doy), 0.01))
@@ -1823,7 +1825,8 @@
     
               #Refit GAM through data
                index <- which(df_Polygon_FSC_Aalstad2020_GAM_new$outliers==FALSE)
-               mod_gam <- with(df_Polygon_FSC_Aalstad2020_GAM_new[index,], mgcv::gam(FSC_Aalstad2020 ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
+               max_k_length3 <- length(unique(df_Polygon_FSC_Aalstad2020_GAM_new[index, 'doy']))
+               mod_gam <- with(df_Polygon_FSC_Aalstad2020_GAM_new[index,], mgcv::gam(FSC_Aalstad2020 ~ s(doy, k=min(gam_k, length(index)-1, max_k_length3-1)), method="REML"))
     
               #Use gam to make predictions on a more detailed interval
                df_Polygon_FSC_Aalstad2020_GAM_predictions_new <- data.frame(Polygon=i, doy=seq(min(df_Polygon_FSC_Aalstad2020_GAM_new$doy), max(df_Polygon_FSC_Aalstad2020_GAM_new$doy), 0.01))
@@ -2009,7 +2012,8 @@
     
                 #Refit GAM through data
                  index <- which(df_Polygon_NDSI_GAM_new$outliers==FALSE)
-                 mod_gam <- with(df_Polygon_NDSI_GAM_new[index,], mgcv::gam(NDSI ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
+                 max_k_length4 <- length(unique(df_Polygon_NDSI_GAM_new[index, 'doy']))
+                 mod_gam <- with(df_Polygon_NDSI_GAM_new[index,], mgcv::gam(NDSI ~ s(doy, k=min(gam_k, length(index)-1, max_k_length4-1)), method="REML"))
     
                 #Use gam to make predictions on a more detailed interval
                  df_Polygon_NDSI_GAM_predictions_new <- data.frame(Polygon=i, doy=seq(min(df_Polygon_NDSI_GAM_new$doy), max(df_Polygon_NDSI_GAM_new$doy), 0.01))
@@ -2195,7 +2199,8 @@
     
                 #Refit GAM through data
                  index <- which(df_Polygon_NDVI_GAM_new$outliers==FALSE)
-                 mod_gam <- with(df_Polygon_NDVI_GAM_new[index,], mgcv::gam(NDVI ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
+                 max_k_length5 <- length(unique(df_Polygon_NDVI_GAM_new[index, 'doy']))
+                 mod_gam <- with(df_Polygon_NDVI_GAM_new[index,], mgcv::gam(NDVI ~ s(doy, k=min(gam_k, length(index)-1, max_k_length5-1)), method="REML"))
     
                 #Use gam to make predictions on a more detailed (1-day) day of year interval
                  df_Polygon_NDVI_GAM_predictions_new <- data.frame(Polygon=i, doy=seq(min(df_Polygon_NDVI_GAM_new$doy), max(df_Polygon_NDVI_GAM_new$doy), 0.01))
@@ -2339,7 +2344,8 @@
     
                 #Refit GAM through data
                  index <- which(df_Polygon_NDMI_GAM_new$outliers==FALSE)
-                 mod_gam <- with(df_Polygon_NDMI_GAM_new[index,], mgcv::gam(NDMI ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
+                 max_k_length6 <- length(unique(df_Polygon_NDMI_GAM_new[index, 'doy']))
+                 mod_gam <- with(df_Polygon_NDMI_GAM_new[index,], mgcv::gam(NDMI ~ s(doy, k=min(gam_k, length(index)-1, max_k_length6-1)), method="REML"))
     
                 #Use gam to make predictions on a more detailed (1-day) day of year interval
                  df_Polygon_NDMI_GAM_predictions_new <- data.frame(Polygon=i, doy=seq(min(df_Polygon_NDMI_GAM_new$doy), max(df_Polygon_NDMI_GAM_new$doy), 0.01))

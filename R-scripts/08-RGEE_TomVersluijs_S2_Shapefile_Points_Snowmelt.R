@@ -1265,7 +1265,8 @@
 
                 #Refit GAM through data
                  index <- which(df_Location_NDSI_new$outliers==FALSE)
-                 mod_gam <- with(df_Location_NDSI_new[index,], mgcv::gam(NDSI ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
+                 max_k_length1 <- length(unique(df_Location_NDSI_new[index, 'doy']))
+                 mod_gam <- with(df_Location_NDSI_new[index,], mgcv::gam(NDSI ~ s(doy, k=min(gam_k, length(index)-1, max_k_length1-1)), method="REML"))
 
                 #Use gam to make predictions on a more detailed (1-day) day of year interval
                  df_Locations_NDSI_predictions_new <- data.frame(LocationID=i, doy=seq(min(df_Location_NDSI_new$doy), max(df_Location_NDSI_new$doy), 1))
@@ -1407,7 +1408,8 @@
 
                  #Refit GAM through data
                  index <- which(df_Location_NDVI_new$outliers==FALSE)
-                 mod_gam <- with(df_Location_NDVI_new[index,], mgcv::gam(NDVI ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
+                 max_k_length2 <- length(unique(df_Location_NDVI_new[index, 'doy']))
+                 mod_gam <- with(df_Location_NDVI_new[index,], mgcv::gam(NDVI ~ s(doy, k=min(gam_k, length(index)-1, max_k_length2-1)), method="REML"))
   
                  #Use gam to make predictions on a more detailed (1-day) day of year interval
                  df_Locations_NDVI_predictions_new <- data.frame(LocationID=i, doy=seq(min(df_Location_NDVI_new$doy), max(df_Location_NDVI_new$doy), 1))
@@ -1490,7 +1492,8 @@
 
                #Refit GAM through data
                index <- which(df_Location_NDMI_new$outliers==FALSE)
-               mod_gam <- with(df_Location_NDMI_new[index,], mgcv::gam(NDMI ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
+               max_k_length3 <- length(unique(df_Location_NDMI_new[index, 'doy']))
+               mod_gam <- with(df_Location_NDMI_new[index,], mgcv::gam(NDMI ~ s(doy, k=min(gam_k, length(index)-1, max_k_length3-1)), method="REML"))
 
                #Use gam to make predictions on a more detailed (1-day) day of year interval
                df_Locations_NDMI_predictions_new <- data.frame(LocationID=i, doy=seq(min(df_Location_NDMI_new$doy), max(df_Location_NDMI_new$doy), 1))
@@ -1631,7 +1634,8 @@
   
                  #Refit GAM through data
                   index <- which(df_Location_SnowFraction_GAM_new$outliers==FALSE)
-                  mod_gam <- with(df_Location_SnowFraction_GAM_new[index,], mgcv::gam(SnowFraction ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
+                  max_k_length4 <- length(unique(df_Location_SnowFraction_GAM_new[index, 'doy']))
+                  mod_gam <- with(df_Location_SnowFraction_GAM_new[index,], mgcv::gam(SnowFraction ~ s(doy, k=min(gam_k, length(index)-1, max_k_length4-1)), method="REML"))
   
                  #Use gam to make predictions on a more detailed (1-day) day of year interval
                   df_Locations_SnowFraction_GAM_predictions_new <- data.frame(LocationID=i, NDSI_threshold=j, doy=seq(min(df_Location_SnowFraction_GAM_new$doy), max(df_Location_SnowFraction_GAM_new$doy), 1))

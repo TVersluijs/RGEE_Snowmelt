@@ -543,7 +543,8 @@
         
         #Refit GAM through data
         index <- which(df_Location_SnowFraction_GAM$outliers==FALSE)
-        mod_gam <- with(df_Location_SnowFraction_GAM[index,], mgcv::gam(SnowFraction ~ s(doy, k=min(gam_k, length(index)-1)), method="REML"))
+        max_k_length <- length(unique(df_Location_SnowFraction_GAM[index, 'doy']))
+        mod_gam <- with(df_Location_SnowFraction_GAM[index,], mgcv::gam(SnowFraction ~ s(doy, k=min(gam_k, length(index)-1, max_k_length-1)), method="REML"))
         
         #Use gam to make predictions on a more detailed interval
         df_Locations_SnowFraction_GAM_predictions_new <- data.frame(LocationID=i, doy=seq(min(df_Location_SnowFraction_GAM$doy), max(df_Location_SnowFraction_GAM$doy), 0.01))
