@@ -205,12 +205,12 @@
   Sys.setenv(RETICULATE_PYTHON = rgee_environment_dir)
   Sys.setenv(EARTHENGINE_PYTHON = rgee_environment_dir)
   
-  #Reboot R-Studio at this point (no need to rerun any code).
+  #Important: reboot R-Studio at this point (no need to rerun any code after restarting).
   
   #Specify installation folder ('google-cloud-sdk\\bin') of gcloud CLI manually:
   Sys.setenv(EARTHENGINE_GCLOUD = "C:\\Users\\USERNAME\\AppData\\Local\\Google\\Cloud SDK\\google-cloud-sdk\\bin")
   
-    #Authorize access to Earth Engine using OAuth2
+  #Authorize access to Earth Engine using OAuth2
   rgee::ee_Authenticate(user="ENTER YOUR OWN GOOGLE EMAIL (@gmail.com)", auth_mode='notebook')
   
   #Initialize Earth engine
