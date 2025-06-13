@@ -2,7 +2,7 @@
 
 # Script: Script with installation procedures to use RGEE
 # Author: Tom Versluijs, adapted from Ricardo Dal'Agnol da Silva
-# Date Created: 2024-11-19
+# Date Created: 2025-06-13
 # R version 4.3.2
 # Adapted from the following video tutorial: https://www.youtube.com/watch?v=1-k6wNL2hlo&ab_channel=RicardoDalagnol
 
@@ -38,15 +38,15 @@
   ## Install Miniconda3 at https://docs.conda.io/en/latest/miniconda.html (keep all default settings, i.e. install for local user only)
   ## Open 'anaconda' in the command prompt (window button --> anaconda, you will see anaconda prompt)
   ## Then type in the commands below one-by-one (without the #) to install the rgee_py environment and packages:
-  # conda create -n rgee_py pip python     #or "conda create -n rgee_py pip python=3.11" for a specific python version
+  # conda create -n rgee_py pip python=3.8.18     #or "conda create -n rgee_py pip python" for the newest python version
   # conda activate rgee_py
   # pip install google-api-python-client
-  # pip install earthengine-api==0.1.370            #or 'pip install earthengine-api' for the newest version
+  # pip install earthengine-api==0.1.370            #or 'pip install earthengine-api' for the newest earthengine-api version
   # pip install numpy
   
   #Important: there is a bug in the newest versions of the earthengine-api that result in the error "credentials have expired" when
   #initializing Google Earth Engine using RGEE. To prevent this we have installed an older version of the earthengine-api (0.1.370)
-  #at line 44 (see 'https://github.com/r-spatial/rgee/issues/353#issuecomment-1983765552' for more details).
+  #using an older version of python (3.8.18) at line 44 (see 'https://github.com/r-spatial/rgee/issues/353#issuecomment-1983765552' for more details).
 
   ## Conda should now be installed, now lets get the path to the environment. Type inside anaconda:
   # conda env list
@@ -72,7 +72,9 @@
   #(I): Install the Google Cloud CLI: 
   
     #Download the Google Cloud Installer CLI from this website: (https://cloud.google.com/sdk/docs/install)
-    #and follow the steps below to install gcloud:
+    #and follow the steps below to install gcloud.
+
+    #Make sure to remember the folder where you install GCloud because we need this at line 211 of this script.
 
       #-(1): Pick all the default install options (i.e. install for Single user only, and keep 'Bundled Python' and 'Cloud Tools for Powershell' checked).
       #-(2): After the installation has completed, the installer gives you the option to create Start Menu and Desktop shortcuts, 
@@ -176,12 +178,13 @@
 
   # now some more specific packages related to using rgee
   p_load(geojsonio, remotes, reticulate, devtools, googledrive, magick)
-  devtools:::install_github("r-spatial/rgee")
+  p_load(rgee)
+  #devtools:::install_github("r-spatial/rgee") #Note: install Github version only when default rgee package does not work
   remotes::install_github("r-earthengine/rgeeExtra")
 
-  ## IMPORTANT! Restart R before proceeding with the code below. Also try restarting if the installation
-  ## did not finish properly and run the installation again after restart. In any case make sure to
-  ## rerun 'rgee_environment_dir' at line 58 after restarting RStudio. 
+  #IMPORTANT! Save your R-script at this point and restart R before proceeding with the code below. 
+  #Also try restarting if the installation did not finish properly and run the installation again after 
+  #restart. After re-starting make sure to re-run all lines of code up to this point.
 
 ######################################################################################################################################
 
@@ -202,17 +205,22 @@
   Sys.setenv(RETICULATE_PYTHON = rgee_environment_dir)
   Sys.setenv(EARTHENGINE_PYTHON = rgee_environment_dir)
   
-  #Reboot R-Studio at this point.
+  #Reboot R-Studio at this point (no need to rerun any code).
   
   #Specify installation folder ('google-cloud-sdk\\bin') of gcloud CLI manually:
   Sys.setenv(EARTHENGINE_GCLOUD = "C:\\Users\\USERNAME\\AppData\\Local\\Google\\Cloud SDK\\google-cloud-sdk\\bin")
   
-  # Initialize the Python Environment
-  # If everything fails try to run this code before ee_Initialize: ee_Authenticate(auth_mode='notebook')
-  rgee::ee_Initialize(user="ENTER YOUR OWN GOOGLE EMAIL (@gmail.com)", drive = T) 
+    #Authorize access to Earth Engine using OAuth2
+  rgee::ee_Authenticate(user="ENTER YOUR OWN GOOGLE EMAIL (@gmail.com)", auth_mode='notebook')
+  
+  #Initialize Earth engine
+  #Your 'project' is the ID of your Google Cloud Project which can be found when logging in at https://console.cloud.google.com/cloud-resource-manager
+  rgee::ee_Initialize(user="ENTER YOUR OWN GOOGLE EMAIL (@gmail.com)", 
+                      project='ENTER THE PROJECT ID OF YOUR GOOGLE CLOUD PROJECT HERE (suggested format at line 88 was: YOURNAME_rgee_snowmelt)', 
+                      drive = T) 
  
-  #When running this for the first time you will need to conduct two authentication steps:
-  #(1): You need to allow Tidyverse to access and manage files on your Google Drive. IMPORTANT: make sure to cross the 
+  #When running this for the first time you will need to conduct one or two authentication steps:
+  #(1): You might need to allow Tidyverse to access and manage files on your Google Drive. IMPORTANT: make sure to cross the 
   #     box to give this permission before confirming.
   #(2): Notebook Authenticator: 
   #  -Verify that the correct user account is listed. If not, press 'SWITCH ACCOUNT' to select another gmail account.
