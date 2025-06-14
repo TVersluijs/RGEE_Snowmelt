@@ -2,12 +2,8 @@
 
 # Script: Script with installation procedures to use RGEE
 # Author: Tom Versluijs, adapted from Ricardo Dal'Agnol da Silva
-<<<<<<< HEAD
 # Date Created: 2025-06-14
-=======
-# Date Created: 2025-06-13
->>>>>>> 6eef476613b2a1c69e53d6e5b79155e02e95e7fb
-# R version 4.3.2
+# R version 4.5.0
 # Adapted from the following video tutorial: https://www.youtube.com/watch?v=1-k6wNL2hlo&ab_channel=RicardoDalagnol
 
 ######################################################################################################################################
@@ -144,10 +140,10 @@
 
 ######################################################################################################################################
 
-  ## R: version 4.4.1 (this is the newest version that I tested successfully)
+  ## R: version 4.5.0 (this is the newest version that I tested successfully)
   # Link: https://cran.r-project.org/bin/windows/base/
 
-  ## RStudio: version at least 2024.09.0 build 375 (this is the version that I tested successfully)
+  ## RStudio: version at least 2025.05.1 build 513 (this is the version that I tested successfully)
   ## Older versions do not show the GEE images in Viewer correctly.
   # Link: https://www.rstudio.com/products/rstudio/download/
 
@@ -186,15 +182,9 @@
   #devtools:::install_github("r-spatial/rgee") #Note: install Github version only when default rgee package does not work
   remotes::install_github("r-earthengine/rgeeExtra")
 
-<<<<<<< HEAD
   #IMPORTANT! Save your R-script at this point and restart R before proceeding with the code below.
   #Also try restarting if the installation did not finish properly and run the installation again after
   #restart. After re-starting make sure to re-run all lines of R-code up to this point.
-=======
-  #IMPORTANT! Save your R-script at this point and restart R before proceeding with the code below. 
-  #Also try restarting if the installation did not finish properly and run the installation again after 
-  #restart. After re-starting make sure to re-run all lines of code up to this point.
->>>>>>> 6eef476613b2a1c69e53d6e5b79155e02e95e7fb
 
 ######################################################################################################################################
 
@@ -214,7 +204,6 @@
   #Manually override python paths for reticulate and rgee
   Sys.setenv(RETICULATE_PYTHON = rgee_environment_dir)
   Sys.setenv(EARTHENGINE_PYTHON = rgee_environment_dir)
-<<<<<<< HEAD
 
   #Important: reboot R-Studio at this point (no need to rerun any code after restarting).
 
@@ -232,25 +221,6 @@
 
   #When running this for the first time you will need to conduct one or two authentication steps:
   #(1): You might need to allow Tidyverse to access and manage files on your Google Drive. IMPORTANT: make sure to cross the
-=======
-  
-  #Important: reboot R-Studio at this point (no need to rerun any code after restarting).
-  
-  #Specify installation folder ('google-cloud-sdk\\bin') of gcloud CLI manually:
-  Sys.setenv(EARTHENGINE_GCLOUD = "C:\\Users\\USERNAME\\AppData\\Local\\Google\\Cloud SDK\\google-cloud-sdk\\bin")
-  
-  #Authorize access to Earth Engine using OAuth2
-  rgee::ee_Authenticate(user="ENTER YOUR OWN GOOGLE EMAIL (@gmail.com)", auth_mode='notebook')
-  
-  #Initialize Earth engine
-  #Your 'project' is the ID of your Google Cloud Project which can be found when logging in at https://console.cloud.google.com/cloud-resource-manager
-  rgee::ee_Initialize(user="ENTER YOUR OWN GOOGLE EMAIL (@gmail.com)", 
-                      project='ENTER THE PROJECT ID OF YOUR GOOGLE CLOUD PROJECT HERE (suggested format at line 88 was: YOURNAME_rgee_snowmelt)', 
-                      drive = T) 
- 
-  #When running this for the first time you will need to conduct one or two authentication steps:
-  #(1): You might need to allow Tidyverse to access and manage files on your Google Drive. IMPORTANT: make sure to cross the 
->>>>>>> 6eef476613b2a1c69e53d6e5b79155e02e95e7fb
   #     box to give this permission before confirming.
   #(2): Notebook Authenticator:
   #  -Verify that the correct user account is listed. If not, press 'SWITCH ACCOUNT' to select another gmail account.
