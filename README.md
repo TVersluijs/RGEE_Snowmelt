@@ -10,7 +10,7 @@ MODIS or Sentinel-2 satellite data. While the user can specify the required para
 cloud/water filtering etc) the rest of the script automatically generates the required output data. This ReadMe file consists of
 the following sections: (I) Usage notes, (II) Which script to use?, and (III) Detailed description of RGEE scripts.
 
-Copyright: Tom S.L. Versluijs 2024 (tom.versluijs@gmail.com)
+Copyright: Tom S.L. Versluijs 2025 (tom.versluijs@gmail.com)
 
 When using any of these scripts for scientific publications, please cite the original Github repository by following the provided
 information in the file 'CITATION.cff' found in the root folder of this Github respository. In addition, also cite the RGEE package:
@@ -36,7 +36,7 @@ Aybar, C. rgee: R Bindings for Calling the 'Earth Engine' API (Version 1.1.7) [C
 -(4) All scripts are completely automated and require the user to only alter parameters in the "#Specify parameters of interest" section at the start of each script. After adjusting these 
      parameters, the complete code can be selected (CTRL-A) and can be run at once (CTRL + ENTER, or CTRL + R, or by clicking Run in R-Studio). 
 	 
--(5) Update to the newest versions of R and R-Studio before running the scripts. The scripts were developed with R-version 4.3.2 and R-Studio 2023.12.1 build 402.
+-(5) Update to the newest versions of R and R-Studio before running the scripts. The scripts were developed with R-version 4.5.0 and R-Studio 2025.05.1 build 513.
 	 
 -(6) If the R-package 'RGEE' has not yet been installed, or does not function properly, make sure to install RGEE and its python dependencies using the script "00-RGEE_TomVersluijs_Installation.R". 
      Note that getting RGEE to function properly can be quite a frustrating first hurdle to take. Things will get easier once everything is up and running!
