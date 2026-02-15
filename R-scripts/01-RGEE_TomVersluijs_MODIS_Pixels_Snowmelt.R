@@ -6,7 +6,7 @@
 #creating the snow melt map, script "10-RGEE_TomVersluijs_S2_ExtractSnowFraction.R" can be used to extract time series of the 
 #fraction of snow cover for points/polygon(s) of interest from this map.
 
-#Copyright Tom Versluijs 2024-11-20. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
+#Copyright Tom Versluijs 2026-02-15. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
 
 #Before running this script make sure to install RGEE according to the instructions in script "00-RGEE_TomVersluijs_Installation.R". 
 #Note that a GoogleDrive is required. Important: make sure to run this script from within the "RGEE_Snowmelt.Rproj" project file.
@@ -17,16 +17,25 @@
 
 ##################################################################################################################################
 
-      #(0): Clear workspace and set python environment
+      #(0): Setup workspace
+
+       #Clear workspace
        rm(list=ls())
        utils::install.packages("here")
        library(here)
+       
+       #Load python environment path
        if(file.exists(paste0(here::here(), "/Input/rgee_environment_dir.rds"))){
          rgee_environment_dir <- readRDS(paste0(here::here(), "/Input/rgee_environment_dir.rds"))
          reticulate::use_python(rgee_environment_dir, required=T)
          reticulate::py_config()
          }
 
+       #Load google earth engine credentials folder
+       if(file.exists(paste0(here::here(), "/Input/rgee_credentials_dir.rds"))){
+         fldr_credentials_user <- readRDS(paste0(here::here(), "/Input/rgee_credentials_dir.rds"))
+         }
+       
       #(1): Load packages
        #renv::restore() #revert to last version of R-packages used to successfully run this script (optional).
        utils::install.packages("pacman")
@@ -43,11 +52,13 @@
              complete = TRUE)}
        
        #(3): Load auxiliary functions
-       source_files <- list.files(path=paste0(here(), "/Input"), full.names=TRUE, recursive = TRUE, pattern = "MODIS_AuxiliaryFunctions")
+       source_files <- list.files(path=paste0(here(), "/Input"), full.names=TRUE, recursive = TRUE, pattern = "MODIS_AuxiliaryFunctions|Installation")
        sapply(source_files, source, chdir = TRUE) ; rm(source_files)
        
-      #(4): Initialize earth engine and google drive
-       rgee::ee_Initialize(user="tom.versluijs@gmail.com", drive = T)
+       #(4): Initialize earth engine using a custom function
+       f_ee_Init(user = "tom.versluijs@gmail.com", project = "heroic-bird-255915", fldr_asset = "escape", 
+                 fldr_credentials_user=fldr_credentials_user, drive = TRUE, quiet = FALSE)
+       #rgee::ee_Initialize(user = "tom.versluijs@gmail.com", drive = TRUE)
        
        
 ##################################################################################################################################
