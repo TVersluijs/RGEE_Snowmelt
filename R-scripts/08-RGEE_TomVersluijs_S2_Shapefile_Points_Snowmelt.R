@@ -29,7 +29,7 @@
 #for small areas of c.a. 50-100 km2 (larger areas might result in computation errors unless the spatial resolution of the analyses 
 #is decreased). In addition, the 'pixel_gam' method is implemented in script "06", but not in the current script "08".
 
-#Copyright Tom Versluijs 2026-02-15. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
+#Copyright Tom Versluijs 2026-02-19. Do not use this code without permission. Contact information: tom.versluijs@gmail.com
 
 #Before running this script make sure to install RGEE according to the instructions in script "00-RGEE_TomVersluijs_Installation.R". 
 #Note that a GoogleDrive is required. Important: make sure to run this script from within the "RGEE_Snowmelt.Rproj" project file.
@@ -194,11 +194,6 @@
       start_date_NDWI <- paste0(year_ID, "-07-15")
       end_date_NDWI <- paste0(year_ID, "-08-15")
 
-      #Date range to detect permanent waterbodies based on NDSI (used to differentiate between water and snow in the detection of
-      #permanent waterbodies).This date range should occur c.a. 2 weeks before the date range from start_date_NDWI to end_date_NDWI.
-      start_date_NDSI <- paste0(year_ID, "-07-01")
-      end_date_NDSI <- paste0(year_ID, "-08-01")
-
   #(g): Composite image
       
     #Specify whether a composite image will be generated for all images (i.e. tiles) per unique doy (default=TRUE). Note that setting this
@@ -237,6 +232,14 @@
 ##################################################################################################################################
     
   #(5): Automatically define some additional parameters 
+    
+    #Check if date variables are specified correctly
+     if(!(as.Date(start_date) <= (as.Date(start_date_NDWI) - as.difftime(14, units = "days")))){
+       stop("'start_date' should be set at least 14 days earlier than 'start_date_NDWI'")
+       }
+     if(!(as.Date(end_date) >= as.Date(end_date_NDWI))){
+       stop("'end_date' should be set equal to or later than 'end_date_NDWI'")
+       }
     
     #Create a unique data_ID
     if(nchar(area_name)>3){area_name <- substr(area_name, start = 1, stop = 3)}
@@ -584,7 +587,7 @@
              
          #Extract pixels corresponding to permanent waterbodies
          water_mask2 <- compute_Water_Manual(img_col=s2_col, start_date_NDWI=start_date_NDWI, end_date_NDWI=end_date_NDWI, NDWI_threshold=NDWI_threshold,
-                                             start_date_NDSI=start_date_NDSI, end_date_NDSI=end_date_NDSI, NDSI_threshold=NDSI_threshold_vector[1], NIR_threshold=NIR_threshold)
+                                             NDSI_threshold=NDSI_threshold_vector[1], NIR_threshold=NIR_threshold)
              
              
          }

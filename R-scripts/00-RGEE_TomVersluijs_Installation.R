@@ -2,7 +2,7 @@
 
 # Script: Script with installation procedures to use RGEE
 # Author: Tom Versluijs, adapted from Ricardo Dal'Agnol da Silva
-# Date Created: 2026-02-15
+# Date Created: 2026-02-19
 # R version 4.5.0
 # Adapted from the following video tutorial: https://www.youtube.com/watch?v=1-k6wNL2hlo&ab_channel=RicardoDalagnol
 
