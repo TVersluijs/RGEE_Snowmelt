@@ -26,7 +26,7 @@
 
 #(I.b): (Option 2) Detect water pixels using a manual function based on NDWI, NDSI and NIR bands
  compute_Water_Manual <- function(img_col=s2_col, start_date_NDWI=start_date_NDWI, end_date_NDWI=end_date_NDWI, NDWI_threshold=NDWI_threshold,
-                                  start_date_NDSI=start_date_NDSI, end_date_NDSI=end_date_NDSI, NDSI_threshold=NDSI_threshold, NIR_threshold=NIR_threshold){
+                                  NDSI_threshold=NDSI_threshold, NIR_threshold=NIR_threshold){
    
    #Water can in general be detected by looking at NDWI values (>0 indicates water). This method works well in non build-up areas (Du 2016, Xu 2006)
    #However, high NDWI values per se do not indicate water as snow can also have high NDWI values. To properly detect waterbodies, we thus have to mask
@@ -65,13 +65,19 @@
    Map$addLayer(ndwi_mask, list(min=0, max=1, palette = c('ffffff', '000000')), 'NDWI_mask')
    
    #(D): select all images between start_date_NDSI and end_date_NDSI with a cloudcover percentage < 5% (s2_NDSI_mask)
-   s2_NDSI_mask <- img_col$
-     #Filter dates for which a median NDSI image will be generated
-     filterDate(start_date_NDSI, end_date_NDSI)$
-     #Filter selection to only contain images with less than 5% cloudcover (CloudFraction=0.05)
-     filter(ee$Filter$lt('CloudFraction', 0.05))$
-     #Apply cloudmask for individual pixels
-     map(Add_CloudMask)
+   
+     #Subtract 14 days from the period used to calculate the median NDWI image
+     start_date_NDSI <- as.character(as.Date(start_date_NDWI) - as.difftime(14, units = "days"))
+     end_date_NDSI <- as.character(as.Date(end_date_NDWI) - as.difftime(14, units = "days"))
+     
+     #Select image collection to calculate snow mask
+     s2_NDSI_mask <- img_col$
+       #Filter dates for which a median NDSI image will be generated
+       filterDate(start_date_NDSI, end_date_NDSI)$
+       #Filter selection to only contain images with less than 5% cloudcover (CloudFraction=0.05)
+       filter(ee$Filter$lt('CloudFraction', 0.05))$
+       #Apply cloudmask for individual pixels
+       map(Add_CloudMask)
    
    #(E): Calculate median NDSI and NIR (B8) images for all images in s2_NDSI_mask
    s2_NDSI_mask <- s2_NDSI_mask$select("B4", "B3", "B2", "NDSI", "B8")$reduce(ee$Reducer$median())
@@ -94,7 +100,7 @@
    snow_mask <- ndsi_mask$And(B8_mask)$rename('snow_mask')
    
    #(G): Subtract the snow-covered pixels from the water-and-snow pixels (NDWI>0) to retain water-pixels only
-   water_mask <- ndwi_mask$And(snow_mask$lt(1))
+   water_mask <- ndwi_mask$And(snow_mask$lt(1))$rename('water')
    
    # #Plot stepwise selection of waterbodies in median image (for debugging)
    # Map$addLayer(s2_NDWI_mask, list(bands=c("B4_median", "B3_median", "B2_median"), min=100, max=8000, gamma=c(1.9, 1.7, 1.7)), 'TRUE COLOR Median')+
